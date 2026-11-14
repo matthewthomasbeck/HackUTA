@@ -3,6 +3,7 @@ import SwiftUI
 struct PersonDetailView: View {
     let client: APIClient?
     @State var person: Person
+    var onUpdate: (Person) -> Void = { _ in }
     @State private var memories: [String] = []
     @State private var editing = false
     @State private var draftName = ""
@@ -47,6 +48,7 @@ struct PersonDetailView: View {
     private func load() async {
         guard let client, let detail = try? await client.person(id: person.id) else { return }
         person = detail.person
+        onUpdate(person)
         memories = detail.memories
     }
 
@@ -55,6 +57,7 @@ struct PersonDetailView: View {
         guard let client, !name.isEmpty else { return }
         do {
             person = try await client.updatePerson(id: person.id, name: name)
+            onUpdate(person)
             error = nil
         } catch {
             self.error = "Couldn't save the name"

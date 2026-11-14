@@ -17,23 +17,29 @@ final class VisitSync: NSObject, CLLocationManagerDelegate {
         Task { await flush() }
     }
 
-    /// CLVisit reports `.distantFuture` as the departure while the person is still there.
-    /// The id derives from arrival + coordinates so the departure upload upserts the arrival one.
-    static func makeVisit(arrival: Date, departure: Date, lat: Double, lon: Double) -> Visit {
-        Visit(
-            id: String(format: "visit-%d-%.5f-%.5f", Int(arrival.timeIntervalSince1970), lat, lon),
-            arrived: arrival,
+    /// CLVisit reports `.distantFuture` as the departure while the person is still there, and
+    /// `.distantPast` as the arrival when it wasn't observed. An unknown arrival is clamped to the
+    /// start of the departure's local day; with neither known the visit is dropped.
+    /// The id derives from the arrival time only (whole seconds), so the departure upserts the arrival.
+    static func makeVisit(arrival: Date, departure: Date, lat: Double, lon: Double,
+                          calendar: Calendar = .current) -> Visit? {
+        var arrived = arrival
+        if arrival == .distantPast {
+            guard departure != .distantFuture, departure != .distantPast else { return nil }
+            arrived = calendar.startOfDay(for: departure)
+        }
+        return Visit(
+            id: "visit-\(Int(arrived.timeIntervalSince1970))",
+            arrived: arrived,
             departed: departure == .distantFuture ? nil : departure,
             lat: lat, lon: lon, placeName: nil
         )
     }
 
     func locationManager(_ manager: CLLocationManager, didVisit visit: CLVisit) {
-        let mapped = Self.makeVisit(arrival: visit.arrivalDate, departure: visit.departureDate,
-                                    lat: visit.coordinate.latitude, lon: visit.coordinate.longitude)
-        var pending = Self.pending
-        pending[mapped.id] = mapped // a departure replaces the queued arrival
-        Self.pending = pending
+        guard let mapped = Self.makeVisit(arrival: visit.arrivalDate, departure: visit.departureDate,
+                                          lat: visit.coordinate.latitude, lon: visit.coordinate.longitude) else { return }
+        Self.pending = Self.enqueue(mapped, into: Self.pending)
         Task { await flush() }
     }
 
@@ -42,21 +48,27 @@ final class VisitSync: NSObject, CLLocationManagerDelegate {
         let queued = Self.pending
         guard !queued.isEmpty else { return }
         do {
-            try await client.uploadVisits(Array(queued.values))
+            try await client.uploadVisits(queued)
             // Drop only what was sent; a newer version of the same visit may have been queued meanwhile.
-            Self.pending = Self.pending.filter { queued[$0.key] != $0.value }
+            Self.pending = Self.pending.filter { !queued.contains($0) }
         } catch {
             // Stays queued; retried on the next visit event or launch.
         }
     }
 
-    private static var pending: [String: Visit] {
-        get {
-            guard let data = UserDefaults.standard.data(forKey: pendingKey) else { return [:] }
-            return (try? JSONDecoder.calypso.decode([String: Visit].self, from: data)) ?? [:]
-        }
-        set {
-            UserDefaults.standard.set(try? JSONEncoder.calypso.encode(newValue), forKey: pendingKey)
-        }
+    /// A departure replaces the queued arrival with the same id.
+    static func enqueue(_ visit: Visit, into queue: [Visit]) -> [Visit] {
+        queue.filter { $0.id != visit.id } + [visit]
+    }
+
+    static func encodeQueue(_ queue: [Visit]) -> Data? { try? JSONEncoder.calypso.encode(queue) }
+
+    static func decodeQueue(_ data: Data) -> [Visit] {
+        (try? JSONDecoder.calypso.decode([Visit].self, from: data)) ?? []
+    }
+
+    private static var pending: [Visit] {
+        get { UserDefaults.standard.data(forKey: pendingKey).map(decodeQueue) ?? [] }
+        set { UserDefaults.standard.set(encodeQueue(newValue), forKey: pendingKey) }
     }
 }

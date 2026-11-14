@@ -14,8 +14,13 @@ struct AddContactView: View {
             Text("So you can start a FaceTime call with Calypso⁻¹ like with anyone else.")
                 .multilineTextAlignment(.center).foregroundStyle(.secondary)
             Spacer()
+            if Config.chertPhone.isEmpty {
+                Text("Set CHERT_PHONE in Secrets.xcconfig to add the contact.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
             Button("Add Calypso⁻¹ to Contacts") { showEditor = true }
                 .buttonStyle(.borderedProminent).controlSize(.large)
+                .disabled(Config.chertPhone.isEmpty)
             Button("Continue", action: onNext)
         }
         .padding()

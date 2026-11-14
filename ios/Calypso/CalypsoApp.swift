@@ -1,7 +1,27 @@
 import SwiftUI
+import UIKit
+
+/// Visit monitoring must start at launch: iOS relaunches a terminated app in the background for visits.
+final class AppDelegate: NSObject, UIApplicationDelegate {
+    private var visitSync: VisitSync?
+
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        if UserDefaults.standard.bool(forKey: "onboarded") { startVisitSync() }
+        return true
+    }
+
+    func startVisitSync() {
+        guard visitSync == nil, let client = APIClient.configured else { return }
+        let sync = VisitSync(client: client)
+        visitSync = sync
+        sync.start()
+    }
+}
 
 @main
 struct CalypsoApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @AppStorage("onboarded") private var onboarded = false
 
     var body: some Scene {
@@ -12,12 +32,14 @@ struct CalypsoApp: App {
                 OnboardingView()
             }
         }
+        .onChange(of: onboarded) { _, done in
+            if done { delegate.startVisitSync() }
+        }
     }
 }
 
 struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
-    @State private var visitSync = APIClient.configured.map(VisitSync.init)
     private let client = APIClient.configured
 
     var body: some View {
@@ -25,8 +47,7 @@ struct HomeView: View {
             TodayView(client: client).tabItem { Label("Today", systemImage: "clock") }
             PeopleListView(client: client).tabItem { Label("People", systemImage: "person.2") }
         }
-        .task { visitSync?.start() }
-        .onChange(of: scenePhase) { _, phase in
+        .onChange(of: scenePhase, initial: true) { _, phase in
             if phase == .active, let client { Task { await PhotoSync.syncNew(using: client) } }
         }
     }

@@ -33,6 +33,7 @@ targets:
         API_TOKEN: $(API_TOKEN)
         CHERT_PHONE: $(CHERT_PHONE)
         NSContactsUsageDescription: "Calypso⁻¹ adds itself to your contacts so you can FaceTime it."
+        NSLocalNetworkUsageDescription: "Calypso⁻¹ connects to your Calypso server on the local network during development."
         NSPhotoLibraryUsageDescription: "Calypso⁻¹ places your photos on your day's timeline."
         NSLocationAlwaysAndWhenInUseUsageDescription: "Calypso⁻¹ remembers places you visited so it can tell you about your day."
         NSLocationWhenInUseUsageDescription: "Calypso⁻¹ remembers places you visited so it can tell you about your day."

@@ -5,6 +5,7 @@ import SwiftUI
 @MainActor
 final class LocationPermission: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
+    private var userRequested = false
 
     override init() {
         super.init()
@@ -13,6 +14,7 @@ final class LocationPermission: NSObject, ObservableObject, CLLocationManagerDel
 
     /// iOS grants "Always" in two steps: When-In-Use first, then the Always upgrade.
     func request() {
+        userRequested = true
         if manager.authorizationStatus == .notDetermined {
             manager.requestWhenInUseAuthorization()
         } else {
@@ -20,9 +22,12 @@ final class LocationPermission: NSObject, ObservableObject, CLLocationManagerDel
         }
     }
 
+    /// Also fires when the manager is created, so only upgrade after a request the user started.
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        if manager.authorizationStatus == .authorizedWhenInUse {
-            manager.requestAlwaysAuthorization()
+        Task { @MainActor in
+            if userRequested, manager.authorizationStatus == .authorizedWhenInUse {
+                manager.requestAlwaysAuthorization()
+            }
         }
     }
 }

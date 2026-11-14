@@ -9,7 +9,9 @@ struct PeopleListView: View {
         NavigationStack {
             List(people) { person in
                 NavigationLink {
-                    PersonDetailView(client: client, person: person)
+                    PersonDetailView(client: client, person: person) { updated in
+                        if let i = people.firstIndex(where: { $0.id == updated.id }) { people[i] = updated }
+                    }
                 } label: {
                     HStack(spacing: 12) {
                         FaceView(urlString: person.facePhotoUrl, size: 44)

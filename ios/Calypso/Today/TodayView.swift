@@ -32,6 +32,10 @@ struct TodayView: View {
             }
             events = try await loaded.sorted { $0.start < $1.start }
             error = nil
+        } catch is CancellationError {
+            return
+        } catch let error as URLError where error.code == .cancelled {
+            return
         } catch {
             events = []
             self.error = "Couldn't load this day"
