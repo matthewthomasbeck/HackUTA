@@ -1,0 +1,15 @@
+[project]
+name = "calypso-agent"
+version = "0.1.0"
+description = "Calypso⁻¹ Chert FaceTime agent: recognition loop, cards as outgoing video, setup calls, recall"
+requires-python = ">=3.11"
+dependencies = [
+  "livekit>=0.17",
+  "pillow>=10",
+  "httpx>=0.27",
+  "pydantic>=2.7",
+  "anthropic>=0.40",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "pytest-asyncio>=0.23"]

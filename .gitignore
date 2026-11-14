@@ -1,0 +1,16 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+data/
+out/
+*.db
+*.wav
+!backend/fixtures/**/*.wav
+!puck/tests/fixtures/**/*.wav
+# Xcode
+ios/**/xcuserdata/
+ios/**/DerivedData/
+*.xcconfig
+.DS_Store
