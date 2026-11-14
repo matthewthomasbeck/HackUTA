@@ -1,0 +1,56 @@
+name: Calypso
+options:
+  bundleIdPrefix: com.calypso
+  deploymentTarget:
+    iOS: "17.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_IDENTITY: ""
+targets:
+  Calypso:
+    type: application
+    platform: iOS
+    sources: [Calypso]
+    # Optional and git-ignored; see Secrets.xcconfig.example. Build works without it.
+    configFiles:
+      Debug: Config/Base.xcconfig
+      Release: Config/Base.xcconfig
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.calypso.app
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: NO
+    info:
+      path: Calypso/Info.plist
+      properties:
+        CFBundleDisplayName: "Calypso⁻¹"
+        UILaunchScreen: {}
+        UIBackgroundModes: [location]
+        API_BASE_URL: $(API_BASE_URL)
+        API_TOKEN: $(API_TOKEN)
+        CHERT_PHONE: $(CHERT_PHONE)
+        NSContactsUsageDescription: "Calypso⁻¹ adds itself to your contacts so you can FaceTime it."
+        NSPhotoLibraryUsageDescription: "Calypso⁻¹ places your photos on your day's timeline."
+        NSLocationAlwaysAndWhenInUseUsageDescription: "Calypso⁻¹ remembers places you visited so it can tell you about your day."
+        NSLocationWhenInUseUsageDescription: "Calypso⁻¹ remembers places you visited so it can tell you about your day."
+  CalypsoTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: CalypsoTests
+    dependencies:
+      - target: Calypso
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.calypso.tests
+schemes:
+  Calypso:
+    build:
+      targets:
+        Calypso: all
+    test:
+      targets: [CalypsoTests]

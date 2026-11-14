@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>API_BASE_URL</key>
+	<string>$(API_BASE_URL)</string>
+	<key>API_TOKEN</key>
+	<string>$(API_TOKEN)</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Calypso⁻¹</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>CHERT_PHONE</key>
+	<string>$(CHERT_PHONE)</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Calypso⁻¹ adds itself to your contacts so you can FaceTime it.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Calypso⁻¹ remembers places you visited so it can tell you about your day.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Calypso⁻¹ remembers places you visited so it can tell you about your day.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Calypso⁻¹ places your photos on your day's timeline.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
+	<key>UILaunchScreen</key>
+	<dict/>
+</dict>
+</plist>

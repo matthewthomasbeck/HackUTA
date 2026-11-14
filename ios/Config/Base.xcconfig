@@ -1,0 +1,5 @@
+// Committed (force-added; *.xcconfig is git-ignored). Pulls in optional local secrets.
+API_BASE_URL =
+API_TOKEN =
+CHERT_PHONE =
+#include? "../Secrets.xcconfig"

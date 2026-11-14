@@ -1,0 +1,24 @@
+[
+  {
+    "id": "ev_1",
+    "start": "2026-11-14T09:30:00",
+    "end": "2026-11-14T10:15:00",
+    "place": "Kroger",
+    "place_confidence": 0.87,
+    "people": ["p_mom"],
+    "summary": "Went grocery shopping with Mom.",
+    "evidence": ["visit:v1", "photo:ph1"],
+    "photo_ids": ["ph1"]
+  },
+  {
+    "id": "ev_2",
+    "start": "2026-11-14T12:00:00.250000Z",
+    "end": "2026-11-14T13:00:00+00:00",
+    "place": "Home",
+    "place_confidence": 0.95,
+    "people": [],
+    "summary": "Lunch at home.",
+    "evidence": [],
+    "photo_ids": []
+  }
+]
