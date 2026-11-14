@@ -20,4 +20,6 @@ ml = ["speechbrain", "insightface", "onnxruntime", "sentence-transformers", "ope
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]
 
 [tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_default_fixture_loop_scope = "function"
 markers = ["live: hits a real external API; skipped without keys"]
