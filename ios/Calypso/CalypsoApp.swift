@@ -46,6 +46,7 @@ struct HomeView: View {
         TabView {
             TodayView(client: client).tabItem { Label("Today", systemImage: "clock") }
             PeopleListView(client: client).tabItem { Label("People", systemImage: "person.2") }
+            AccountView().tabItem { Label("Account", systemImage: "person.crop.circle") }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             if phase == .active, let client { Task { await PhotoSync.syncNew(using: client) } }

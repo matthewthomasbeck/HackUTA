@@ -64,13 +64,13 @@ Check off steps here as you go (`- [x]`). Shared data shapes live in `backend/ca
   - `ContactBuilder.calypso(phone:) -> CNMutableContact` with given name "Calypso⁻¹", the phone number from `Config.chertPhone`, and the app logo as its image
   - Onboarding flow: Welcome → "Add Calypso⁻¹ to Contacts" (`CNContactViewController(forNewContact:)`, prefilled) → "How to start a group FaceTime" (3 illustrated steps: FaceTime → New FaceTime → add Mom + Calypso⁻¹ → Video, plus the "Or text Calypso⁻¹: *call Mom with me*" shortcut) → permissions (Photos, Location Always for Visits) → done. Completion is stored in `@AppStorage("onboarded")`.
 
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
   - `testDecodePerson`, `testDecodeDayEvent` (from fixtures, including ISO-8601 dates)
   - `testCalypsoContactHasNameAndPhone`
-- [ ] **Step 2:** Run with `xcodebuild test -scheme Calypso -destination 'platform=iOS Simulator,name=iPhone 16'` → FAIL.
-- [ ] **Step 3:** Implement the models, `APIClient`, `ContactBuilder`, and the onboarding views.
-- [ ] **Step 4:** Run the tests → PASS. On a device, the onboarding adds the contact and it shows up in FaceTime search.
-- [ ] **Step 5:** Commit `feat(ios): onboarding + add Calypso⁻¹ contact`.
+- [x] **Step 2:** Run with `xcodebuild test -scheme Calypso -destination 'platform=iOS Simulator,name=iPhone 17'` → FAIL.
+- [x] **Step 3:** Implement the models, `APIClient`, `ContactBuilder`, and the onboarding views.
+- [ ] **Step 4:** ~~Run the tests → PASS~~ (done, 17/17 on iPhone 17 sim). On a device, the onboarding adds the contact and it shows up in FaceTime search.
+- [x] **Step 5:** Commit `feat(ios): onboarding + add Calypso⁻¹ contact`.
 
 ### Task 17: iOS app: People, Today timeline, photo and visit uploaders
 
@@ -86,8 +86,8 @@ Check off steps here as you go (`- [x]`). Shared data shapes live in `backend/ca
   - `TodayView`: date picker plus a list of `EventRow` ("9:10 · Blue Bean Café · summary", people chips, photo thumbs). Pull to refresh.
   - `PeopleListView` / `PersonDetailView`: face, name (or "Unnamed visitor", with an edit-name action through `PATCH`), relationship, and recent memories.
 
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
   - `testVisitMapsDistantFutureToNilDeparture` (CLVisit uses `.distantFuture` for "still here")
   - `testPhotoSyncSkipsScreenshots` (mediaSubtypes filter)
-- [ ] **Step 2:** Run → FAIL. **Step 3:** Implement. **Step 4:** Run → PASS.
+- [x] **Step 2:** Run → FAIL. **Step 3:** Implement. **Step 4:** Run → PASS.
 - [ ] **Step 5:** On a device: take a photo, then pull to refresh in Today 15 minutes later (or after `POST /days/{date}/rebuild`) → the photo shows up under the right event. Commit `feat(ios): people, today timeline, sync`.

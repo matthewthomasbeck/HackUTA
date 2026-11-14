@@ -24,6 +24,7 @@
 		AB157F26920A6951A4F16A1F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8F342471DA69D019603CCF54 /* Assets.xcassets */; };
 		C186C8026759B4A7F67F12A9 /* AddContactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F63932741AF35C8CEF7253B /* AddContactView.swift */; };
 		CC383F035487C0E12E10687B /* person.json in Resources */ = {isa = PBXBuildFile; fileRef = 7AF65A48C2B99AA17637EAE0 /* person.json */; };
+		CEAAA36EB67A5B215AEE6E8E /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9DE861182F214754D6B51F7 /* AccountView.swift */; };
 		D24756932D01B4EA00DE52F2 /* day_events.json in Resources */ = {isa = PBXBuildFile; fileRef = 7142BFC78178A9CE47212C61 /* day_events.json */; };
 		D7931FA2864863CDF0EB6EEF /* VisitSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67362F56F646B0C8A4C00B65 /* VisitSyncTests.swift */; };
 		E08C90366F8545608632D2F9 /* GroupCallHowToView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC8E90F0AA08BAC56087EB2 /* GroupCallHowToView.swift */; };
@@ -70,6 +71,7 @@
 		CCC8E90F0AA08BAC56087EB2 /* GroupCallHowToView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupCallHowToView.swift; sourceTree = "<group>"; };
 		DD27CA6990D892953719D4B1 /* card.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = card.json; sourceTree = "<group>"; };
 		E26ED4E4BC103197F47F32EA /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		E9DE861182F214754D6B51F7 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		EAB25557BFD3F2F40E9D0D2B /* PersonDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDetailView.swift; sourceTree = "<group>"; };
 		EBBB739A589A7F912F54233D /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
 		FFFD5920901B83B310B84DF0 /* ModelsDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsDecodingTests.swift; sourceTree = "<group>"; };
@@ -97,6 +99,14 @@
 				9DCAAAEC1B328785E547F0C6 /* Fixtures */,
 			);
 			path = CalypsoTests;
+			sourceTree = "<group>";
+		};
+		3B5A5A00AE5C48FB5D9BDA6A /* Account */ = {
+			isa = PBXGroup;
+			children = (
+				E9DE861182F214754D6B51F7 /* AccountView.swift */,
+			);
+			path = Account;
 			sourceTree = "<group>";
 		};
 		621E372D77B9640B5F2C358C /* Core */ = {
@@ -154,6 +164,7 @@
 				8F342471DA69D019603CCF54 /* Assets.xcassets */,
 				1BA8A7316EEF065BD5C1F278 /* CalypsoApp.swift */,
 				AFF0847AB5D7506F0D986E2A /* Info.plist */,
+				3B5A5A00AE5C48FB5D9BDA6A /* Account */,
 				621E372D77B9640B5F2C358C /* Core */,
 				09D055F1DBDBA48345446E2F /* Onboarding */,
 				AA1DCDC4D2D2845C9A08745F /* People */,
@@ -301,6 +312,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				31DD5362F551F3A11DA1827F /* APIClient.swift in Sources */,
+				CEAAA36EB67A5B215AEE6E8E /* AccountView.swift in Sources */,
 				C186C8026759B4A7F67F12A9 /* AddContactView.swift in Sources */,
 				367C353412EB4741F36914DD /* CalypsoApp.swift in Sources */,
 				7F46DBB0D390E1258E5D7BB5 /* Config.swift in Sources */,
