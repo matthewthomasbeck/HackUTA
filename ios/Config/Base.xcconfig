@@ -2,4 +2,6 @@
 API_BASE_URL =
 API_TOKEN =
 CHERT_PHONE =
+APP_BUNDLE_ID = com.calypso.app
+DEVELOPMENT_TEAM =
 #include? "../Secrets.xcconfig"
