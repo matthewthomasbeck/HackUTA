@@ -1,0 +1,577 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		03523954E6FF5DA23FF86B05 /* ContactBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFA318F059492AB2C1179647 /* ContactBuilderTests.swift */; };
+		198DF353F2A700D7A5431E65 /* PermissionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86A3F0EE6854B0B69B9BED8F /* PermissionsView.swift */; };
+		1990378769632A6B50AE2D5B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90AC15038E2C32668688A5FC /* OnboardingView.swift */; };
+		1ADFCE652FF794F86CCB9FC7 /* ContactBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 013CE471DAB0DE95C63AD848 /* ContactBuilder.swift */; };
+		2F6DB8893954A584049FC608 /* PersonDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAB25557BFD3F2F40E9D0D2B /* PersonDetailView.swift */; };
+		31DD5362F551F3A11DA1827F /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 172FCEC2FD95E71D4334677C /* APIClient.swift */; };
+		367C353412EB4741F36914DD /* CalypsoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BA8A7316EEF065BD5C1F278 /* CalypsoApp.swift */; };
+		484F7978CFFBE861E4AFC4FC /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ACB2B94AE150CA1A096F52F /* Models.swift */; };
+		4A5DE239414E7F74DD11EEBD /* VisitSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF7C632925D6D48A7D561E07 /* VisitSync.swift */; };
+		54A317F607A71DF3EFCD4B0C /* PhotoSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66A1EEECD7F59818BDAFFA3A /* PhotoSync.swift */; };
+		7F46DBB0D390E1258E5D7BB5 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B350D7FDB84FCD745D02E68 /* Config.swift */; };
+		825B335B54C2FAD38D5E3EB6 /* ModelsDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFFD5920901B83B310B84DF0 /* ModelsDecodingTests.swift */; };
+		9CD912909AD1ACEC79350773 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A019F55B802A508A2223AAAB /* TodayView.swift */; };
+		A8E1CDB66CC2C3EA3B398103 /* PhotoSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 619D8BAB1B9994414C0F8BFF /* PhotoSyncTests.swift */; };
+		AB157F26920A6951A4F16A1F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8F342471DA69D019603CCF54 /* Assets.xcassets */; };
+		C186C8026759B4A7F67F12A9 /* AddContactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F63932741AF35C8CEF7253B /* AddContactView.swift */; };
+		CC383F035487C0E12E10687B /* person.json in Resources */ = {isa = PBXBuildFile; fileRef = 7AF65A48C2B99AA17637EAE0 /* person.json */; };
+		CEAAA36EB67A5B215AEE6E8E /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9DE861182F214754D6B51F7 /* AccountView.swift */; };
+		D24756932D01B4EA00DE52F2 /* day_events.json in Resources */ = {isa = PBXBuildFile; fileRef = 7142BFC78178A9CE47212C61 /* day_events.json */; };
+		D7931FA2864863CDF0EB6EEF /* VisitSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67362F56F646B0C8A4C00B65 /* VisitSyncTests.swift */; };
+		E08C90366F8545608632D2F9 /* GroupCallHowToView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC8E90F0AA08BAC56087EB2 /* GroupCallHowToView.swift */; };
+		EA59C67737D4B673E42E12C0 /* card.json in Resources */ = {isa = PBXBuildFile; fileRef = DD27CA6990D892953719D4B1 /* card.json */; };
+		EE567266074201F5433BD53F /* EventRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57F213DBACE9FF99060673E9 /* EventRow.swift */; };
+		FF3AA5B2C38D4CF0D8F76AAD /* PeopleListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66C4426D34E7133D06233BDD /* PeopleListView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		F3BFB213D1425D8F0E9A5E68 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E61123D8697E70ED062109E4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1A7565509F8CBBA641342E3D;
+			remoteInfo = Calypso;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		013CE471DAB0DE95C63AD848 /* ContactBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactBuilder.swift; sourceTree = "<group>"; };
+		0ACB2B94AE150CA1A096F52F /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		16BF16670930782C25ABB070 /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		172FCEC2FD95E71D4334677C /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		1BA8A7316EEF065BD5C1F278 /* CalypsoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalypsoApp.swift; sourceTree = "<group>"; };
+		1F63932741AF35C8CEF7253B /* AddContactView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddContactView.swift; sourceTree = "<group>"; };
+		57F213DBACE9FF99060673E9 /* EventRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventRow.swift; sourceTree = "<group>"; };
+		619D8BAB1B9994414C0F8BFF /* PhotoSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoSyncTests.swift; sourceTree = "<group>"; };
+		66A1EEECD7F59818BDAFFA3A /* PhotoSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoSync.swift; sourceTree = "<group>"; };
+		66C4426D34E7133D06233BDD /* PeopleListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleListView.swift; sourceTree = "<group>"; };
+		67362F56F646B0C8A4C00B65 /* VisitSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisitSyncTests.swift; sourceTree = "<group>"; };
+		7142BFC78178A9CE47212C61 /* day_events.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = day_events.json; sourceTree = "<group>"; };
+		7AEDC98BA46AC8C0902164F2 /* Calypso.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Calypso.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7AF65A48C2B99AA17637EAE0 /* person.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = person.json; sourceTree = "<group>"; };
+		7B350D7FDB84FCD745D02E68 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		86A3F0EE6854B0B69B9BED8F /* PermissionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsView.swift; sourceTree = "<group>"; };
+		8F342471DA69D019603CCF54 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		90AC15038E2C32668688A5FC /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		A019F55B802A508A2223AAAB /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		AF7C632925D6D48A7D561E07 /* VisitSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisitSync.swift; sourceTree = "<group>"; };
+		AFA318F059492AB2C1179647 /* ContactBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactBuilderTests.swift; sourceTree = "<group>"; };
+		AFF0847AB5D7506F0D986E2A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		B76503FD2834DAE360BCC268 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		CB00D30C88C8102CB6EFEA94 /* CalypsoTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CalypsoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CCC8E90F0AA08BAC56087EB2 /* GroupCallHowToView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupCallHowToView.swift; sourceTree = "<group>"; };
+		DD27CA6990D892953719D4B1 /* card.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = card.json; sourceTree = "<group>"; };
+		E26ED4E4BC103197F47F32EA /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		E9DE861182F214754D6B51F7 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
+		EAB25557BFD3F2F40E9D0D2B /* PersonDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDetailView.swift; sourceTree = "<group>"; };
+		EBBB739A589A7F912F54233D /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		FFFD5920901B83B310B84DF0 /* ModelsDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsDecodingTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		09D055F1DBDBA48345446E2F /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				1F63932741AF35C8CEF7253B /* AddContactView.swift */,
+				CCC8E90F0AA08BAC56087EB2 /* GroupCallHowToView.swift */,
+				90AC15038E2C32668688A5FC /* OnboardingView.swift */,
+				86A3F0EE6854B0B69B9BED8F /* PermissionsView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		24037F260A7F573B41DCBF79 /* CalypsoTests */ = {
+			isa = PBXGroup;
+			children = (
+				AFA318F059492AB2C1179647 /* ContactBuilderTests.swift */,
+				FFFD5920901B83B310B84DF0 /* ModelsDecodingTests.swift */,
+				619D8BAB1B9994414C0F8BFF /* PhotoSyncTests.swift */,
+				67362F56F646B0C8A4C00B65 /* VisitSyncTests.swift */,
+				9DCAAAEC1B328785E547F0C6 /* Fixtures */,
+			);
+			path = CalypsoTests;
+			sourceTree = "<group>";
+		};
+		3B5A5A00AE5C48FB5D9BDA6A /* Account */ = {
+			isa = PBXGroup;
+			children = (
+				E9DE861182F214754D6B51F7 /* AccountView.swift */,
+			);
+			path = Account;
+			sourceTree = "<group>";
+		};
+		621E372D77B9640B5F2C358C /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				172FCEC2FD95E71D4334677C /* APIClient.swift */,
+				7B350D7FDB84FCD745D02E68 /* Config.swift */,
+				013CE471DAB0DE95C63AD848 /* ContactBuilder.swift */,
+				0ACB2B94AE150CA1A096F52F /* Models.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		6F870B28E7DC43C4EA367F8F /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				B76503FD2834DAE360BCC268 /* Base.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		8DCE33593A2EF909917C71B6 /* Today */ = {
+			isa = PBXGroup;
+			children = (
+				16BF16670930782C25ABB070 /* .gitkeep */,
+				57F213DBACE9FF99060673E9 /* EventRow.swift */,
+				A019F55B802A508A2223AAAB /* TodayView.swift */,
+			);
+			path = Today;
+			sourceTree = "<group>";
+		};
+		9DCAAAEC1B328785E547F0C6 /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				DD27CA6990D892953719D4B1 /* card.json */,
+				7142BFC78178A9CE47212C61 /* day_events.json */,
+				7AF65A48C2B99AA17637EAE0 /* person.json */,
+			);
+			path = Fixtures;
+			sourceTree = "<group>";
+		};
+		AA1DCDC4D2D2845C9A08745F /* People */ = {
+			isa = PBXGroup;
+			children = (
+				E26ED4E4BC103197F47F32EA /* .gitkeep */,
+				66C4426D34E7133D06233BDD /* PeopleListView.swift */,
+				EAB25557BFD3F2F40E9D0D2B /* PersonDetailView.swift */,
+			);
+			path = People;
+			sourceTree = "<group>";
+		};
+		C080834E8103E6512231527F /* Calypso */ = {
+			isa = PBXGroup;
+			children = (
+				8F342471DA69D019603CCF54 /* Assets.xcassets */,
+				1BA8A7316EEF065BD5C1F278 /* CalypsoApp.swift */,
+				AFF0847AB5D7506F0D986E2A /* Info.plist */,
+				3B5A5A00AE5C48FB5D9BDA6A /* Account */,
+				621E372D77B9640B5F2C358C /* Core */,
+				09D055F1DBDBA48345446E2F /* Onboarding */,
+				AA1DCDC4D2D2845C9A08745F /* People */,
+				EB5D9B9FC93CFC0542F46347 /* Sync */,
+				8DCE33593A2EF909917C71B6 /* Today */,
+			);
+			path = Calypso;
+			sourceTree = "<group>";
+		};
+		E354230D74BCFEA3A10ED19A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				7AEDC98BA46AC8C0902164F2 /* Calypso.app */,
+				CB00D30C88C8102CB6EFEA94 /* CalypsoTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		EB5D9B9FC93CFC0542F46347 /* Sync */ = {
+			isa = PBXGroup;
+			children = (
+				EBBB739A589A7F912F54233D /* .gitkeep */,
+				66A1EEECD7F59818BDAFFA3A /* PhotoSync.swift */,
+				AF7C632925D6D48A7D561E07 /* VisitSync.swift */,
+			);
+			path = Sync;
+			sourceTree = "<group>";
+		};
+		FD6AE3732D92F61B25655156 = {
+			isa = PBXGroup;
+			children = (
+				C080834E8103E6512231527F /* Calypso */,
+				24037F260A7F573B41DCBF79 /* CalypsoTests */,
+				6F870B28E7DC43C4EA367F8F /* Config */,
+				E354230D74BCFEA3A10ED19A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1A7565509F8CBBA641342E3D /* Calypso */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A2D6028C3908F9F6DA5EB45D /* Build configuration list for PBXNativeTarget "Calypso" */;
+			buildPhases = (
+				FE81994CCB59C8DB57E15F4E /* Sources */,
+				11688E7DF303EC1D3F44CF40 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Calypso;
+			packageProductDependencies = (
+			);
+			productName = Calypso;
+			productReference = 7AEDC98BA46AC8C0902164F2 /* Calypso.app */;
+			productType = "com.apple.product-type.application";
+		};
+		E0D2CB957811BF29E75308CB /* CalypsoTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 59D51FFC8F314A80C22A65E6 /* Build configuration list for PBXNativeTarget "CalypsoTests" */;
+			buildPhases = (
+				1D444F8D089FD26D1BA935CE /* Sources */,
+				4510FCC51479F58D9378C5C2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FA9D8A44D36BFC1D12B0E9DB /* PBXTargetDependency */,
+			);
+			name = CalypsoTests;
+			packageProductDependencies = (
+			);
+			productName = CalypsoTests;
+			productReference = CB00D30C88C8102CB6EFEA94 /* CalypsoTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E61123D8697E70ED062109E4 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					1A7565509F8CBBA641342E3D = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					E0D2CB957811BF29E75308CB = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 40E706EF5BCF71C749B98201 /* Build configuration list for PBXProject "Calypso" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = FD6AE3732D92F61B25655156;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = E354230D74BCFEA3A10ED19A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1A7565509F8CBBA641342E3D /* Calypso */,
+				E0D2CB957811BF29E75308CB /* CalypsoTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		11688E7DF303EC1D3F44CF40 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB157F26920A6951A4F16A1F /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4510FCC51479F58D9378C5C2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EA59C67737D4B673E42E12C0 /* card.json in Resources */,
+				D24756932D01B4EA00DE52F2 /* day_events.json in Resources */,
+				CC383F035487C0E12E10687B /* person.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1D444F8D089FD26D1BA935CE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				03523954E6FF5DA23FF86B05 /* ContactBuilderTests.swift in Sources */,
+				825B335B54C2FAD38D5E3EB6 /* ModelsDecodingTests.swift in Sources */,
+				A8E1CDB66CC2C3EA3B398103 /* PhotoSyncTests.swift in Sources */,
+				D7931FA2864863CDF0EB6EEF /* VisitSyncTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FE81994CCB59C8DB57E15F4E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				31DD5362F551F3A11DA1827F /* APIClient.swift in Sources */,
+				CEAAA36EB67A5B215AEE6E8E /* AccountView.swift in Sources */,
+				C186C8026759B4A7F67F12A9 /* AddContactView.swift in Sources */,
+				367C353412EB4741F36914DD /* CalypsoApp.swift in Sources */,
+				7F46DBB0D390E1258E5D7BB5 /* Config.swift in Sources */,
+				1ADFCE652FF794F86CCB9FC7 /* ContactBuilder.swift in Sources */,
+				EE567266074201F5433BD53F /* EventRow.swift in Sources */,
+				E08C90366F8545608632D2F9 /* GroupCallHowToView.swift in Sources */,
+				484F7978CFFBE861E4AFC4FC /* Models.swift in Sources */,
+				1990378769632A6B50AE2D5B /* OnboardingView.swift in Sources */,
+				FF3AA5B2C38D4CF0D8F76AAD /* PeopleListView.swift in Sources */,
+				198DF353F2A700D7A5431E65 /* PermissionsView.swift in Sources */,
+				2F6DB8893954A584049FC608 /* PersonDetailView.swift in Sources */,
+				54A317F607A71DF3EFCD4B0C /* PhotoSync.swift in Sources */,
+				9CD912909AD1ACEC79350773 /* TodayView.swift in Sources */,
+				4A5DE239414E7F74DD11EEBD /* VisitSync.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		FA9D8A44D36BFC1D12B0E9DB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1A7565509F8CBBA641342E3D /* Calypso */;
+			targetProxy = F3BFB213D1425D8F0E9A5E68 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		03BA2DF546D28062A1CDDA04 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]" = NO;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		2D4A99F14CD7261BE0466888 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B76503FD2834DAE360BCC268 /* Base.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Calypso/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID)";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		3EAC4A66E75F1BAA58CD701E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.calypso.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Calypso.app/Calypso";
+			};
+			name = Debug;
+		};
+		5E8A5F4D886BC49E40F0BA17 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B76503FD2834DAE360BCC268 /* Base.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Calypso/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID)";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		DB82F7A4A31E93C56AB1EA57 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.calypso.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Calypso.app/Calypso";
+			};
+			name = Release;
+		};
+		FB2ADD972A8C2C9A6BBC727B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]" = NO;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		40E706EF5BCF71C749B98201 /* Build configuration list for PBXProject "Calypso" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FB2ADD972A8C2C9A6BBC727B /* Debug */,
+				03BA2DF546D28062A1CDDA04 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		59D51FFC8F314A80C22A65E6 /* Build configuration list for PBXNativeTarget "CalypsoTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3EAC4A66E75F1BAA58CD701E /* Debug */,
+				DB82F7A4A31E93C56AB1EA57 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A2D6028C3908F9F6DA5EB45D /* Build configuration list for PBXNativeTarget "Calypso" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2D4A99F14CD7261BE0466888 /* Debug */,
+				5E8A5F4D886BC49E40F0BA17 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = E61123D8697E70ED062109E4 /* Project object */;
+}
