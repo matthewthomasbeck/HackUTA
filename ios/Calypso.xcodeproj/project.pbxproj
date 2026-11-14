@@ -11,17 +11,25 @@
 		198DF353F2A700D7A5431E65 /* PermissionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86A3F0EE6854B0B69B9BED8F /* PermissionsView.swift */; };
 		1990378769632A6B50AE2D5B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90AC15038E2C32668688A5FC /* OnboardingView.swift */; };
 		1ADFCE652FF794F86CCB9FC7 /* ContactBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 013CE471DAB0DE95C63AD848 /* ContactBuilder.swift */; };
+		2F6DB8893954A584049FC608 /* PersonDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAB25557BFD3F2F40E9D0D2B /* PersonDetailView.swift */; };
 		31DD5362F551F3A11DA1827F /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 172FCEC2FD95E71D4334677C /* APIClient.swift */; };
 		367C353412EB4741F36914DD /* CalypsoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BA8A7316EEF065BD5C1F278 /* CalypsoApp.swift */; };
 		484F7978CFFBE861E4AFC4FC /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ACB2B94AE150CA1A096F52F /* Models.swift */; };
+		4A5DE239414E7F74DD11EEBD /* VisitSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF7C632925D6D48A7D561E07 /* VisitSync.swift */; };
+		54A317F607A71DF3EFCD4B0C /* PhotoSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66A1EEECD7F59818BDAFFA3A /* PhotoSync.swift */; };
 		7F46DBB0D390E1258E5D7BB5 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B350D7FDB84FCD745D02E68 /* Config.swift */; };
 		825B335B54C2FAD38D5E3EB6 /* ModelsDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFFD5920901B83B310B84DF0 /* ModelsDecodingTests.swift */; };
+		9CD912909AD1ACEC79350773 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A019F55B802A508A2223AAAB /* TodayView.swift */; };
+		A8E1CDB66CC2C3EA3B398103 /* PhotoSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 619D8BAB1B9994414C0F8BFF /* PhotoSyncTests.swift */; };
 		AB157F26920A6951A4F16A1F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8F342471DA69D019603CCF54 /* Assets.xcassets */; };
 		C186C8026759B4A7F67F12A9 /* AddContactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F63932741AF35C8CEF7253B /* AddContactView.swift */; };
 		CC383F035487C0E12E10687B /* person.json in Resources */ = {isa = PBXBuildFile; fileRef = 7AF65A48C2B99AA17637EAE0 /* person.json */; };
 		D24756932D01B4EA00DE52F2 /* day_events.json in Resources */ = {isa = PBXBuildFile; fileRef = 7142BFC78178A9CE47212C61 /* day_events.json */; };
+		D7931FA2864863CDF0EB6EEF /* VisitSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67362F56F646B0C8A4C00B65 /* VisitSyncTests.swift */; };
 		E08C90366F8545608632D2F9 /* GroupCallHowToView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC8E90F0AA08BAC56087EB2 /* GroupCallHowToView.swift */; };
 		EA59C67737D4B673E42E12C0 /* card.json in Resources */ = {isa = PBXBuildFile; fileRef = DD27CA6990D892953719D4B1 /* card.json */; };
+		EE567266074201F5433BD53F /* EventRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57F213DBACE9FF99060673E9 /* EventRow.swift */; };
+		FF3AA5B2C38D4CF0D8F76AAD /* PeopleListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66C4426D34E7133D06233BDD /* PeopleListView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -41,6 +49,11 @@
 		172FCEC2FD95E71D4334677C /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		1BA8A7316EEF065BD5C1F278 /* CalypsoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalypsoApp.swift; sourceTree = "<group>"; };
 		1F63932741AF35C8CEF7253B /* AddContactView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddContactView.swift; sourceTree = "<group>"; };
+		57F213DBACE9FF99060673E9 /* EventRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventRow.swift; sourceTree = "<group>"; };
+		619D8BAB1B9994414C0F8BFF /* PhotoSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoSyncTests.swift; sourceTree = "<group>"; };
+		66A1EEECD7F59818BDAFFA3A /* PhotoSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoSync.swift; sourceTree = "<group>"; };
+		66C4426D34E7133D06233BDD /* PeopleListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleListView.swift; sourceTree = "<group>"; };
+		67362F56F646B0C8A4C00B65 /* VisitSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisitSyncTests.swift; sourceTree = "<group>"; };
 		7142BFC78178A9CE47212C61 /* day_events.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = day_events.json; sourceTree = "<group>"; };
 		7AEDC98BA46AC8C0902164F2 /* Calypso.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Calypso.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7AF65A48C2B99AA17637EAE0 /* person.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = person.json; sourceTree = "<group>"; };
@@ -48,6 +61,8 @@
 		86A3F0EE6854B0B69B9BED8F /* PermissionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsView.swift; sourceTree = "<group>"; };
 		8F342471DA69D019603CCF54 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		90AC15038E2C32668688A5FC /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		A019F55B802A508A2223AAAB /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		AF7C632925D6D48A7D561E07 /* VisitSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisitSync.swift; sourceTree = "<group>"; };
 		AFA318F059492AB2C1179647 /* ContactBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactBuilderTests.swift; sourceTree = "<group>"; };
 		AFF0847AB5D7506F0D986E2A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B76503FD2834DAE360BCC268 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
@@ -55,6 +70,7 @@
 		CCC8E90F0AA08BAC56087EB2 /* GroupCallHowToView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupCallHowToView.swift; sourceTree = "<group>"; };
 		DD27CA6990D892953719D4B1 /* card.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = card.json; sourceTree = "<group>"; };
 		E26ED4E4BC103197F47F32EA /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		EAB25557BFD3F2F40E9D0D2B /* PersonDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDetailView.swift; sourceTree = "<group>"; };
 		EBBB739A589A7F912F54233D /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
 		FFFD5920901B83B310B84DF0 /* ModelsDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsDecodingTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -76,6 +92,8 @@
 			children = (
 				AFA318F059492AB2C1179647 /* ContactBuilderTests.swift */,
 				FFFD5920901B83B310B84DF0 /* ModelsDecodingTests.swift */,
+				619D8BAB1B9994414C0F8BFF /* PhotoSyncTests.swift */,
+				67362F56F646B0C8A4C00B65 /* VisitSyncTests.swift */,
 				9DCAAAEC1B328785E547F0C6 /* Fixtures */,
 			);
 			path = CalypsoTests;
@@ -104,6 +122,8 @@
 			isa = PBXGroup;
 			children = (
 				16BF16670930782C25ABB070 /* .gitkeep */,
+				57F213DBACE9FF99060673E9 /* EventRow.swift */,
+				A019F55B802A508A2223AAAB /* TodayView.swift */,
 			);
 			path = Today;
 			sourceTree = "<group>";
@@ -122,6 +142,8 @@
 			isa = PBXGroup;
 			children = (
 				E26ED4E4BC103197F47F32EA /* .gitkeep */,
+				66C4426D34E7133D06233BDD /* PeopleListView.swift */,
+				EAB25557BFD3F2F40E9D0D2B /* PersonDetailView.swift */,
 			);
 			path = People;
 			sourceTree = "<group>";
@@ -154,6 +176,8 @@
 			isa = PBXGroup;
 			children = (
 				EBBB739A589A7F912F54233D /* .gitkeep */,
+				66A1EEECD7F59818BDAFFA3A /* PhotoSync.swift */,
+				AF7C632925D6D48A7D561E07 /* VisitSync.swift */,
 			);
 			path = Sync;
 			sourceTree = "<group>";
@@ -267,6 +291,8 @@
 			files = (
 				03523954E6FF5DA23FF86B05 /* ContactBuilderTests.swift in Sources */,
 				825B335B54C2FAD38D5E3EB6 /* ModelsDecodingTests.swift in Sources */,
+				A8E1CDB66CC2C3EA3B398103 /* PhotoSyncTests.swift in Sources */,
+				D7931FA2864863CDF0EB6EEF /* VisitSyncTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -279,10 +305,16 @@
 				367C353412EB4741F36914DD /* CalypsoApp.swift in Sources */,
 				7F46DBB0D390E1258E5D7BB5 /* Config.swift in Sources */,
 				1ADFCE652FF794F86CCB9FC7 /* ContactBuilder.swift in Sources */,
+				EE567266074201F5433BD53F /* EventRow.swift in Sources */,
 				E08C90366F8545608632D2F9 /* GroupCallHowToView.swift in Sources */,
 				484F7978CFFBE861E4AFC4FC /* Models.swift in Sources */,
 				1990378769632A6B50AE2D5B /* OnboardingView.swift in Sources */,
+				FF3AA5B2C38D4CF0D8F76AAD /* PeopleListView.swift in Sources */,
 				198DF353F2A700D7A5431E65 /* PermissionsView.swift in Sources */,
+				2F6DB8893954A584049FC608 /* PersonDetailView.swift in Sources */,
+				54A317F607A71DF3EFCD4B0C /* PhotoSync.swift in Sources */,
+				9CD912909AD1ACEC79350773 /* TodayView.swift in Sources */,
+				4A5DE239414E7F74DD11EEBD /* VisitSync.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

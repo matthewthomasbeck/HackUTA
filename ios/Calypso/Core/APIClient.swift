@@ -5,6 +5,25 @@ struct PhotoUpload {
     var imageData: Data
 }
 
+/// `GET /people/{id}`: a Person plus its last few memory summaries. The `memories`
+/// field is not pinned down by the backend yet, so it defaults to empty when missing.
+struct PersonDetail: Decodable, Equatable {
+    var person: Person
+    var memories: [String]
+
+    init(person: Person, memories: [String] = []) {
+        self.person = person; self.memories = memories
+    }
+
+    init(from decoder: Decoder) throws {
+        person = try Person(from: decoder)
+        memories = try decoder.container(keyedBy: CodingKeys.self)
+            .decodeIfPresent([String].self, forKey: .memories) ?? []
+    }
+
+    private enum CodingKeys: String, CodingKey { case memories }
+}
+
 enum APIError: Error {
     case badStatus(Int)
 }
@@ -22,6 +41,17 @@ struct APIClient {
 
     func people() async throws -> [Person] {
         try await get("people")
+    }
+
+    func person(id: String) async throws -> PersonDetail {
+        try await get("people/\(id)")
+    }
+
+    func updatePerson(id: String, name: String) async throws -> Person {
+        var request = makeRequest("people/\(id)", method: "PATCH")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let data = try await send(request, body: JSONEncoder.calypso.encode(["name": name]))
+        return try JSONDecoder.calypso.decode(Person.self, from: data)
     }
 
     func events(day: String) async throws -> [DayEvent] {
@@ -76,5 +106,13 @@ struct APIClient {
             throw APIError.badStatus(status)
         }
         return data
+    }
+}
+
+extension APIClient {
+    /// Client built from Info.plist config, or nil when the app isn't configured.
+    static var configured: APIClient? {
+        guard let url = Config.apiBaseURL, url.scheme != nil else { return nil }
+        return APIClient(baseURL: url, token: Config.apiToken)
     }
 }
