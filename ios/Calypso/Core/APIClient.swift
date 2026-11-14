@@ -5,8 +5,8 @@ struct PhotoUpload {
     var imageData: Data
 }
 
-/// `GET /people/{id}`: a Person plus its last few memory summaries. The `memories`
-/// field is not pinned down by the backend yet, so it defaults to empty when missing.
+/// `GET /people/{id}`: a flat Person plus up to 5 pre-formatted memory lines, newest first.
+/// `memories` defaults to empty when missing.
 struct PersonDetail: Decodable, Equatable {
     var person: Person
     var memories: [String]
@@ -56,6 +56,11 @@ struct APIClient {
 
     func events(day: String) async throws -> [DayEvent] {
         try await get("days/\(day)/events")
+    }
+
+    /// Photos are served publicly by unguessable id; sensitive ones return 404.
+    func photoURL(id: String) -> URL {
+        baseURL.appending(path: "media/photos/\(id).jpg")
     }
 
     func uploadPhoto(_ upload: PhotoUpload) async throws {

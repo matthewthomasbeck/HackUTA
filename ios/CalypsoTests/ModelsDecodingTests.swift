@@ -33,7 +33,7 @@ final class ModelsDecodingTests: XCTestCase {
         XCTAssertEqual(first.placeConfidence, 0.87, accuracy: 0.0001)
         XCTAssertEqual(first.people, ["p_mom"])
         XCTAssertEqual(first.photoIds, ["ph1"])
-        // No fractional seconds, no timezone -> UTC.
+        // No fractional seconds, with Z (the backend always sends a zone).
         XCTAssertEqual(first.start, Date(timeIntervalSince1970: 1_794_648_600))
         XCTAssertEqual(first.end.timeIntervalSince(first.start), 45 * 60)
         // Fractional seconds with Z, and explicit offset without fraction.
@@ -52,6 +52,12 @@ final class ModelsDecodingTests: XCTestCase {
             XCTAssertEqual(visit.arrived.timeIntervalSince1970, 1_794_648_600, accuracy: 0.5, text)
             XCTAssertNil(visit.departed)
         }
+    }
+
+    func testPhotoURLUsesMediaPath() throws {
+        let client = APIClient(baseURL: try XCTUnwrap(URL(string: "https://calypso.example")), token: "t")
+        XCTAssertEqual(client.photoURL(id: "ABC-123-L0-001").absoluteString,
+                       "https://calypso.example/media/photos/ABC-123-L0-001.jpg")
     }
 
     func testDecodeCard() throws {

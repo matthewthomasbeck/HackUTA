@@ -4,6 +4,7 @@ struct EventRow: View {
     let event: DayEvent
     /// Person id -> display name.
     let names: [String: String]
+    let photoURL: (String) -> URL?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -18,13 +19,17 @@ struct EventRow: View {
                     }
                 }
             }
-            // The backend has no photo-serving URL yet, so show placeholders per photo.
             if !event.photoIds.isEmpty {
                 HStack {
-                    ForEach(event.photoIds, id: \.self) { _ in
-                        Image(systemName: "photo")
-                            .frame(width: 44, height: 44)
-                            .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+                    ForEach(event.photoIds, id: \.self) { id in
+                        AsyncImage(url: photoURL(id)) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
+                            Image(systemName: "photo")
+                        }
+                        .frame(width: 44, height: 44)
+                        .background(.quaternary)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
                 }
             }

@@ -11,7 +11,7 @@ struct TodayView: View {
         NavigationStack {
             List {
                 DatePicker("Day", selection: $day, in: ...Date(), displayedComponents: .date)
-                ForEach(events) { EventRow(event: $0, names: names) }
+                ForEach(events) { EventRow(event: $0, names: names, photoURL: { client?.photoURL(id: $0) }) }
             }
             .overlay {
                 if events.isEmpty { ContentUnavailableView(error ?? "Nothing on this day", systemImage: "calendar") }
