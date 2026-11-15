@@ -163,7 +163,9 @@ async def run_call(ctx, config):
             log.info("video_source subscribed group=%s width=%s height=%s", config.mode == "group_intro",
                      getattr(publication, "width", None), getattr(publication, "height", None))
             spawn(video_frames(track, callback))
-        elif track.kind == rtc.TrackKind.KIND_AUDIO and config.mode != "group_intro":
+        elif track.kind == rtc.TrackKind.KIND_AUDIO and (config.mode != "group_intro"
+                                                         or participant.identity == selected_identity):
+            # group_intro: only the Chert bridge's single mixed call track, for grounded recall.
             spawn(audio_frames(track, speech))
 
     async def workflow():
@@ -184,19 +186,21 @@ async def run_call(ctx, config):
         ready.set()
         if await apply(initial):
             return
-        if config.mode == "group_intro":
-            await stopped.wait()  # Face-only introductions: do not transcribe mixed audio.
-            return
+        group_intro = config.mode == "group_intro"
         while not stopped.is_set() and not dialogue_done:
             text = await speech.listen()
             sentence_end = time.monotonic()
             if dialogue_done:
                 return
+            if group_intro and not text:
+                continue  # Introductions are face-only; mixed audio only feeds recall.
             try:
-                crops = await samples.collect()
+                crops = [] if group_intro else await samples.collect()
             except ValueError:
                 crops = []
-            voice = getattr(speech, "last_wav", None) if text and active_mode != "recognize" else None
+            # Never send mixed group audio or recognition-call audio for voice matching.
+            voice = (getattr(speech, "last_wav", None)
+                     if text and active_mode != "recognize" and not group_intro else None)
             effects = await gateway.event("utterance" if text else "silence",
                 text=text, face_jpegs_b64=[b64(crop) for crop in crops],
                 voice_wav_b64=b64(voice) if voice else None)
