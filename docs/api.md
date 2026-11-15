@@ -33,7 +33,8 @@ One voiced speech segment. The puck captures 30 ms frames for VAD, then uploads 
   "ts_start": "2026-11-14T15:30:00.000Z",
   "ts_end":   "2026-11-14T15:30:04.500Z",
   "sound_tags": [ { "ts": "2026-11-14T15:30:01.000Z", "label": "Espresso machine", "score": 0.81 } ],
-  "local_text": "let me grab a coffee"
+  "local_text": "let me grab a coffee",
+  "time_synced": true
 }
 ```
 Response `200`:
@@ -43,7 +44,9 @@ Response `200`:
 Rules:
 - Generate `segment_uuid` **once** when the segment is cut, store it in the queue, and **reuse it on every retry**. The server dedupes on it.
 - Ack (remove from the queue) on any `2xx`, including `duplicate: true`. On a network error or `5xx`, keep it and retry with backoff. `503` means the server couldn't queue processing; retry later.
-- `local_text` (whisper.cpp) is optional. It's the fallback text if server STT fails.
+- `local_text` (whisper.cpp) is optional. If present it wins; otherwise the server transcribes the audio (`CALYPSO_STT`). Confident voice matches set the utterance's person.
+- `time_synced` (bool, default `true`) is new on `SegmentMeta`. Send `false` when the Pi's clock wasn't NTP-synced when the segment was cut; the server stores it, and the day builder ignores unsynced segments (their timestamps can be wrong). Older pucks that omit it are treated as synced.
+- The puck spools every segment to disk first (`PUCK_SPOOL_DIR`, capped by `PUCK_SPOOL_MAX_MB`, oldest evicted) and uploads oldest-first, so reboots and offline stretches lose nothing.
 - The server never keeps the audio: it is deleted right after processing.
 
 ```bash
@@ -160,11 +163,17 @@ POST /calls/c1/lines       → {"speaker": "sarah", "text": "Hi Mom!", "ts": "20
 POST /calls/c1/end         ← the Call with "ended" set
 ```
 
-### `POST /recall`  (stub → Task 8)
+### `POST /recall`
 ```json
 { "lines": [ { "speaker": "Sarah", "text": "Mom, what did you do today?" } ] }
 ```
-Response: `{"intent": {"intent": "today", ...}, "card": {"kind": "today", "title": "Today", "lines": ["9:10 · Blue Bean Café · coffee with Sarah"], "image_urls": []}}`. **Stub today:** always `{"intent": {"intent": "none", ...}, "card": null}`.
+The detector (`CALYPSO_DETECTOR`, Haiku) classifies the **last line** only: `today | person | memory | photo | none`. Below `RECALL_MIN` confidence it returns `none`. The model never writes card text; every line comes from saved day events, people, memories and photos.
+
+Response: `{"intent": {"intent": "today", ...}, "card": {"kind": "today", "title": "Today", "lines": ["9:10 AM · Blue Bean Café · Coffee with Sarah"], "image_urls": []}}`.
+- No match, or an ambiguous question ("the weather today is awful") gives `{"intent": {"intent": "none", ...}, "card": null}`.
+- `today` with no events gives a neutral card: "A quiet day at home" if the day is a home day (`CALYPSO_HOME_LABEL`), else "Nothing saved yet today".
+- Photos flagged `sensitive` are never included. Emits the `recall.detect` bus stage.
+- The agent drops recall cards older than 4 s and logs `recall_latency_ms`.
 
 ### `POST /agent/events`
 Dashboard events from the agent, e.g. `card.shown`. Body `{"stage": "card.shown", "payload": {...}}`.
@@ -182,7 +191,7 @@ Finds the patient (for "I help **Mary** remember…").
 | `GET /people/{id}` | | `PersonDetail`: a flat Person plus `memories: [String]` (up to 5, newest first, e.g. `"Nov 14 · Blue Bean Café · Coffee with Sarah"`) |
 | `PATCH /people/{id}` | `{"name": "Eric"}` (also `relationship`, `facts`, `phone`) | `Person` |
 | `GET /days/{yyyy-MM-dd}/events` | | `[DayEvent]` for that local day; `people` holds person ids, patient excluded |
-| `POST /days/{yyyy-MM-dd}/rebuild` | | `{"ok": true, ...}` (stub → Task 7) |
+| `POST /days/{yyyy-MM-dd}/rebuild` | | `{"ok": true, "events": n}`: really rebuilds that local day (episodes split on gaps, places from visits, Sonnet summaries via `CALYPSO_SUMMARIZER`). Idempotent. Segment ingestion also marks the day dirty and rebuilds it (inline, or debounced 60 s under `rq`) |
 | `POST /app/visits` | JSON array of `Visit`; `departed: null` while the visit is still going on | `{"ok": true, "count": n}`; upserts by `id` |
 | `POST /app/photos` | multipart: `meta` (JSON `{id, taken_at, lat, lon}`) + `image` (JPEG) | `{"ok": true, "id": ..., "duplicate": bool}`; a repeat `id` is ignored |
 | `GET /media/faces/{person_id}.jpg` | public | JPEG or `404` |
@@ -213,6 +222,19 @@ Finds the patient (for "I help **Mary** remember…").
 | `GET /dashboard/` | The judge dashboard (static files) |
 
 ---
+
+## Passive-recall environment variables
+
+| Var | Default | Meaning |
+|---|---|---|
+| `CALYPSO_STT` | `grok` if `XAI_API_KEY` set, else `fake` | Server speech-to-text for segments without `local_text` |
+| `CALYPSO_SUMMARIZER` | `claude` if `ANTHROPIC_API_KEY` set, else `fake` | Day-event summaries |
+| `CALYPSO_DETECTOR` | `claude` if `ANTHROPIC_API_KEY` set, else `fake` | Recall intent detection |
+| `CALYPSO_SUMMARY_MODEL` | `claude-sonnet-4-6` | Model for summaries |
+| `CALYPSO_DETECTOR_MODEL` | `claude-haiku-4-5` | Model for recall detection (the code reads this name, not `CALYPSO_DETECT_MODEL`) |
+| `CALYPSO_HOME_LABEL` | `Home` | Visit place name that counts as home for "quiet day at home" |
+| `PUCK_SPOOL_DIR` | `/var/lib/calypso-puck/spool` (example) | Puck on-disk segment spool |
+| `PUCK_SPOOL_MAX_MB` | `512` | Spool cap; oldest segments are evicted past it |
 
 ## Running it
 
