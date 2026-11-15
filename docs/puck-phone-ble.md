@@ -12,13 +12,18 @@ starting with `Calypso`. Every payload is one UTF-8 JSON object per write or not
 The puck sends `who` only when someone is speaking (roughly every `OFFLINE_SEGMENT_MS`). The phone treats the
 speaker as gone after **20 s** with no `who` message. On `enroll_start` the puck records one clip, ending on silence
 or after a cap, and saves it under `gallery/patient/`. The phone gives up on a clip after **15 s** without
-`enroll_saved` or `enroll_failed`.
+`enroll_saved` or `enroll_failed`. On a timeout the phone sends `enroll_cancel`, then retries the same `index`; the
+puck must send `enroll_recording` for each `enroll_start` before its `enroll_saved`/`enroll_failed`, because the
+phone ignores a `saved`/`failed` that arrives first after a timeout (it could belong to the abandoned clip).
+
+Keep every notification payload under about 180 bytes. A `who` or `events` message larger than the negotiated ATT
+MTU minus 3 is truncated and the phone drops it as invalid JSON (iOS and BlueZ usually negotiate 185 or more).
 
 ## What the phone does
 
 The iOS app scans for the service, connects, and subscribes to `who` and `events`. It shows a "Talking with" card on
 Today: a name only when `status` is `identified` with a non-empty `display_name`; `uncertain` and `unknown` both
-show neutral "Getting to know someone new…" wording, even if a candidate name is present. Messages whose
+show neutral "Someone new" / "Getting to know them…" wording, even if a candidate name is present. Messages whose
 `person_id` is `"patient"` (or a known patient) are dropped, since the patient is never the subject of a card.
 During onboarding ("Teach your voice") it writes `enroll_start` for each of five sentences, waits for
 `enroll_saved`, and sends `enroll_finish` after the last one without waiting for `enroll_done`. Unknown JSON

@@ -20,7 +20,10 @@ protocol PuckLink: AnyObject {
     func startScanning()
     /// Connects to the puck found by `startScanning`.
     func connect()
-    /// Reconnects to a previously paired puck without a new scan.
+    /// True once a puck has been paired on this phone.
+    var hasRemembered: Bool { get }
+    /// Reconnects to a previously paired puck without a new scan. Does nothing while already connected,
+    /// connecting or scanning, so it is safe to call on every foreground.
     func reconnectRemembered()
     func send(_ command: PuckCommand)
     func disconnect()
@@ -68,6 +71,8 @@ final class PuckConnection: ObservableObject {
         #endif
         return PuckConnection(link: useFake ? FakePuckLink(arguments: arguments) : BLEPuckLink())
     }
+
+    var hasRemembered: Bool { link.hasRemembered }
 
     func startScanning() { link.startScanning() }
     func connect() { link.connect() }

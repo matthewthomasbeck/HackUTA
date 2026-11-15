@@ -52,9 +52,14 @@ final class FakePuckLink: PuckLink {
         beginConnecting()
     }
 
+    var hasRemembered: Bool { defaults.bool(forKey: Self.pairedKey) }
+
     func reconnectRemembered() {
-        guard defaults.bool(forKey: Self.pairedKey) else { return }
-        beginConnecting()
+        guard hasRemembered else { return }
+        switch state {
+        case .connected, .connecting, .scanning: return
+        default: beginConnecting()
+        }
     }
 
     func send(_ command: PuckCommand) {
@@ -87,35 +92,37 @@ final class FakePuckLink: PuckLink {
     }
 
     /// Sarah every 4 s for 16 s, silence for 25 s, unknown every 4 s for 12 s, repeat. Pinned: one state forever.
+    /// The task holds the link only while a tick runs, so a released link ends the loop instead of spinning.
     private func runSpeakerLoop() {
         speakerTask = Task { [weak self] in
+            var tick = 0
             while !Task.isCancelled {
-                if let pinned = self?.pinnedSpeaker {
-                    await self?.pulse(pinned, every: 4, for: .infinity)
-                } else {
-                    await self?.pulse(.sarah, every: 4, for: 16)
-                    await self?.pause(25)
-                    await self?.pulse(.unknown, every: 4, for: 12)
-                }
+                guard let nanos = self?.runTick(tick) else { return }
+                tick += 1
+                try? await Task.sleep(nanoseconds: nanos)
             }
         }
     }
 
-    private func pulse(_ speaker: FakeSpeaker, every period: Double, for duration: Double) async {
-        var elapsed = 0.0
-        while elapsed < duration, !Task.isCancelled {
-            switch speaker {
-            case .sarah:
-                onWho?(WhoIsTalking(status: .identified, personId: "p_sarah", displayName: "Sarah",
-                                    relationship: "daughter", score: 0.81))
-            case .unknown:
-                onWho?(WhoIsTalking(status: .unknown))
-            case .none:
-                break
-            }
-            await pause(period)
-            elapsed += period
+    /// Emits tick `n` of the script and returns how long to wait before the next one.
+    private func runTick(_ n: Int) -> UInt64 {
+        let cycle: [(FakeSpeaker, Double)]
+        if let pinnedSpeaker {
+            cycle = [(pinnedSpeaker, 4)]
+        } else {
+            cycle = Array(repeating: (.sarah, 4), count: 4) + [(.none, 25)] + Array(repeating: (.unknown, 4), count: 3)
         }
+        let (speaker, wait) = cycle[n % cycle.count]
+        switch speaker {
+        case .sarah:
+            onWho?(WhoIsTalking(status: .identified, personId: "p_sarah", displayName: "Sarah",
+                                relationship: "daughter", score: 0.81))
+        case .unknown:
+            onWho?(WhoIsTalking(status: .unknown))
+        case .none:
+            break
+        }
+        return UInt64(wait * timeScale * 1_000_000_000)
     }
 
     private func pause(_ seconds: Double) async {

@@ -88,4 +88,30 @@ final class VoiceEnrollmentTests: XCTestCase {
         XCTAssertEqual(e.phase, .ready)
         XCTAssertNil(e.next())
     }
+
+    func testPuckLostResetsRecordingAndFailed() {
+        var recording = VoiceEnrollment()
+        _ = recording.start()
+        recording.puckLost()
+        XCTAssertEqual(recording.phase, .ready)
+        var failed = VoiceEnrollment(index: 2, phase: .failed("x"))
+        failed.puckLost()
+        XCTAssertEqual(failed.phase, .ready)
+        XCTAssertEqual(failed.index, 2)
+        var saved = VoiceEnrollment(index: 1, phase: .saved)
+        saved.puckLost()
+        XCTAssertEqual(saved.phase, .saved)
+    }
+
+    func testLateEventFromTimedOutAttemptIsNotCreditedToRetry() {
+        var e = VoiceEnrollment()
+        _ = e.start()
+        e.timeout()
+        _ = e.retry()
+        e.apply(.saved(index: 0))
+        XCTAssertEqual(e.phase, .recording)
+        e.apply(.recording(index: 0))
+        e.apply(.saved(index: 0))
+        XCTAssertEqual(e.phase, .saved)
+    }
 }

@@ -9,14 +9,13 @@ struct VoiceSetupView: View {
     @State private var enrollment = VoiceEnrollment()
     /// Bumped on every start so the 15 s timeout restarts, even for a retry of the same sentence.
     @State private var attempt = 0
-    @State private var pulse = false
     @ScaledMetric(relativeTo: .title2) private var disc: CGFloat = 64
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
 
     private var finished: Bool { enrollment.phase == .finished }
-    /// Without a puck there is nothing to read to; a finished voice is already saved, so it stays on screen.
-    private var needsPuck: Bool { !puck.isConnected && enrollment.phase == .ready && !finished }
+    /// Without a puck there is nothing to read to, whatever the phase; a saved sentence or voice stays on screen.
+    private var needsPuck: Bool { !puck.isConnected && enrollment.phase != .saved && !finished }
 
     var body: some View {
         OnboardingScaffold(step: .voiceSetup, onBack: back) {
@@ -49,10 +48,18 @@ struct VoiceSetupView: View {
             // always passes through `recording` first and a restart is already `.recording` locally.
             if let event { enrollment.apply(event) }
         }
+        .onChange(of: puck.isConnected) { _, connected in
+            // Otherwise a dropped puck leaves "Listening…" / "Try again" looping with nothing to hear.
+            if !connected { enrollment.puckLost() }
+        }
+        .onChange(of: enrollment.phase) { _, phase in announce(phase) }
         .task(id: enrollment.phase == .recording ? attempt : -1) {
             guard enrollment.phase == .recording else { return }
             try? await Task.sleep(for: .seconds(VoiceEnrollment.clipTimeout))
-            if !Task.isCancelled { enrollment.timeout() }
+            guard !Task.isCancelled else { return }
+            enrollment.timeout()
+            // Tell the puck to drop the clip we gave up on, so it can't answer the retry.
+            puck.send(.enrollCancel)
         }
     }
 
@@ -91,20 +98,7 @@ struct VoiceSetupView: View {
     @ViewBuilder private var statusPill: some View {
         switch enrollment.phase {
         case .recording:
-            HStack(spacing: 12) {
-                CalypsoIcon(.soundWave, size: 36)
-                Text("Listening…").calypsoFont(.bodyStrong)
-            }
-            .foregroundStyle(Color.ink)
-            .frame(maxWidth: .infinity, minHeight: 56)
-            .background(Color.periwinkleMist, in: RoundedRectangle(cornerRadius: 24))
-            .opacity(pulse || reduceMotion ? 1 : 0.55)
-            .onAppear {
-                guard !reduceMotion else { return }
-                withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { pulse = true }
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Listening")
+            ListeningPill()
         case .saved:
             StatusCheckPill(label: "Sentence saved")
         case .failed(let message):
@@ -177,6 +171,16 @@ struct VoiceSetupView: View {
 
     // MARK: Actions
 
+    /// Status changes aren't focus changes, so VoiceOver would otherwise stay silent.
+    private func announce(_ phase: VoiceEnrollment.Phase) {
+        switch phase {
+        case .recording: AccessibilityNotification.Announcement("Listening").post()
+        case .saved: AccessibilityNotification.Announcement("Sentence saved").post()
+        case .failed(let message): AccessibilityNotification.Announcement(message).post()
+        case .ready, .finished: break
+        }
+    }
+
     private func start() { run(enrollment.start()) }
 
     private func retry() { run(enrollment.retry()) }
@@ -201,6 +205,29 @@ struct VoiceSetupView: View {
     private func back() {
         cancelIfRecording()
         onBack()
+    }
+}
+
+/// The "Listening…" pill. Owns its pulse so every sentence's pill animates, not only the first.
+private struct ListeningPill: View {
+    @State private var pulse = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        HStack(spacing: 12) {
+            CalypsoIcon(.soundWave, size: 36)
+            Text("Listening…").calypsoFont(.bodyStrong)
+        }
+        .foregroundStyle(Color.ink)
+        .frame(maxWidth: .infinity, minHeight: 56)
+        .background(Color.periwinkleMist, in: RoundedRectangle(cornerRadius: 24))
+        .opacity(pulse || reduceMotion ? 1 : 0.55)
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { pulse = true }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Listening")
     }
 }
 

@@ -42,6 +42,32 @@ final class FakePuckLinkTests: XCTestCase {
         link.disconnect()
     }
 
+    func testReconnectWhileConnectedKeepsStateAndSpeaker() async {
+        let link = makeLink(pinned: .sarah)
+        let puck = PuckConnection(link: link)
+        defaults.set(true, forKey: "puckPaired")
+        XCTAssertTrue(puck.hasRemembered)
+        puck.reconnectRemembered()
+        try? await Task.sleep(nanoseconds: 150_000_000)
+        XCTAssertTrue(puck.isConnected)
+        XCTAssertNotNil(puck.speaker)
+        puck.reconnectRemembered()
+        XCTAssertTrue(puck.isConnected)
+        XCTAssertNotNil(puck.speaker)
+        puck.disconnect()
+    }
+
+    func testReleasedLinkStopsItsSpeakerLoop() async {
+        var link: FakePuckLink? = makeLink(pinned: .sarah)
+        weak var weakLink = link
+        defaults.set(true, forKey: "puckPaired")
+        link?.reconnectRemembered()
+        try? await Task.sleep(nanoseconds: 150_000_000)
+        link = nil
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertNil(weakLink)
+    }
+
     func testEnrollmentEvents() async {
         let link = makeLink(pinned: FakeSpeaker.none)
         defaults.set(true, forKey: "puckPaired")

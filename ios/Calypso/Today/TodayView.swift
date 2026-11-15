@@ -12,6 +12,7 @@ struct TodayView: View {
     @State private var pickingDay = false
     @State private var openedPerson: Person?
     @State private var showingSomeoneNew = false
+    @State private var pairingPuck = false
 
     @EnvironmentObject private var puck: PuckConnection
 
@@ -58,6 +59,7 @@ struct TodayView: View {
                     }
                 }
                 .sheet(isPresented: $showingSomeoneNew) { SomeoneNewSheet() }
+                .sheet(isPresented: $pairingPuck) { ConnectPuckSheet() }
         }
         .tint(Color.periwinkleDeep)
     }
@@ -68,7 +70,7 @@ struct TodayView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     header
                     if isToday {
-                        TalkingToCard(presentation: talkingTo, action: openTalkingTo)
+                        TalkingToCard(presentation: talkingTo, action: canOpenTalkingTo ? openTalkingTo : nil)
                             .padding(.horizontal, 24)
                             .padding(.top, 8)
                     }
@@ -98,11 +100,19 @@ struct TodayView: View {
 
     private static let endNoteID = "today.endNote"
 
+    /// A speaker the backend has no record of (an unloaded list, a `puck_<name>` id) has no profile to open.
+    private var canOpenTalkingTo: Bool {
+        if case .person(let person) = talkingTo { return people.contains { $0.id == person.id } }
+        return true
+    }
+
     private func openTalkingTo() {
         switch talkingTo {
         case .person(let person): openedPerson = person
         case .someoneNew: showingSomeoneNew = true
-        case .notConnected: puck.reconnectRemembered()
+        case .notConnected:
+            // Nothing paired yet: offer pairing instead of a reconnect that can't do anything.
+            if puck.hasRemembered { puck.reconnectRemembered() } else { pairingPuck = true }
         case .quiet: break
         }
     }

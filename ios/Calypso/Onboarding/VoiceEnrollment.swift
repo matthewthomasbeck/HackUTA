@@ -19,6 +19,9 @@ struct VoiceEnrollment: Equatable {
 
     private(set) var index = 0
     private(set) var phase = Phase.ready
+    /// Set when a clip timed out: the puck may still answer it late, so the retry ignores `saved`/`failed` until
+    /// it has announced its own `recording`.
+    private var awaitingRecording = false
 
     init() {}
 
@@ -42,6 +45,10 @@ struct VoiceEnrollment: Equatable {
     /// fire-and-forget (see `next`).
     mutating func apply(_ event: PuckEvent) {
         guard phase == .recording else { return }
+        if awaitingRecording {
+            if case .recording(let i) = event, i == index { awaitingRecording = false }
+            return
+        }
         switch event {
         case .saved(let i) where i == index:
             phase = .saved
@@ -56,6 +63,18 @@ struct VoiceEnrollment: Equatable {
     mutating func timeout() {
         guard phase == .recording else { return }
         phase = .failed(Self.genericFailure)
+        awaitingRecording = true
+    }
+
+    /// The puck dropped mid-flow: whatever was recording or had failed starts over from `ready` on reconnect.
+    mutating func puckLost() {
+        switch phase {
+        case .recording, .failed:
+            phase = .ready
+            awaitingRecording = false
+        case .ready, .saved, .finished:
+            break
+        }
     }
 
     /// Moves past a saved sentence. After the last one this asks the puck to finish and is `finished` at once:

@@ -43,11 +43,9 @@ struct ConnectPuckView: View {
     var onBack: () -> Void
     var onNext: () -> Void
     @EnvironmentObject private var puck: PuckConnection
-    @ScaledMetric(relativeTo: .title2) private var disc: CGFloat = 64
-    @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        let presentation = ConnectPuckPresentation.make(state: puck.state)
         let connected = puck.isConnected
         OnboardingScaffold(step: .connectPuck, onBack: onBack) {
             VStack(alignment: .leading, spacing: 8) {
@@ -57,7 +55,7 @@ struct ConnectPuckView: View {
                         Mascot(pose: .presenting, size: .s, shadow: true)
                             .alignmentGuide(.top) { $0[.bottom] }
                     }
-                statusCard(presentation, connected: connected)
+                PuckStatusCard()
                 Spacer(minLength: 24)
                 if connected {
                     CalypsoButton("Continue", action: onNext)
@@ -68,10 +66,20 @@ struct ConnectPuckView: View {
             .padding(.horizontal, 24)
             .frame(maxHeight: .infinity)
         }
-        .animation(.default, value: puck.state)
+        .animation(reduceMotion ? nil : .default, value: puck.state)
     }
+}
 
-    private func statusCard(_ presentation: ConnectPuckPresentation, connected: Bool) -> some View {
+/// The puck's status card: its disc, name and state, and the button for what the link is doing. Shared by the
+/// onboarding step and the sheet Today opens when no puck was ever paired.
+struct PuckStatusCard: View {
+    @EnvironmentObject private var puck: PuckConnection
+    @ScaledMetric(relativeTo: .title2) private var disc: CGFloat = 64
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        let presentation = ConnectPuckPresentation.make(state: puck.state)
+        let connected = puck.isConnected
         // The callout wraps, so switch on AX sizes instead of `ViewThatFits`.
         let layout = typeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
@@ -116,6 +124,31 @@ struct ConnectPuckView: View {
     }
 }
 
+/// Today's sheet for a phone that never paired a puck (it skipped onboarding's step, or onboarded earlier): the
+/// same status card, closing itself once the puck connects.
+struct ConnectPuckSheet: View {
+    @EnvironmentObject private var puck: PuckConnection
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        PaperSheet {
+            Text("Connect your puck")
+                .calypsoFont(.title)
+                .foregroundStyle(Color.ink)
+                .accessibilityAddTraits(.isHeader)
+            Text("Turn on your Calypso⁻¹ puck and keep it close to your phone.")
+                .calypsoFont(.body)
+                .foregroundStyle(Color.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+            PuckStatusCard()
+            CalypsoButton("Not now", kind: .quiet) { dismiss() }
+        }
+        .onChange(of: puck.isConnected) { _, connected in
+            if connected { dismiss() }
+        }
+    }
+}
+
 #Preview {
     ConnectPuckView(onBack: {}, onNext: {})
         .environmentObject(PuckConnection(link: FakePuckLink()))
@@ -125,4 +158,9 @@ struct ConnectPuckView: View {
     ConnectPuckView(onBack: {}, onNext: {})
         .environmentObject(PuckConnection(link: FakePuckLink()))
         .dynamicTypeSize(.accessibility5)
+}
+
+#Preview("Sheet") {
+    Color.paper.sheet(isPresented: .constant(true)) { ConnectPuckSheet() }
+        .environmentObject(PuckConnection(link: FakePuckLink()))
 }

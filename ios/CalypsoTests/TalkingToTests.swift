@@ -108,7 +108,7 @@ final class TalkingToTests: XCTestCase {
         XCTAssertEqual(TalkingToPresentation.notConnected.title, "Not connected")
         XCTAssertEqual(TalkingToPresentation.notConnected.subtitle, "Keep your puck close to your phone.")
         XCTAssertEqual(TalkingToPresentation.notConnected.accessibilityLabel,
-                       "Your puck is not connected. Keep your puck close to your phone. Tap to reconnect.")
+                       "Your puck is not connected. Keep your puck close to your phone. Tap to connect.")
         XCTAssertFalse(TalkingToPresentation.notConnected.isLive)
     }
 }

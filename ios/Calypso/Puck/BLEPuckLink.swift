@@ -21,6 +21,10 @@ final class BLEPuckLink: NSObject, PuckLink {
     private var control: CBCharacteristic?
     private var pendingAction: (() -> Void)?
     private var wantsConnection = false
+    private var timeoutTask: Task<Void, Never>?
+    /// Without these a missing or silent puck would leave "Looking…" / "Connecting…" spinning forever.
+    private static let scanTimeout: TimeInterval = 15
+    private static let connectTimeout: TimeInterval = 15
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -34,11 +38,21 @@ final class BLEPuckLink: NSObject, PuckLink {
 
     func connect() {
         guard let peripheral, case .found = state else { return }
-        open(peripheral)
+        open(peripheral, timeout: Self.connectTimeout)
+    }
+
+    var hasRemembered: Bool { rememberedID != nil }
+
+    private var rememberedID: UUID? {
+        defaults.string(forKey: Self.rememberedKey).flatMap(UUID.init(uuidString:))
     }
 
     func reconnectRemembered() {
-        guard let id = defaults.string(forKey: Self.rememberedKey).flatMap(UUID.init(uuidString:)) else { return }
+        guard let id = rememberedID else { return }
+        switch state {
+        case .connected, .connecting, .scanning: return
+        default: break
+        }
         pendingAction = { [weak self] in
             guard let self, let central = self.central else { return }
             guard let known = central.retrievePeripherals(withIdentifiers: [id]).first else { return }
@@ -55,6 +69,7 @@ final class BLEPuckLink: NSObject, PuckLink {
     }
 
     func disconnect() {
+        timeoutTask?.cancel()
         wantsConnection = false
         pendingAction = nil
         central?.stopScan()
@@ -77,15 +92,39 @@ final class BLEPuckLink: NSObject, PuckLink {
     private func beginScan() {
         state = .scanning
         central?.scanForPeripherals(withServices: [PuckUUID.service])
+        failIfStillBusy(after: Self.scanTimeout, message: "We couldn't find your puck. Make sure it is on and close by.")
     }
 
-    private func open(_ peripheral: CBPeripheral) {
+    /// Moves a link still `.scanning` / `.connecting` after `seconds` to `.failed`.
+    private func failIfStillBusy(after seconds: TimeInterval, message: String) {
+        timeoutTask?.cancel()
+        timeoutTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            guard !Task.isCancelled, let self else { return }
+            switch self.state {
+            case .scanning, .connecting:
+                self.central?.stopScan()
+                self.wantsConnection = false
+                if let peripheral = self.peripheral { self.central?.cancelPeripheralConnection(peripheral) }
+                self.state = .failed(message)
+            default: break
+            }
+        }
+    }
+
+    /// `timeout` is nil for reconnects, which wait until the puck is back in range.
+    private func open(_ peripheral: CBPeripheral, timeout: TimeInterval? = nil) {
         central?.stopScan()
         self.peripheral = peripheral
         peripheral.delegate = self
         wantsConnection = true
         state = .connecting
         central?.connect(peripheral)
+        if let timeout {
+            failIfStillBusy(after: timeout, message: "Couldn't connect to the puck.")
+        } else {
+            timeoutTask?.cancel()
+        }
     }
 
     /// Maps the Bluetooth radio state to a link state; nil means no change (`.poweredOn`, transient states).
@@ -112,6 +151,11 @@ extension BLEPuckLink: @preconcurrency CBCentralManagerDelegate {
         } else if central.state == .poweredOn {
             if state == .bluetoothOff || state == .unauthorized { state = .idle }
             runPendingIfPoweredOn()
+            // After a Bluetooth power cycle the old peripheral is stale: fetch it again and resume.
+            if wantsConnection, state == .idle, let id = peripheral?.identifier,
+               let known = central.retrievePeripherals(withIdentifiers: [id]).first {
+                open(known)
+            }
         }
     }
 
@@ -142,7 +186,10 @@ extension BLEPuckLink: @preconcurrency CBCentralManagerDelegate {
 
 extension BLEPuckLink: @preconcurrency CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
-        guard let service = peripheral.services?.first(where: { $0.uuid == PuckUUID.service }) else { return }
+        guard error == nil, let service = peripheral.services?.first(where: { $0.uuid == PuckUUID.service }) else {
+            state = .failed("This puck is missing a feature. Update its software.")
+            return
+        }
         peripheral.discoverCharacteristics([PuckUUID.who, PuckUUID.control, PuckUUID.events], for: service)
     }
 
@@ -156,6 +203,7 @@ extension BLEPuckLink: @preconcurrency CBPeripheralDelegate {
             state = .failed("This puck is missing a feature. Update its software.")
             return
         }
+        timeoutTask?.cancel()
         defaults.set(peripheral.identifier.uuidString, forKey: Self.rememberedKey)
         let name = peripheral.name ?? "Calypso Puck"
         state = .connected(name: name)

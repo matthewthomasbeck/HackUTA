@@ -69,7 +69,7 @@ enum TalkingToPresentation: Equatable {
         case .quiet:
             return "Right now it’s quiet. I’ll show who you’re talking with."
         case .notConnected:
-            return "Your puck is not connected. Keep your puck close to your phone. Tap to reconnect."
+            return "Your puck is not connected. Keep your puck close to your phone. Tap to connect."
         }
     }
 
@@ -114,7 +114,7 @@ struct TalkingToCard: View {
         }
     }
 
-    private var showsChevron: Bool { presentation.isLive }
+    private var showsChevron: Bool { presentation.isLive && action != nil }
 
     private var card: some View {
         let shape = RoundedRectangle(cornerRadius: 16)
@@ -142,8 +142,16 @@ struct TalkingToCard: View {
         .overlay { border(shape) }
         .contentShape(shape)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(presentation.accessibilityLabel)
+        .accessibilityLabel(label)
         .accessibilityAddTraits(action != nil && presentation != .quiet ? .isButton : [])
+    }
+
+    /// A person with no profile to open reads without "Opens …".
+    private var label: String {
+        if case .person = presentation, action == nil {
+            return "Talking with " + [presentation.title, presentation.subtitle].compactMap { $0 }.joined(separator: ", ") + "."
+        }
+        return presentation.accessibilityLabel
     }
 
     private var background: Color {
@@ -247,8 +255,9 @@ private struct LiveDot: View {
             .frame(width: 12, height: 12)
             .opacity(dimmed ? 0.35 : 1)
             .onAppear { dimmed = !reduceMotion }
-            .onChange(of: reduceMotion) { _, reduce in dimmed = !reduce }
             .animation(reduceMotion ? nil : .easeInOut(duration: 1).repeatForever(autoreverses: true), value: dimmed)
+            // A running repeatForever isn't stopped by dropping the modifier, so rebuild the dot instead.
+            .id(reduceMotion)
             .accessibilityHidden(true)
     }
 }
