@@ -13,6 +13,7 @@
 		03A60D1110FF7C2BEC8282A4 /* FamilyInvite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8751105924CDD3FC29E760CE /* FamilyInvite.swift */; };
 		05B34E775C53A4E7B8743C53 /* PeoplePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FBD8A67C07EB46E613D7F9F /* PeoplePresentationTests.swift */; };
 		064661FD9AFB1256F1112965 /* MomentCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA7E994FE48D2107E9B5BC3 /* MomentCard.swift */; };
+		06EB51948CE21FD738F4E73B /* BLEPuckLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C797C3D6ECB309A57E97CF5D /* BLEPuckLinkTests.swift */; };
 		0B92D28E1121C6A3B27DB62E /* ComponentsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221385F83789EE45B9C7A7F3 /* ComponentsTests.swift */; };
 		0B9E793E6CC3519125895CE1 /* PhotoTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A48544A88801A6AC7BE05C /* PhotoTile.swift */; };
 		0D64A7131DA04B382C0F8687 /* CallBlock.swift in Sources */ = {isa = PBXBuildFile; fileRef = F74889272C3B35A07E7533FA /* CallBlock.swift */; };
@@ -91,6 +92,7 @@
 		EA59C67737D4B673E42E12C0 /* card.json in Resources */ = {isa = PBXBuildFile; fileRef = DD27CA6990D892953719D4B1 /* card.json */; };
 		ECCD5911526611BE8E7CC2E5 /* DayPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E330351A31673814846B7D47 /* DayPresentationTests.swift */; };
 		EDC9AC698844006B2323993D /* PuckMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14F65908C7B78824738663F2 /* PuckMessages.swift */; };
+		EEEA420146FFEFCCBC8E3CE1 /* BLEPuckLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 916073FA042EFCBB4272AD53 /* BLEPuckLink.swift */; };
 		F3FA10055E7A8ADA7C07BE90 /* OFL-Nunito.txt in Resources */ = {isa = PBXBuildFile; fileRef = 05BDE8C999D8C72BB74C5FF0 /* OFL-Nunito.txt */; };
 		F67E312763B60B576CB146DE /* ContactPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A4ADF1D3D9EF0A14A8B3C2C /* ContactPicker.swift */; };
 		FF3AA5B2C38D4CF0D8F76AAD /* PeopleListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66C4426D34E7133D06233BDD /* PeopleListView.swift */; };
@@ -161,6 +163,7 @@
 		8E2318AF52E2B55954D629B9 /* PersonPhone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonPhone.swift; sourceTree = "<group>"; };
 		8F342471DA69D019603CCF54 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		90AC15038E2C32668688A5FC /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		916073FA042EFCBB4272AD53 /* BLEPuckLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEPuckLink.swift; sourceTree = "<group>"; };
 		97D056F448444649B322B97E /* FakePuckLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FakePuckLinkTests.swift; sourceTree = "<group>"; };
 		998AFCC2F781DF2228746AC0 /* DaySwitcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaySwitcher.swift; sourceTree = "<group>"; };
 		9B79343FDC0FDB82875BCAAF /* PersonChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonChip.swift; sourceTree = "<group>"; };
@@ -181,6 +184,7 @@
 		C000207E3BE110C95A3CC700 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		C1D8BD76689F7B9700767D06 /* PlaceRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceRow.swift; sourceTree = "<group>"; };
 		C330ABECFE9A5CE74E8391AE /* MeetCompanionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetCompanionView.swift; sourceTree = "<group>"; };
+		C797C3D6ECB309A57E97CF5D /* BLEPuckLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEPuckLinkTests.swift; sourceTree = "<group>"; };
 		CB00D30C88C8102CB6EFEA94 /* CalypsoTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CalypsoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CCC8E90F0AA08BAC56087EB2 /* GroupCallHowToView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupCallHowToView.swift; sourceTree = "<group>"; };
 		DD27CA6990D892953719D4B1 /* card.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = card.json; sourceTree = "<group>"; };
@@ -224,6 +228,7 @@
 		24037F260A7F573B41DCBF79 /* CalypsoTests */ = {
 			isa = PBXGroup;
 			children = (
+				C797C3D6ECB309A57E97CF5D /* BLEPuckLinkTests.swift */,
 				E5404021D99ED1C31032DF14 /* CallRequestTests.swift */,
 				221385F83789EE45B9C7A7F3 /* ComponentsTests.swift */,
 				AFA318F059492AB2C1179647 /* ContactBuilderTests.swift */,
@@ -387,6 +392,7 @@
 		DC405298867515DF0BFB055A /* Puck */ = {
 			isa = PBXGroup;
 			children = (
+				916073FA042EFCBB4272AD53 /* BLEPuckLink.swift */,
 				8B394DB93F50F6959D486214 /* FakePuckLink.swift */,
 				77D0632F32E2DA9967A3A650 /* PuckLink.swift */,
 				14F65908C7B78824738663F2 /* PuckMessages.swift */,
@@ -546,6 +552,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				06EB51948CE21FD738F4E73B /* BLEPuckLinkTests.swift in Sources */,
 				23EE01EDD97EBB76BB7BC6E8 /* CallRequestTests.swift in Sources */,
 				0B92D28E1121C6A3B27DB62E /* ComponentsTests.swift in Sources */,
 				03523954E6FF5DA23FF86B05 /* ContactBuilderTests.swift in Sources */,
@@ -572,6 +579,7 @@
 				C186C8026759B4A7F67F12A9 /* AddContactView.swift in Sources */,
 				25B6D628C4A6C7E4F920AA99 /* AllSetView.swift in Sources */,
 				1F0F7BCDA52952DC3D3A10A0 /* Avatar.swift in Sources */,
+				EEEA420146FFEFCCBC8E3CE1 /* BLEPuckLink.swift in Sources */,
 				1ECE490FD83D5D6A1B20D3F2 /* BackButton.swift in Sources */,
 				0D64A7131DA04B382C0F8687 /* CallBlock.swift in Sources */,
 				0083C1B62CB500210F8072FC /* CallRequest.swift in Sources */,

@@ -61,8 +61,12 @@ final class PuckConnection: ObservableObject {
 
     /// Fake on the simulator or with `-fakePuck`; the real CoreBluetooth link otherwise.
     static func make(arguments: [String] = ProcessInfo.processInfo.arguments) -> PuckConnection {
-        // Task 2: return BLEPuckLink() on device unless `-fakePuck` is present.
-        PuckConnection(link: FakePuckLink(arguments: arguments))
+        #if targetEnvironment(simulator)
+        let useFake = true
+        #else
+        let useFake = arguments.contains("-fakePuck")
+        #endif
+        return PuckConnection(link: useFake ? FakePuckLink(arguments: arguments) : BLEPuckLink())
     }
 
     func startScanning() { link.startScanning() }

@@ -23,6 +23,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 struct CalypsoApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @AppStorage("onboarded") private var onboarded = false
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var puck = PuckConnection.make()
 
     var body: some Scene {
         WindowGroup {
@@ -35,7 +37,11 @@ struct CalypsoApp: App {
                     OnboardingView()
                 }
             }
+            .environmentObject(puck)
             .preferredColorScheme(.light)
+            .onChange(of: scenePhase, initial: true) { _, phase in
+                if phase == .active, onboarded { puck.reconnectRemembered() }
+            }
         }
         .onChange(of: onboarded) { _, done in
             if done { delegate.startVisitSync() }
