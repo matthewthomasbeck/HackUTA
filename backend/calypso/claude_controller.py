@@ -193,7 +193,7 @@ class ClaudeController:
                 text += f", your {relationship}"
             effects.speech.append(text + ".")
             effects.cards.append(Card(kind="identity", title=name,
-                lines=([f"{patient}'s {relationship}"] if relationship else [])
+                lines=[f"{patient}'s {relationship}" if relationship else ""]  # slot 0 = relationship
                       + (person.get("memories") or person.get("facts", []))[:3]))
             session.group_announced.add(person_id)
         return effects
@@ -519,7 +519,7 @@ class ClaudeController:
             if relationship and patient_name and not relationship.casefold().startswith((patient_name + "'s ").casefold()):
                 relationship = f"{patient_name}'s {relationship}"
             effects.cards.append(Card(kind="identity", title=title,
-                lines=([relationship] if relationship else []) + (person.get("memories") or person.get("facts", []))[:3]))
+                lines=[relationship or ""] + (person.get("memories") or person.get("facts", []))[:3]))
         elif name == "show_learning":
             if session.learning_count < 3:
                 raise ValueError("Wait for three learning frames")
