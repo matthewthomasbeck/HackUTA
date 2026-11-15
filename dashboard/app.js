@@ -302,7 +302,7 @@
       case "day": return S.days ? `${S.days.length} moments today` : `${S.counts["day.built"] || 0} builds`;
       case "agent": return S.call ? `${callLabel(S.call)} · ${S.participants.size} seen` : S.lastCallEnded ? `last call ${clock(S.lastCallEnded)}` : "waiting for a call";
       case "ctrl": return lastLat("ctrl") != null ? `controller · ${Math.round(lastLat("ctrl"))} ms` : "waiting";
-      case "recog": return S.recognizeCount ? `face + voice · ${S.recognizeCount}` : "waiting";
+      case "recog": return S.recognizeCount ? `face · ${S.recognizeCount}` : "waiting";
       case "recall": {
         const best = bestRecall();
         if (best) return `best ${fmt(best.score)} ${best.score >= recallMin() ? "≥" : "<"} ${fmt(recallMin())}`;
@@ -433,8 +433,8 @@
       h("div", { class: "participant-top" }, avatar,
         h("div", { class: "participant-text" }, h("div", { class: "participant-name" }, name), h("div", { class: "small soft" }, detail)),
         h("span", { class: `tag ${tagCls}` }, tag)),
-      scored && scoreBar("Face", p.face && p.face.score, p.th.face_match),
-      scored && scoreBar("Voice", p.voice && p.voice.score, p.th.voice_match));
+      // Calls identify people by face only, so only the face meter is shown.
+      scored && scoreBar("Face", p.face && p.face.score, p.th.face_match));
   }
 
   // Chert names the caller "chert-bridge-<call id>"; show who they are instead.
@@ -572,7 +572,7 @@
       case "puck.processed": return `${(p.utterance_ids || []).length} utterance(s)`;
       case "puck.failed": return p.error || "failed";
       case "puck.health": return `queue ${p.queue_depth} · ${p.ms_per_segment != null ? Math.round(p.ms_per_segment) + " ms/seg" : p.sound_backend}`;
-      case "recognize": return (p.faces || []).map((f) => `${f.status === "identified" ? nameOf(f.person_id) || "known" : f.status} · face ${fmt((f.face_top3 || [])[0]?.score)}`).join(", ") || "voice only";
+      case "recognize": return (p.faces || []).map((f) => `${f.status === "identified" ? nameOf(f.person_id) || "known" : f.status} · face ${fmt((f.face_top3 || [])[0]?.score)}`).join(", ") || "no face in frame";
       case "recall.detect": return p.intent ? `${p.intent.intent}${p.intent.query ? ` · “${p.intent.query}”` : ""}` : "";
       case "recall.search": return bestRecall() ? `best ${fmt(bestRecall().score)}` : "no matches";
       case "card.queued": case "card.shown": return (p.card && p.card.title) || p.title || "card";
