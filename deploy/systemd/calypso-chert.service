@@ -1,0 +1,21 @@
+[Unit]
+Description=Calypso Chert FaceTime connector
+Wants=network-online.target calypso-media.service
+After=network-online.target calypso-media.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=/root/HackUTA/agent
+EnvironmentFile=/etc/calypso/media.env
+Environment=PATH=/opt/calypso-runtime/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/bin
+ExecStart=/opt/calypso-runtime/node/bin/node /opt/calypso-runtime/chert/node_modules/@trychert/facetime/dist/src/cli/main.js dev --agent calypso-stage1 --env-file /etc/calypso/media.env
+Restart=always
+RestartSec=15
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

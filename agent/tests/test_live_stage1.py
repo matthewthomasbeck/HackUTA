@@ -165,8 +165,11 @@ async def test_audio_segments_one_utterance_and_suppresses_output_echo():
     for _ in range(41):  # 820 ms of silence ends the utterance
         speech.feed(b"\0\0" * 320)
     assert await task == "Sarah"
+    assert speech.last_wav == recorded[0]
     with wave.open(BytesIO(recorded[0]), "rb") as wav:
         assert wav.getframerate() == 16000 and wav.getnchannels() == 1
+    assert await speech.listen(timeout_s=0) is None
+    assert speech.last_wav is None
 
 
 @pytest.mark.asyncio
