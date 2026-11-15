@@ -120,6 +120,7 @@ CREATE TABLE IF NOT EXISTS day_events (
   photo_ids TEXT NOT NULL DEFAULT '[]'
 );
 CREATE INDEX IF NOT EXISTS idx_events_start ON day_events(start_ts);
+CREATE TABLE IF NOT EXISTS dirty_days (day TEXT PRIMARY KEY, marked_at TEXT NOT NULL);
 """
 
 

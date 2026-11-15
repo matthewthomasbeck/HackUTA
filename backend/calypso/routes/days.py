@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends
 
 from .. import db
 from ..auth import require_token
-from ..bus import emit
 from ..config import Settings
+from ..day_builder import rebuild_day
 from ..deps import get_conn, get_settings
 from ..models import DayEvent, iso_utc
 from ..timeutil import local_day_bounds, parse_iso
@@ -40,7 +40,5 @@ def get_events(day: date, conn: sqlite3.Connection = Depends(get_conn),
 @router.post("/{day}/rebuild")
 def rebuild(day: date, conn: sqlite3.Connection = Depends(get_conn),
             settings: Settings = Depends(get_settings)) -> dict:
-    """M1: no-op that reports the current events. Task 7 runs the day builder here."""
-    n = len(events_for_day(conn, day, settings.tz))
-    emit("day.built", {"day": day.isoformat(), "events": n, "stub": True})
+    n = len(rebuild_day(conn, day, settings))
     return {"ok": True, "day": day.isoformat(), "events": n}

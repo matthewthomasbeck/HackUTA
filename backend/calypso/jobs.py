@@ -19,6 +19,7 @@ import httpx
 from . import db
 from .bus import emit
 from .config import Settings
+from .day_builder import DEBOUNCE_S, mark_day_dirty, rebuild_day, rebuild_dirty_days
 from .identity import ModelUnavailable
 from .identity.audio import AudioError
 from .identity.vectors import best_scores, ranked
@@ -38,6 +39,9 @@ class InlineJobs:
             func(*args)
         except Exception:
             _log.exception("inline job %s failed", func.__name__)
+
+    def enqueue_in(self, delay_s: float, func: Callable, *args: Any) -> None:
+        self.enqueue(func, *args)  # no clock to wait on: run now
 
 
 class RQJobs:
@@ -60,6 +64,10 @@ class RQJobs:
         )
 
 
+    def enqueue_in(self, delay_s: float, func: Callable, *args: Any) -> None:
+        self.queue.enqueue_in(timedelta(seconds=delay_s), f"{func.__module__}.{func.__name__}", *args)
+
+
 def get_jobs(settings: Settings):
     if settings.jobs == "rq":
         return RQJobs(settings.redis_url, settings.rq_queue)
@@ -80,10 +88,6 @@ def notify(settings: Settings, stage: str, payload: dict) -> None:
         )
     except httpx.HTTPError as exc:  # the dashboard missing one event must not fail the job
         _log.warning("could not post %s event to the API: %s", stage, exc)
-
-
-def mark_day_dirty(conn, day: date) -> None:
-    """Task 4 replaces this: flag the day's timeline for rebuilding."""
 
 
 def attribute_speaker(conn, wav: bytes, settings: Settings) -> str | None:
@@ -155,6 +159,10 @@ def process_segment(segment_uuid: str, wav_path: str) -> list[str]:
         try:
             local_day = parse_iso(seg["ts_start"]).astimezone(ZoneInfo(settings.tz)).date()
             mark_day_dirty(conn, local_day)
+            if settings.jobs == "rq":
+                get_jobs(settings).enqueue_in(DEBOUNCE_S, rebuild_dirty_days, None)
+            else:
+                rebuild_day(conn, local_day, settings)
         except Exception:
             _log.exception("mark_day_dirty failed for %s", segment_uuid)
         Path(wav_path).unlink(missing_ok=True)  # audio is never kept
