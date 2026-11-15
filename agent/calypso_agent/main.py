@@ -37,8 +37,8 @@ class Config:
     def from_env(cls, env=None):
         env = os.environ if env is None else env
         mode = env.get("CALYPSO_CALL_MODE")
-        if mode not in {"setup", "group", "recognize"}:
-            raise ValueError("Set CALYPSO_CALL_MODE=setup, recognize or group; automatic patient routing is not enabled")
+        if mode not in {"setup", "group", "recognize", "auto"}:
+            raise ValueError("Set CALYPSO_CALL_MODE=setup, recognize, auto or group; automatic patient routing is not enabled")
         missing = [name for name in ("CALYPSO_BACKEND_URL", "CALYPSO_API_TOKEN", "XAI_API_KEY") if not env.get(name)]
         if missing:
             raise ValueError("Missing environment variables: " + ", ".join(missing))
@@ -65,6 +65,7 @@ async def run_call(ctx, config):
     effect_lock = asyncio.Lock()
     selected_identity = config.participant_id
     needs_crops = False
+    active_mode = "recognize" if config.mode == "auto" else config.mode
     dialogue_done = False
     last_progress = None
     caller_phone = None
@@ -95,10 +96,13 @@ async def run_call(ctx, config):
             stopped.set()
 
     async def apply(effects):
-        nonlocal needs_crops, dialogue_done
-        needs_crops = effects.get("needs_face_crops", False)
-        dialogue_done = effects.get("done", False)
+        nonlocal needs_crops, dialogue_done, active_mode
         async with effect_lock:
+            if dialogue_done:
+                return True
+            active_mode = effects.get("mode") or active_mode
+            needs_crops = effects.get("needs_face_crops", False)
+            dialogue_done = effects.get("done", False)
             for card in effects.get("cards", []):
                 publisher.scheduler.push(Card.model_validate(card))
             if dialogue_done and effects.get("cards"):
@@ -111,7 +115,7 @@ async def run_call(ctx, config):
     async def frame(image):
         nonlocal needs_crops, last_progress
         crop = await samples.add(image)
-        if config.mode == "setup":
+        if active_mode == "setup":
             progress = samples.progress
             if not dialogue_done:
                 publisher.camera_status = (f"Camera: {progress}/3 clear face samples" if progress else
@@ -123,7 +127,7 @@ async def run_call(ctx, config):
                 crops = await samples.collect()
                 needs_crops = False
                 await apply(await gateway.event("camera_ready", face_jpegs_b64=[b64(c) for c in crops]))
-        if ready.is_set() and config.mode in {"group", "recognize"}:
+        if ready.is_set() and not dialogue_done and active_mode in {"group", "recognize"}:
             # Empty input also clears the server's consecutive-frame debounce.
             effects = await gateway.event("frame", jpeg_b64=b64(crop) if crop else None)
             # Frame events may request a newcomer question. The server enforces
@@ -150,9 +154,20 @@ async def run_call(ctx, config):
         await wait_bridge_ready(ctx.room,
             confirmed_bridge=lambda: wait_chert_bridge(selected_identity))
         await gateway.start(config.mode, selected_identity, config.outcome, caller_phone=caller_phone, controlled=config.controlled)
-        if await apply(await gateway.event("start")):
-            return
+        started = time.monotonic()
+        initial = await gateway.event("start")
+        if config.mode == "auto":
+            async def finish_recognition_window():
+                await asyncio.sleep(max(0, 5 - (time.monotonic() - started)) + 0.1)
+                while not dialogue_done and active_mode == "recognize":
+                    if await apply(await gateway.event("recognition_timeout")):
+                        return
+                    if active_mode == "recognize":
+                        await asyncio.sleep(0.25)
+            spawn(finish_recognition_window())
         ready.set()
+        if await apply(initial):
+            return
         while not stopped.is_set() and not dialogue_done:
             text = await speech.listen()
             sentence_end = time.monotonic()
@@ -162,7 +177,7 @@ async def run_call(ctx, config):
                 crops = await samples.collect()
             except ValueError:
                 crops = []
-            voice = getattr(speech, "last_wav", None) if text and config.mode != "recognize" else None
+            voice = getattr(speech, "last_wav", None) if text and active_mode != "recognize" else None
             effects = await gateway.event("utterance" if text else "silence",
                 text=text, face_jpegs_b64=[b64(crop) for crop in crops],
                 voice_wav_b64=b64(voice) if voice else None)
@@ -196,7 +211,7 @@ async def run_call(ctx, config):
         spawn(publisher.run())
         participant = await ctx.wait_for_participant(identity=selected_identity)
         selected_identity = participant.identity
-        if config.mode == "setup":
+        if config.mode in {"setup", "auto"}:
             caller_phone = await resolve_caller_phone(selected_identity)
             log.info("verified_caller_phone_available=%s", bool(caller_phone))
         log.info("Claude media transport: mode=%s, participant=%s", config.mode, selected_identity)

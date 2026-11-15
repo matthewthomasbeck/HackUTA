@@ -59,3 +59,7 @@ real speech have not yet passed live acceptance.
 Use `CALYPSO_CALL_MODE=recognize` for single-relative recognition with one brief opening greeting.
 Real matching is the default; fixtures require `CALYPSO_CONTROLLED_RECOGNITION=true`.
 See [the recognition guide](../docs/returning-relative-test.md) for limitations and live acceptance.
+
+Use `CALYPSO_CALL_MODE=auto` for a five-second face-only check followed by either
+a matched identity/hang-up instruction or the existing enrollment conversation.
+See the recognition guide for timing and acceptance tests.
