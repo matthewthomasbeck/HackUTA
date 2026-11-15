@@ -196,16 +196,16 @@ def _height(blocks, gap=GAP):
     return sum(h for h, _ in blocks) + gap * max(len(blocks) - 1, 0)
 
 
-def _first_fit(*candidates):
+def _first_fit(bottom, *candidates):
     for blocks in candidates:
-        if _height(blocks) <= BOTTOM - TOP:
+        if _height(blocks) <= bottom - TOP:
             return blocks
     return candidates[-1]
 
 
-def _stack(image, blocks, *, top=TOP, gap=GAP, center=True):
+def _stack(image, blocks, *, top=TOP, gap=GAP, center=True, bottom=BOTTOM):
     blocks = [b for b in blocks if b]
-    y = top + max((BOTTOM - top - _height(blocks, gap)) // 2, 0) if center else top
+    y = top + max((bottom - top - _height(blocks, gap)) // 2, 0) if center else top
     draw = ImageDraw.Draw(image)
     for height, paint in blocks:
         paint(image, draw, y)
@@ -224,40 +224,55 @@ def _photo(card, images):
     return next((images[url] for url in card.image_urls if url in images), None)
 
 
-def _fit_with_body(build):
-    """Try the full layout, then drop the gull, then shorten the body text."""
-    return _first_fit(build(True, 3), *(build(False, n) for n in (3, 2, 1, 0)))
+def _fit_with_body(build, bottom, heads=(2,)):
+    """Try the full layout, then drop the gull, shorten the body, and only then the line-0 headline."""
+    first = heads[0]
+    return _first_fit(bottom, build(True, 3, first), *(build(False, n, first) for n in (3, 2, 1, 0)),
+                      *(build(False, 0, head) for head in heads[1:]))
+
+
+def _name(title):
+    """Display 96 when the whole name fits in 2 lines; otherwise Title 72 before any truncation."""
+    if len(wrapped(title, _face("display"), TEXT_W)) <= 2:
+        return _text([title], "display", INK, max_lines=2)
+    return _text([title], "title", INK, max_lines=3)
 
 
 # --- Card layouts ---
 
-def _identity(image, card, images):
+def _identity(image, card, images, bottom):
     photo = _photo(card, images)
     hero = _mat(400, 440, photo) if photo is not None else _picture("avatar-known.png")
-    name = _text([card.title], "display", INK, max_lines=2)
+    name = _name(card.title)
     relation = _text(card.lines[:1], "headline", PERIWINKLE_DEEP, max_lines=2)
-    def build(gull, body):
+    def build(gull, body, _head):
         rest = _text(card.lines[1:], "body", INK_SOFT, max_lines=body) if body else None
         return [hero, name, relation, rest, _picture("gull-presenting-120.png") if gull else None]
-    _stack(image, _fit_with_body(build))
+    _stack(image, _fit_with_body(build, bottom), bottom=bottom)
 
 
-def _learning(image, card, images):
-    def build(gull, body):
+def _learning(image, card, images, bottom):
+    def build(gull, body, _head):
         return [_picture("avatar-unknown.png"),
                 _text([card.title], "title", INK, max_lines=3),
                 _text(card.lines, "body", INK_SOFT, max_lines=body) if body else None,
                 _picture("gull-thinking-120.png") if gull else None]
-    _stack(image, _fit_with_body(build))
+    _stack(image, _fit_with_body(build, bottom), bottom=bottom)
 
 
 def _moment(line):
-    """A white row: optional Apricot time tag, then the rest in Body Strong."""
+    """A white row: optional Apricot time tag, the summary in Body Strong, then any place in Body.
+
+    Backend rows read "9:30 AM · {place} · {summary}"; the summary is what happened, so it goes first.
+    """
     match = _TIME.match(line.strip())
     tag, rest = (match.group(1), match.group(2)) if match else (None, line.strip())
-    strong, caption = _face("strong"), _face("caption")
-    lines = fit_lines([rest], strong, TEXT_W - 48, 2) if rest else []
-    height = 32 + (64 if tag else 0) + (4 if tag and lines else 0) + 64 * len(lines)
+    strong, body, caption = _face("strong"), _face("body"), _face("caption")
+    parts = [part.strip() for part in rest.split(" · ")] if rest else []
+    summary, place = (parts[-1], " · ".join(parts[:-1])) if parts else ("", "")
+    lines = fit_lines([summary], strong, TEXT_W - 48, 2) if summary else []
+    where = fit_lines([place], body, TEXT_W - 48, 1) if place else []
+    height = 32 + (64 if tag else 0) + (4 if tag and lines else 0) + 64 * (len(lines) + len(where))
 
     def paint(image, draw, top, boat=False):
         draw.rounded_rectangle((MARGIN, top, MARGIN + TEXT_W - 1, top + height - 1), radius=24, fill=CARD)
@@ -270,22 +285,23 @@ def _moment(line):
                 art = _art("boat.png")
                 image.paste(art, (MARGIN + TEXT_W - 24 - art.width, y + 32 - art.height // 2), art)
             y += 68
-        _draw_lines(draw, lines, strong, 64, x=MARGIN + 24, y=y, width=TEXT_W - 48, fill=INK)
+        y += _draw_lines(draw, lines, strong, 64, x=MARGIN + 24, y=y, width=TEXT_W - 48, fill=INK)
+        _draw_lines(draw, where, body, 64, x=MARGIN + 24, y=y, width=TEXT_W - 48, fill=INK_SOFT)
     return height, paint, bool(tag)
 
 
-def _today(image, card, images):
+def _today(image, card, images, bottom):
     if not card.lines:
         _stack(image, [_picture("gull-resting-200.png"),
                        _text([card.title], "title", INK, max_lines=2),
-                       _text([QUIET_DAY], "body", INK_SOFT, max_lines=3)])
+                       _text([QUIET_DAY], "body", INK_SOFT, max_lines=3)], bottom=bottom)
         return
     draw = ImageDraw.Draw(image)
     y = _stack(image, [_text([card.title], "title", INK, max_lines=2, align="left")], center=False) + GAP
     rows = []
     for line in card.lines:
         row = _moment(line)
-        if y + row[0] > BOTTOM:
+        if y + row[0] > bottom:
             break  # drop the rest; never shrink text
         rows.append((y, row))
         y += row[0] + 16
@@ -293,7 +309,7 @@ def _today(image, card, images):
         paint(image, draw, top, boat=tagged and index == len(rows) - 1)
 
 
-def _captions(image, card):
+def _captions(image, card, bottom):
     page = _PAGE.search(card.title)
     heading = card.title[:page.start()] if page else card.title
     _stack(image, [_text([heading], "caption", PERIWINKLE_DEEP, max_lines=1, align="left"),
@@ -301,7 +317,7 @@ def _captions(image, card):
            gap=24, center=False)
     if page:
         _, paint = _text([f"{page.group(1)} of {page.group(2)}"], "caption", INK_SOFT, max_lines=1)
-        paint(image, ImageDraw.Draw(image), BOTTOM - _leading("caption"))
+        paint(image, ImageDraw.Draw(image), bottom - _leading("caption"))
 
 
 def _scene(height, layers):
@@ -316,27 +332,27 @@ def _put(name, x, y):
     return lambda image, draw, top: image.paste(art, (x, top + y), art)
 
 
-def _connecting(image):
+def _connecting(image, bottom):
     gull = _art("gull-sailing-400.png")
     waves_y = gull.height - 10
     scene = _scene(waves_y + _art("scene-waves.png").height,
                    [_put("scene-waves.png", 0, waves_y), _put("gull-sailing-400.png", (720 - gull.width) // 2, 0)])
-    _stack(image, [scene, _text([CONNECTING], "title", INK, max_lines=1)])
+    _stack(image, [scene, _text([CONNECTING], "title", INK, max_lines=1)], bottom=bottom)
 
 
-def _listening(image):
+def _listening(image, bottom):
     sun = lambda image, draw, top: draw.ellipse((480, top + 40, 599, top + 159), fill=APRICOT_CREAM)
     scene = _scene(525 + _art("scene-waves.png").height,
                    [sun, _put("scene-waves.png", 0, 525), _put("island-home.png", 378, 375),
                     _put("gull-lantern-300.png", 108, 306)])
-    _stack(image, [scene, _text([LISTENING], "headline", INK, max_lines=1)])
+    _stack(image, [scene, _text([LISTENING], "headline", INK, max_lines=1)], bottom=bottom)
 
 
 def _panel(card):
     """White panel, 4px Periwinkle Mist border: Caption title / Headline line 0 / Body rest."""
-    def build(body):
+    def build(body, head):
         inner = [_text([card.title], "caption", PERIWINKLE_DEEP, max_lines=2, x=88, width=544),
-                 _text(card.lines[:1], "headline", INK, max_lines=2, x=88, width=544),
+                 _text(card.lines[:1], "headline", INK, max_lines=head, x=88, width=544),
                  _text(card.lines[1:], "body", INK_SOFT, max_lines=body, x=88, width=544) if body else None]
         height = 96 + _height(inner, 24)
         def paint(image, draw, top):
@@ -347,35 +363,56 @@ def _panel(card):
     return build
 
 
-def _memory(image, card, images):
+HEADLINE_LINES = (5, 4, 3, 2)  # line 0 of a memory card keeps up to 5 lines while the stack fits
+
+
+def _memory(image, card, images, bottom):
     if card.title == CONNECTING:
-        return _connecting(image)
+        return _connecting(image, bottom)
     if card.title == LISTENING:
-        return _listening(image)
+        return _listening(image, bottom)
     if card.title.startswith(CAPTIONS):
-        return _captions(image, card)
+        return _captions(image, card, bottom)
     photo = _photo(card, images)
     if photo is not None:
-        def build(gull, body):
+        def build(gull, body, head):
             return [_text([card.title], "caption", PERIWINKLE_DEEP, max_lines=2),
                     _mat(TEXT_W, 440, photo),
-                    _text(card.lines[:1], "headline", INK, max_lines=2),
+                    _text(card.lines[:1], "headline", INK, max_lines=head),
                     _text(card.lines[1:], "body", INK_SOFT, max_lines=min(body, 2)) if body else None,
                     _picture("gull-holding-photo-120.png") if gull else None]
     else:
         panel = _panel(card)
-        def build(gull, body):
-            return [panel(body), _picture("gull-lantern-200.png") if gull else None]
-    _stack(image, _fit_with_body(build))
+        def build(gull, body, head):
+            return [panel(body, head), _picture("gull-lantern-200.png") if gull else None]
+    _stack(image, _fit_with_body(build, bottom, HEADLINE_LINES), bottom=bottom)
 
 
 LAYOUTS = {"identity": _identity, "learning": _learning, "today": _today, "memory": _memory}
 
 
-def render_portrait(card, images):
+def render_portrait(card, images, *, footer=0):
+    """`footer` reserves that many px above the wave strip (see `footer_height`)."""
     image = _shell()
-    LAYOUTS[card.kind](image, card, images)
+    LAYOUTS[card.kind](image, card, images, WAVE_Y - footer - 32)
     return image
+
+
+def _footer_tops(status, test):
+    top = WAVE_Y - 24
+    status_top = pill_top = None
+    if status:
+        top = status_top = top - 52
+    if test:
+        top = pill_top = top - (16 if status else 0) - 68
+    return top, status_top, pill_top
+
+
+def footer_height(status=None, test=False):
+    """Height `stamp_footer` paints over, so `render(..., footer=...)` can lay content out above it."""
+    if not status and not test:
+        return 0
+    return WAVE_Y - _footer_tops(status, test)[0]
 
 
 def stamp_footer(image, *, status=None, test=False):
@@ -384,12 +421,7 @@ def stamp_footer(image, *, status=None, test=False):
         return image
     draw = ImageDraw.Draw(image)
     caption = _face("caption")
-    top = WAVE_Y - 24
-    status_top = pill_top = None
-    if status:
-        top = status_top = top - 52
-    if test:
-        top = pill_top = top - (16 if status else 0) - 68
+    top, status_top, pill_top = _footer_tops(status, test)
     draw.rectangle((0, top, CALL_SIZE[0] - 1, WAVE_Y - 1), fill=PAPER)
     if status:
         lines = fit_lines([status], caption, TEXT_W, 1)
@@ -406,9 +438,9 @@ def stamp_footer(image, *, status=None, test=False):
     return image
 
 
-def render(card: Card, images: dict[str, Image.Image], *, size=(1280, 720)) -> Image.Image:
+def render(card: Card, images: dict[str, Image.Image], *, size=(1280, 720), footer=0) -> Image.Image:
     if size == CALL_SIZE:
-        return render_portrait(card, images)
+        return render_portrait(card, images, footer=footer)
     image = Image.new("RGB", (1280, 720), PAPER)
     image.paste(_art("header.png"), (0, 0), _art("header.png"))
     draw = ImageDraw.Draw(image)
@@ -496,8 +528,11 @@ def main():
     for name, (card, images) in cards.items():
         render(card, images, size=CALL_SIZE).save(out / f"{name}-portrait.png")
         render(card, images).save(out / f"{name}.png")
-    stamp_footer(render(cards["learning"][0], {}, size=CALL_SIZE),
-                 status="Learning faces · 3 samples", test=True).save(out / "learning-footer-portrait.png")
+    status = "Learning faces · 3 samples"
+    footer = footer_height(status, test=True)
+    for name, (card, images) in cards.items():
+        stamp_footer(render(card, images, size=CALL_SIZE, footer=footer),
+                     status=status, test=True).save(out / f"{name}-footer-portrait.png")
     idle_frame().save(out / "idle.png")
 
 

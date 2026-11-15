@@ -134,3 +134,102 @@ def test_long_hyphenated_name_breaks_after_the_hyphen():
     from calypso_agent.cards import _face, wrapped
     lines = wrapped("Margaret-Anne Whitfield", _face("display"), 624)
     assert lines[0] in ("Margaret-", "Margaret-Anne") and "".join(lines).replace(" ", "") == "Margaret-AnneWhitfield"
+
+
+# --- Final-review fixes: live footer room, line 0 growth, long names, today summaries ---
+
+from calypso_agent import cards as cards_module
+from calypso_agent.cards import WAVE_Y, footer_height
+
+LIVE_STATUS = "waiting for one clear face"
+
+
+def drawn_lines(monkeypatch, card, **kwargs):
+    seen = []
+    real = cards_module._draw_lines
+    def spy(draw, lines, *args, **kw):
+        seen.extend(lines)
+        return real(draw, lines, *args, **kw)
+    monkeypatch.setattr(cards_module, "_draw_lines", spy)
+    render(card, {}, size=CALL_SIZE, **kwargs)
+    return seen
+
+
+def test_footer_height_matches_what_stamp_footer_paints():
+    base = portrait(Card(kind="memory", title=CONNECTING, lines=[]))
+    for status, test in ((None, True), (LIVE_STATUS, False), (LIVE_STATUS, True)):
+        stamped = stamp_footer(base.copy(), status=status, test=test)
+        painted = ImageChops.difference(stamped, Image.new("RGB", CALL_SIZE, PAPER)).getbbox()
+        band_top = WAVE_Y - footer_height(status, test)
+        # The band fills [band_top, WAVE_Y) with Paper: nothing above it changes.
+        assert ImageChops.difference(stamped, base).getbbox()[1] >= band_top
+        assert painted is not None
+    assert footer_height() == 0 and footer_height(None, True) == 92 and footer_height(LIVE_STATUS, True) == 160
+
+
+@pytest.mark.parametrize("card", CARDS + [
+    Card(kind="memory", title=f"{CAPTIONS} · 1 of 2", lines=["word " * 12] * 7),
+    Card(kind="learning", title="Getting to know someone new…", lines=["Say their name and I’ll remember them. " * 4]),
+], ids=lambda c: f"{c.kind}-{c.title[:12]}")
+def test_live_footer_band_covers_no_content(card):
+    footer = footer_height(LIVE_STATUS, test=True)
+    image = render(card, {}, size=CALL_SIZE, footer=footer)
+    assert non_paper_bbox(image, (0, WAVE_Y - footer, 720, WAVE_Y)) is None
+
+
+def test_captions_page_indicator_survives_the_live_footer():
+    pages = caption_cards(" ".join(f"word{i}" for i in range(100)))
+    footer = footer_height(LIVE_STATUS, test=True)
+    image = stamp_footer(render(pages[0], {}, size=CALL_SIZE, footer=footer), status=LIVE_STATUS, test=True)
+    bottom = WAVE_Y - footer - 32
+    band = (48, bottom - 52, 672, bottom)
+    left, _, right, _ = non_paper_bbox(image, band)
+    assert abs((48 + left + 48 + right) / 2 - 360) < 12  # the centered "1 of N"
+
+
+def test_today_rows_stop_above_the_live_footer():
+    card = Card(kind="today", title="Your day so far", lines=[
+        "9:30 AM · Grocery shopping with Mom", "11:00 AM · Coffee with Sarah",
+        "12:30 PM · Lunch at home", "3:00 PM · A walk in the garden", "5:00 PM · Dinner with Tom"])
+    footer = footer_height(LIVE_STATUS, test=True)
+    image = render(card, {}, size=CALL_SIZE, footer=footer)
+    assert non_paper_bbox(image, (0, WAVE_Y - footer - 32, 720, WAVE_Y)) is None
+    assert non_paper_bbox(image, (48, 600, 672, WAVE_Y - footer - 32)) is not None  # rows still drawn
+
+
+def test_memory_line_zero_is_not_cut_while_there_is_room(monkeypatch):
+    saved = Card(kind="memory", title="Saved",
+                 lines=["Your introduction and memory are saved.", "Please hang up now."])
+    footer = footer_height(LIVE_STATUS, test=True)
+    lines = drawn_lines(monkeypatch, saved, footer=footer)
+    assert " ".join(lines).count("saved.") == 1 and not any(l.endswith("…") for l in lines)
+    recall = Card(kind="memory", title="Sarah", lines=[
+        "You baked cinnamon rolls together last Sunday and laughed about the flour everywhere.",
+        "She told you about her new job."])
+    joined = " ".join(drawn_lines(monkeypatch, recall))
+    assert "flour everywhere." in joined
+
+
+def test_memory_line_zero_still_truncates_when_huge(monkeypatch):
+    card = Card(kind="memory", title="Sarah", lines=["word " * 200])
+    lines = drawn_lines(monkeypatch, card)
+    assert any(l.endswith("…") for l in lines)
+
+
+def test_long_name_falls_back_to_title_size_before_truncating(monkeypatch):
+    for title in ("Margaret-Anne Whitfield", "Bartholomew Montgomery-Worthington"):
+        card = Card(kind="identity", title=title, lines=["Your friend"])
+        lines = drawn_lines(monkeypatch, card, footer=footer_height(LIVE_STATUS, test=True))
+        assert "".join(lines).replace(" ", "").startswith(title.replace(" ", ""))
+        assert not any(l.endswith("…") for l in lines)
+    short = drawn_lines(monkeypatch, Card(kind="identity", title="Sarah", lines=[]))
+    assert "Sarah" in short
+
+
+def test_today_row_shows_the_summary_before_the_place(monkeypatch):
+    card = Card(kind="today", title="Today", lines=[
+        "9:30 AM · Riverside Grocery on Main Street · Grocery shopping with Sarah"])
+    lines = drawn_lines(monkeypatch, card)
+    summary = next(i for i, l in enumerate(lines) if l.startswith("Grocery shopping"))
+    place = next(i for i, l in enumerate(lines) if l.startswith("Riverside"))
+    assert summary < place

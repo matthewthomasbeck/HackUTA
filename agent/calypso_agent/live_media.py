@@ -14,7 +14,7 @@ from livekit import rtc
 import numpy as np
 from PIL import Image
 
-from .cards import CALL_SIZE, CONNECTING, caption_cards, render, stamp_footer
+from .cards import CALL_SIZE, CONNECTING, caption_cards, footer_height, render, stamp_footer
 from .contract import Card
 
 log = logging.getLogger("calypso.camera")
@@ -202,12 +202,12 @@ class Publisher:
             card = self.pinned_card or card or caption
             key = (card.model_dump_json() if card else "idle", self.camera_status)
             if key != previous:
-                picture = render(card, {}, size=CALL_SIZE)
                 status = (
                     self.camera_status.replace("Camera: ", "").replace(" clear face samples", " face samples")
                     if self.camera_status
                     else None
                 )
+                picture = render(card, {}, size=CALL_SIZE, footer=footer_height(status, test=True))
                 stamp_footer(picture, status=status, test=True)
                 frame = rtc.VideoFrame(*CALL_SIZE, rtc.VideoBufferType.RGB24, picture.tobytes())
                 previous = key
