@@ -11,7 +11,7 @@ from livekit.agents import AgentServer, AutoSubscribe, JobContext, cli
 
 from .backend_client import b64
 from .gateway import GatewayClient
-from .caller_identity import resolve_caller_phone
+from .caller_identity import resolve_caller_phone, wait_chert_bridge
 from .contract import Card
 from .grok import GrokSpeech
 from .live_media import CameraSamples, Publisher, RoomSpeech, audio_frames, video_frames, wait_bridge_ready
@@ -143,7 +143,8 @@ async def run_call(ctx, config):
             spawn(audio_frames(track, speech))
 
     async def workflow():
-        await wait_bridge_ready(ctx.room)
+        await wait_bridge_ready(ctx.room,
+            confirmed_bridge=lambda: wait_chert_bridge(selected_identity))
         await gateway.start(config.mode, selected_identity, config.outcome, caller_phone=caller_phone, controlled=config.controlled)
         if await apply(await gateway.event("start")):
             return
