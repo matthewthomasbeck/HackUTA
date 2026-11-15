@@ -12,7 +12,7 @@ from livekit.agents import AgentServer, AutoSubscribe, JobContext, cli
 
 from .backend_client import b64
 from .gateway import GatewayClient
-from .caller_identity import resolve_caller_phone
+from .caller_identity import resolve_caller_phone, wait_chert_bridge
 from .contract import Card
 from .latency import fresh_cards, latency_ms
 from .grok import GrokSpeech
@@ -31,15 +31,14 @@ class Config:
     outcome: str = "learning"
     state_file: str = "data/stage1-enrollment.json"
     participant_id: str | None = None
+    controlled: bool = False
 
     @classmethod
     def from_env(cls, env=None):
         env = os.environ if env is None else env
-        if env.get("CALYPSO_STAGE1") != "true":
-            raise ValueError("Set CALYPSO_STAGE1=true to explicitly enable controlled test recognition")
         mode = env.get("CALYPSO_CALL_MODE")
-        if mode not in {"setup", "group"}:
-            raise ValueError("Set CALYPSO_CALL_MODE=setup or group; automatic patient routing is not enabled")
+        if mode not in {"setup", "group", "recognize"}:
+            raise ValueError("Set CALYPSO_CALL_MODE=setup, recognize or group; automatic patient routing is not enabled")
         missing = [name for name in ("CALYPSO_BACKEND_URL", "CALYPSO_API_TOKEN", "XAI_API_KEY") if not env.get(name)]
         if missing:
             raise ValueError("Missing environment variables: " + ", ".join(missing))
@@ -48,7 +47,8 @@ class Config:
             raise ValueError("STAGE1_RECOGNITION must be identified, learning, or uncertain")
         return cls(mode, env["CALYPSO_BACKEND_URL"], env["CALYPSO_API_TOKEN"], env["XAI_API_KEY"],
             outcome, env.get("STAGE1_STATE_FILE", "data/stage1-enrollment.json"),
-            env.get("STAGE1_PARTICIPANT_ID") or None)
+            env.get("STAGE1_PARTICIPANT_ID") or None,
+            env.get("CALYPSO_CONTROLLED_RECOGNITION", "false").lower() == "true")
 
 
 async def run_call(ctx, config):
@@ -123,7 +123,7 @@ async def run_call(ctx, config):
                 crops = await samples.collect()
                 needs_crops = False
                 await apply(await gateway.event("camera_ready", face_jpegs_b64=[b64(c) for c in crops]))
-        if ready.is_set() and config.mode == "group":
+        if ready.is_set() and config.mode in {"group", "recognize"}:
             # Empty input also clears the server's consecutive-frame debounce.
             effects = await gateway.event("frame", jpeg_b64=b64(crop) if crop else None)
             # Frame events may request a newcomer question. The server enforces
@@ -147,8 +147,9 @@ async def run_call(ctx, config):
             spawn(audio_frames(track, speech))
 
     async def workflow():
-        await wait_bridge_ready(ctx.room)
-        await gateway.start(config.mode, selected_identity, config.outcome, caller_phone=caller_phone)
+        await wait_bridge_ready(ctx.room,
+            confirmed_bridge=lambda: wait_chert_bridge(selected_identity))
+        await gateway.start(config.mode, selected_identity, config.outcome, caller_phone=caller_phone, controlled=config.controlled)
         if await apply(await gateway.event("start")):
             return
         ready.set()
@@ -161,7 +162,7 @@ async def run_call(ctx, config):
                 crops = await samples.collect()
             except ValueError:
                 crops = []
-            voice = getattr(speech, "last_wav", None) if text else None
+            voice = getattr(speech, "last_wav", None) if text and config.mode != "recognize" else None
             effects = await gateway.event("utterance" if text else "silence",
                 text=text, face_jpegs_b64=[b64(crop) for crop in crops],
                 voice_wav_b64=b64(voice) if voice else None)

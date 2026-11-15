@@ -302,7 +302,7 @@ async def test_gateway_transport_preserves_enrollment_and_closes_remote_session(
         assert request.headers["Authorization"] == "Bearer transport-token"
         body = json.loads(request.content) if request.content else None
         if request.url.path == "/agent/sessions":
-            assert body["controlled"] is True and body["mode"] == "setup"
+            assert body["controlled"] is False and body["mode"] == "setup"
             return httpx.Response(201, json={"session_id": "sid", "call_id": "cid"})
         if request.url.path.endswith("/events") and request.url.path != "/agent/events":
             assert body["kind"] == "utterance" and body["text"] == "Yes"
@@ -333,3 +333,80 @@ def test_portrait_captions_page_without_dropping_words():
         diff = ImageChops.difference(image, Image.new("RGB", CALL_SIZE, BACKGROUND))
         left, top, right, bottom = diff.getbbox()
         assert left >= 40 and right <= 680 and bottom <= 1100
+
+
+@pytest.mark.asyncio
+async def test_real_recognition_does_not_load_stored_fixture(tmp_path):
+    from calypso_agent.gateway import GatewayClient
+    path = tmp_path / "fixture.json"
+    path.write_text('invalid fixture must not be read')
+    def handler(request):
+        body = json.loads(request.content)
+        assert body["mode"] == "recognize"
+        assert body["controlled"] is False
+        assert body["enrolled_person_id"] is None
+        return httpx.Response(201, json={"session_id": "sid"})
+    async with httpx.AsyncClient(base_url="http://test", transport=httpx.MockTransport(handler)) as client:
+        gateway = GatewayClient("http://test", "token", path, client=client)
+        await gateway.start("recognize", "phone", "identified")
+
+
+def test_recognize_configuration_defaults_to_real_matching():
+    env = dict(CALYPSO_CALL_MODE="recognize", CALYPSO_BACKEND_URL="http://localhost",
+               CALYPSO_API_TOKEN="token", XAI_API_KEY="key")
+    assert not Config.from_env(env).controlled
+    env["CALYPSO_CONTROLLED_RECOGNITION"] = "true"
+    assert Config.from_env(env).controlled
+
+
+@pytest.mark.asyncio
+async def test_missing_bridge_metadata_waits_for_confirmed_call_api():
+    room = Events()
+    confirmed = asyncio.Event()
+    async def poll():
+        await confirmed.wait()
+        return "chert_call_api"
+    task = asyncio.create_task(wait_bridge_ready(room, timeout=1,
+        confirmed_bridge=poll))
+    await asyncio.sleep(0)
+    assert not task.done()  # prewarm/published tracks alone must not start greeting
+    confirmed.set()
+    assert await task == "chert_call_api"
+    assert not room.handlers["room_metadata_changed"]
+
+
+@pytest.mark.asyncio
+async def test_bridge_metadata_wins_without_waiting_for_video():
+    room = Events()
+    room.metadata = '{"chert_bridge_ready":true}'
+    assert await wait_bridge_ready(room, timeout=0.1,
+        confirmed_bridge=lambda: asyncio.Event().wait()) == "room_metadata"
+    assert not room.handlers["room_metadata_changed"]
+
+
+@pytest.mark.asyncio
+async def test_bridge_wait_cancellation_removes_listener_and_child_tasks():
+    room = Events()
+    task = asyncio.create_task(wait_bridge_ready(room,
+        confirmed_bridge=lambda: asyncio.Event().wait()))
+    await asyncio.sleep(0)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert not room.handlers["room_metadata_changed"]
+
+
+@pytest.mark.asyncio
+async def test_metadata_and_api_race_returns_once_and_cleans_both_waiters():
+    room = Events()
+    ended = asyncio.Event()
+    async def poll():
+        try:
+            room.metadata = '{"chert_bridge_ready":true}'
+            room.emit("room_metadata_changed")
+            return "chert_call_api"
+        finally:
+            ended.set()
+    source = await wait_bridge_ready(room, timeout=1, confirmed_bridge=poll)
+    assert source in {"room_metadata", "chert_call_api"}
+    assert ended.is_set() and not room.handlers["room_metadata_changed"]

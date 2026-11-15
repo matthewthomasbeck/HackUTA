@@ -99,10 +99,10 @@ int main() {
     std::cerr << "ncs2 init skipped/stub\n";
   }
 
-  if (!phone.init(cfg.bt_adapter, cfg.bt_peer_name)) {
-    std::cerr << "phone bluetooth init failed\n";
+  if (!phone.init(cfg.bt_adapter, cfg.bt_peer_name, cfg.who_drop_path)) {
+    std::cerr << "phone init failed\n";
   } else if (!phone.connect()) {
-    std::cerr << "phone bluetooth connect skipped/stub\n";
+    std::cerr << "phone connect skipped\n";
   }
 
   // Titanet-small on CPU; needs CALYPSO_SHERPA_ROOT at cmake time.
@@ -154,7 +154,7 @@ int main() {
 
   calypso::StateMachine sm(capture, link, models, phone,
                            cfg.offline_segment_ms, spool, clock,
-                           cfg.segment_ms);
+                           cfg.segment_ms, cfg.min_speech_rms);
   calypso::ConnectionListener listener(link, sm, cfg.connect_retry_sec,
                                        cfg.connection_check_sec,
                                        force_offline);

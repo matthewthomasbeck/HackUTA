@@ -96,7 +96,7 @@ bool load_config(const std::string& path, Config& out) {
   out.mode = parse_mode_setting(get("MODE"));
   out.chunk_ms = parse_int(get("CHUNK_MS"), 30);
   out.segment_ms = parse_int(get("SEGMENT_MS"), 3000);
-  out.offline_segment_ms = parse_int(get("OFFLINE_SEGMENT_MS"), 2000);
+  out.offline_segment_ms = parse_int(get("OFFLINE_SEGMENT_MS"), 3000);
   out.connect_retry_sec = parse_int(get("CONNECT_RETRY_SEC"), 5);
   out.connection_check_sec = parse_int(get("CONNECTION_CHECK_SEC"), 2);
   out.infer_backend = parse_infer_backend(get("INFER_BACKEND"));
@@ -116,7 +116,8 @@ bool load_config(const std::string& path, Config& out) {
     }
   }
   out.voice_match_threshold =
-      parse_float(get("VOICE_MATCH_THRESHOLD"), 0.55f);
+      parse_float(get("VOICE_MATCH_THRESHOLD"), 0.45f);
+  out.min_speech_rms = parse_float(get("MIN_SPEECH_RMS"), 0.02f);
   {
     const std::string d = get("PUCK_SPOOL_DIR");
     if (!d.empty()) {
@@ -126,6 +127,12 @@ bool load_config(const std::string& path, Config& out) {
   out.spool_max_mb = parse_int(get("PUCK_SPOOL_MAX_MB"), 512);
   out.bt_adapter = get("BT_ADAPTER");
   out.bt_peer_name = get("BT_PEER_NAME");
+  {
+    const std::string w = get("WHO_DROP_PATH");
+    if (!w.empty()) {
+      out.who_drop_path = w;
+    }
+  }
 
   return !out.backend_ip.empty() && out.backend_port != 0 &&
          !out.api_token.empty() && !out.mic_device.empty();

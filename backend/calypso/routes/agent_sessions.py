@@ -53,10 +53,13 @@ async def start(body: StartSession, request: Request):
             person = await api("GET", f"/people/{body.enrolled_person_id}")
             if person["is_patient"]:
                 raise HTTPException(422, "Patient cannot be a recognition fixture")
-        call = await api("POST", "/calls", {"kind": body.mode, "participants": [body.participant]})
+        call = await api("POST", "/calls", {"kind": "group" if body.mode == "recognize" else body.mode, "participants": [body.participant]})
     sid = uuid4().hex
     session = Session(sid, call["id"], body, patients[0])
     request.app.state.agent_sessions[sid] = session
+    # The call log stores recognize calls as kind "group"; tell the dashboard the real mode.
+    emit("agent.session", {"session_id": sid, "call_id": call["id"], "mode": body.mode,
+                           "controlled": body.controlled})
     return {"session_id": sid, "call_id": call["id"]}
 
 

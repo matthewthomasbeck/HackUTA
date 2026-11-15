@@ -25,7 +25,7 @@ CAMERA_PERMISSION = {"you may capture my face", "you can capture my face", "plea
 
 
 class StartSession(BaseModel):
-    mode: str = Field(pattern="^(setup|group)$")
+    mode: str = Field(pattern="^(setup|group|recognize)$")
     participant: str
     controlled: bool = False
     outcome: str = Field(default="learning", pattern="^(identified|learning|uncertain)$")
@@ -69,6 +69,7 @@ class Session:
     silence_count: int = 0
     learning_count: int = 0
     recognized_id: str | None = None
+    last_recognition_status: str | None = None
     emitted: set = field(default_factory=set)
     group_question_used: bool = False
     last_recall_card_at: float = 0.0
@@ -117,6 +118,9 @@ the introduction confirmation. On camera_ready, call save_intro to complete
 the already-confirmed introduction, acknowledge success and finish. Never claim
 capture or enrollment succeeded until the tool returns saved:true.
 Speak freely but briefly.
+In recognize mode: this is a single-relative recognition call. Stay silent, use
+show_identity only on backend-identified results, and never enroll or ask newcomer
+questions. Do not infer identity from the caller's name, phone, or conversation.
 In group calls: stay silent except one confirmation question for a newcomer.
 On identified events use show_identity. On learning events use show_learning.
 On uncertainty show nothing. In group calls, recall is handled automatically by
@@ -174,7 +178,7 @@ class ClaudeController:
         if event.kind == "silence":
             session.last_text = ""
             session.silence_count += 1
-            if session.config.mode == "group":
+            if session.config.mode in {"group", "recognize"}:
                 return effects
             if session.silence_count >= 2:
                 self.finish_setup(session, effects)
@@ -183,19 +187,36 @@ class ClaudeController:
             if session.started:
                 return effects
             session.started = True
-        if event.kind == "frame":
-            if session.config.mode != "group":
+            if session.config.mode == "recognize":
+                effects.cards = [Card(kind="learning", title="Looking for a familiar face…", lines=[])]
+                effects.speech = ["Hi, it's Calypso. One moment while I see who's here."]
+                return effects
+        # Opening identity is face-only. Caller speech may be logged, but may
+        # never identify someone or trigger model guesses in this workflow.
+        if session.config.mode == "recognize" and event.kind != "frame":
+            return effects
+        recognition_event = event.kind == "frame"
+        if recognition_event:
+            if session.config.mode not in {"group", "recognize"}:
                 return effects
             if not event.jpeg_b64:
                 session.learning_count = 0
-                session.recognized_id = None
+                # A missing crop is not contradictory identity evidence. Keep the
+                # last result; do not queue a new placeholder for a dropped frame.
+                if session.config.mode != "recognize":
+                    session.recognized_id = None
                 return effects
             response = await api("POST", "/recognize", {"face_jpeg_b64": event.jpeg_b64,
                 "exclude_patient": True, "participant_key": session.config.participant, "call_id": session.call_id})
             faces = response.get("faces", [])
             if len(faces) != 1:
                 session.learning_count = 0
-                session.recognized_id = None
+                if len(faces) > 1 or session.config.mode != "recognize":
+                    session.recognized_id = None
+                if len(faces) > 1 and session.config.mode == "recognize":
+                    if session.last_recognition_status != "uncertain":
+                        effects.cards = [Card(kind="learning", title="Not sure who this is yet…", lines=[])]
+                    session.last_recognition_status = "uncertain"
                 return effects
             result = faces[0]["result"]
             if session.config.controlled:
@@ -204,9 +225,15 @@ class ClaudeController:
                 if result["status"] == "identified" and not result["person_id"]:
                     result = {"status": "learning", "person_id": None}
             status = result["status"]
+            previous_status = session.last_recognition_status
+            session.last_recognition_status = status
             session.learning_count = session.learning_count + 1 if status == "learning" else 0
             session.recognized_id = result.get("person_id") if status == "identified" else None
             key = (status, session.recognized_id)
+            if status == "uncertain" and session.config.mode == "recognize":
+                if previous_status != "uncertain":
+                    effects.cards = [Card(kind="learning", title="Not sure who this is yet…", lines=[])]
+                return effects
             if status == "uncertain" or (status == "learning" and session.learning_count < 3) or key in session.emitted:
                 return effects
             event_data = {"recognition": result}
@@ -226,7 +253,7 @@ class ClaudeController:
         effects.done = session.done
         effects.enrolled_person_id = session.enrolled_id
         effects.needs_face_crops = session.awaiting_crops
-        if event.kind == "frame" and effects.cards:
+        if recognition_event and effects.cards:
             session.emitted.add(key)
         return effects
 
@@ -309,6 +336,8 @@ class ClaudeController:
         if name == "speak":
             if effects.speech:
                 raise ValueError("Wait for the caller after the current prompt")
+            if session.config.mode == "recognize":
+                raise ValueError("Recognition calls remain silent")
             text = str(args["text"]).strip()
             if session.config.mode == "setup" and not session.transcript:
                 patient_name = session.patient.get("name") or "your relative"
@@ -380,8 +409,12 @@ class ClaudeController:
             if person["is_patient"] or not person.get("name"):
                 raise ValueError("Patient or unnamed profile cannot be an identity card")
             title = ("Test profile: " if session.config.controlled else "") + person["name"]
+            relationship = person.get("relationship")
+            patient_name = session.patient.get("name")
+            if relationship and patient_name and not relationship.casefold().startswith((patient_name + "'s ").casefold()):
+                relationship = f"{patient_name}'s {relationship}"
             effects.cards.append(Card(kind="identity", title=title,
-                lines=([person["relationship"]] if person.get("relationship") else []) + (person.get("memories") or person.get("facts", []))[:3]))
+                lines=([relationship] if relationship else []) + (person.get("memories") or person.get("facts", []))[:3]))
         elif name == "show_learning":
             if session.learning_count < 3:
                 raise ValueError("Wait for three learning frames")

@@ -28,6 +28,17 @@ class CardScheduler:
         key = self._key(card)
         if key in self._queued or key in self._shown:
             return False
+        if card.kind == "identity":
+            # Placeholders carry no memory to read: an actual identity should not
+            # wait behind them. Real cards keep their minimum reading time.
+            self._queue = deque(c for c in self._queue if c.kind != "learning")
+            self._queued = {self._key(c) for c in self._queue}
+            if self._card is not None and self._card.kind == "learning":
+                self._card = None
+        elif card.kind == "learning":
+            # Only the most recent pending neutral state is relevant.
+            self._queue = deque(c for c in self._queue if c.kind != "learning")
+            self._queued = {self._key(c) for c in self._queue}
         self._queue.append(card.model_copy(deep=True))
         self._queued.add(key)
         return True

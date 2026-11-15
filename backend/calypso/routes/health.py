@@ -25,7 +25,7 @@ def stream(limit: int | None = Query(default=None, ge=1)) -> StreamingResponse:
 
 
 @router.get("/events/recent")
-def recent_events(limit: int = Query(default=100, ge=1, le=200)) -> list[dict]:
+def recent_events(limit: int = Query(default=100, ge=1, le=1000)) -> list[dict]:
     """The last events, so the dashboard can fill in on page load. No auth, like /stream."""
     return list(bus.recent)[-limit:]
 

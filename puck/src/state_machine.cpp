@@ -1,15 +1,31 @@
 #include "state_machine.hpp"
 
 #include <chrono>
+#include <cmath>
 #include <iostream>
 #include <thread>
 
 namespace calypso {
+namespace {
+
+// Mean absolute amplitude in [0, 1]. Cheap speech/silence gate.
+float clip_rms(const AudioChunk& clip) {
+  if (clip.pcm.empty()) {
+    return 0.f;
+  }
+  double sum = 0.0;
+  for (std::int16_t s : clip.pcm) {
+    sum += std::fabs(static_cast<double>(s) / 32768.0);
+  }
+  return static_cast<float>(sum / static_cast<double>(clip.pcm.size()));
+}
+
+}  // namespace
 
 StateMachine::StateMachine(Capture& capture, BackendLink& link, Models& models,
                            PhoneLink& phone, int offline_segment_ms,
                            SegmentSpool& spool, const ClockSource& clock,
-                           int segment_ms)
+                           int segment_ms, float min_speech_rms)
     : capture_(capture),
       link_(link),
       models_(models),
@@ -17,6 +33,7 @@ StateMachine::StateMachine(Capture& capture, BackendLink& link, Models& models,
       spool_(spool),
       segmenter_(segment_ms, clock),
       offline_buf_(offline_segment_ms),
+      min_speech_rms_(min_speech_rms > 0.f ? min_speech_rms : 0.02f),
       queue_(/*max_chunks=*/200) {}
 
 StateMachine::~StateMachine() {
@@ -110,6 +127,13 @@ void StateMachine::process_offline(const AudioChunk& chunk) {
     return;
   }
 
+  // Skip silence / noise — those embeddings look like "uncertain strangers".
+  const float rms = clip_rms(*clip);
+  if (rms < min_speech_rms_) {
+    std::cerr << "who is talking: (skip quiet clip rms=" << rms << ")\n";
+    return;
+  }
+
   ModelOutput out;
   if (!models_.infer(*clip, out)) {
     return;
@@ -119,11 +143,11 @@ void StateMachine::process_offline(const AudioChunk& chunk) {
   switch (out.who.status) {
     case WhoIsTalking::Status::Identified:
       std::cerr << "who is talking: " << out.who.display_name
-                << " (score=" << out.who.score << ")\n";
+                << " (score=" << out.who.score << " rms=" << rms << ")\n";
       break;
     case WhoIsTalking::Status::Uncertain:
       std::cerr << "who is talking: uncertain (best_score=" << out.who.score
-                << ")\n";
+                << " rms=" << rms << ")\n";
       break;
     case WhoIsTalking::Status::Unknown:
       std::cerr << "who is talking: unknown (no gallery / no embedding)\n";
