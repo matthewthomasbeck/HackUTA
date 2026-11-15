@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Person (Figma 20:668 named, 20:852 someone new). The system back button stays (tinted by the stack) so
-/// swipe-back keeps working. An unknown person is never titled "Unnamed visitor"; the nav title is empty.
+/// Person (Figma 20:668 named, 20:852 someone new). The navigation bar is hidden (the iOS 26 system back button
+/// is a glass circle) and the paper-cut "‹ People" button sits at the top of the content, as in Figma; swipe-back
+/// still works through `SwipeBack.swift`. An unknown person is never titled "Unnamed visitor".
 /// `startEditing` opens the edit-name sheet on appear (DEBUG `-screen edit-name-…` route).
 struct PersonDetailView: View {
     let client: APIClient?
@@ -13,6 +14,7 @@ struct PersonDetailView: View {
     @State private var error: String?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dismiss) private var dismiss
 
     init(client: APIClient?, person: Person, onUpdate: @escaping (Person) -> Void = { _ in },
          startEditing: Bool = false) {
@@ -28,6 +30,8 @@ struct PersonDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
+                BackButton("People") { dismiss() }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 if let name = person.name {
                     namedIdentity(name)
                     facts
@@ -51,9 +55,8 @@ struct PersonDetailView: View {
             .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 1), value: memories)
         }
         .background(Color.paper.ignoresSafeArea())
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.visible, for: .navigationBar)
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $editing) {
             EditNameSheet(initialName: draftName, onSave: { name in
                 draftName = name

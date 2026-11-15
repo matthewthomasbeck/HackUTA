@@ -24,7 +24,7 @@ struct PeopleListView: View {
                 .padding(.bottom, 24)
             }
             .background(Color.paper.ignoresSafeArea())
-            // Hidden at the root, but it gives the detail screen's system back button its "People" label.
+            // Hidden here and on the detail screen, which draws its own "‹ People" button.
             .navigationTitle("People")
             .toolbar(.hidden, for: .navigationBar)
             .refreshable { await load() }

@@ -59,7 +59,7 @@ enum ScreenRoute {
 }
 
 #if DEBUG
-/// Opens a person screen already pushed on a People stack, so the system back button shows as it does in the app.
+/// Opens a person screen already pushed on a People stack, so the back button and swipe-back work as in the app.
 private struct DebugPersonStack: View {
     let seed: Person
     var startEditing = false

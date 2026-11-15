@@ -49,6 +49,7 @@
 		AB157F26920A6951A4F16A1F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8F342471DA69D019603CCF54 /* Assets.xcassets */; };
 		AB2EA21093BD0A46F30EC14D /* Nunito-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 88929DA6DFCFA83507C98BB0 /* Nunito-SemiBold.ttf */; };
 		AB64BA5BA34F86A82DCC7527 /* DesignSystemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73B2520CB080608B20FAAD51 /* DesignSystemTests.swift */; };
+		ACCB1DFFBEF4264776D4FD03 /* SwipeBack.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED6FAFEF92E8AA73E9348CEC /* SwipeBack.swift */; };
 		B01F100A6D481A0F08E1CAA9 /* CalypsoButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE05A37936A65DEB8235E2F /* CalypsoButton.swift */; };
 		BBD2B5724BA6FD88872AC9AF /* NavHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CC9FE748068B7F226F25BD8 /* NavHeader.swift */; };
 		C186C8026759B4A7F67F12A9 /* AddContactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F63932741AF35C8CEF7253B /* AddContactView.swift */; };
@@ -58,6 +59,7 @@
 		CEAAA36EB67A5B215AEE6E8E /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9DE861182F214754D6B51F7 /* AccountView.swift */; };
 		D24756932D01B4EA00DE52F2 /* day_events.json in Resources */ = {isa = PBXBuildFile; fileRef = 7142BFC78178A9CE47212C61 /* day_events.json */; };
 		D7931FA2864863CDF0EB6EEF /* VisitSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67362F56F646B0C8A4C00B65 /* VisitSyncTests.swift */; };
+		E0504E073931D2EDF0374369 /* SwipeBackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAAF377C93B55D82528963B0 /* SwipeBackTests.swift */; };
 		E08C90366F8545608632D2F9 /* GroupCallHowToView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC8E90F0AA08BAC56087EB2 /* GroupCallHowToView.swift */; };
 		E5605C1A17A0FB6384AD6C27 /* Icon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528C68D5A8457E9E471591AD /* Icon.swift */; };
 		E9CD81B65AF90AC53D3B75BD /* Nunito-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 50B615A01F92611AEA9EC53C /* Nunito-Regular.ttf */; };
@@ -127,6 +129,7 @@
 		AFF0847AB5D7506F0D986E2A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B0FDFA825C90C750F94C441C /* SeaPathRail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeaPathRail.swift; sourceTree = "<group>"; };
 		B76503FD2834DAE360BCC268 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		BAAF377C93B55D82528963B0 /* SwipeBackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeBackTests.swift; sourceTree = "<group>"; };
 		BAB180B2E853CF7FA515B5C5 /* BackButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackButton.swift; sourceTree = "<group>"; };
 		C000207E3BE110C95A3CC700 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		C1D8BD76689F7B9700767D06 /* PlaceRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceRow.swift; sourceTree = "<group>"; };
@@ -138,6 +141,7 @@
 		EAB25557BFD3F2F40E9D0D2B /* PersonDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDetailView.swift; sourceTree = "<group>"; };
 		EBBB739A589A7F912F54233D /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
 		ECE05A37936A65DEB8235E2F /* CalypsoButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalypsoButton.swift; sourceTree = "<group>"; };
+		ED6FAFEF92E8AA73E9348CEC /* SwipeBack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeBack.swift; sourceTree = "<group>"; };
 		F26F48A3EF1D19ADF7191BD1 /* StepDots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepDots.swift; sourceTree = "<group>"; };
 		F88CAB202EF683EA5FCD9937 /* CalypsoTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalypsoTabBar.swift; sourceTree = "<group>"; };
 		FFFD5920901B83B310B84DF0 /* ModelsDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsDecodingTests.swift; sourceTree = "<group>"; };
@@ -165,6 +169,7 @@
 				FFFD5920901B83B310B84DF0 /* ModelsDecodingTests.swift */,
 				9FBD8A67C07EB46E613D7F9F /* PeoplePresentationTests.swift */,
 				619D8BAB1B9994414C0F8BFF /* PhotoSyncTests.swift */,
+				BAAF377C93B55D82528963B0 /* SwipeBackTests.swift */,
 				67362F56F646B0C8A4C00B65 /* VisitSyncTests.swift */,
 				9DCAAAEC1B328785E547F0C6 /* Fixtures */,
 			);
@@ -177,6 +182,7 @@
 				5366F45AA4CA4C56A2BBDECF /* Decoration.swift */,
 				039F204A3910A45258DDF7AC /* Mascot.swift */,
 				4B6BB8C1DAF0F0A34D244938 /* Palette.swift */,
+				ED6FAFEF92E8AA73E9348CEC /* SwipeBack.swift */,
 				C000207E3BE110C95A3CC700 /* Typography.swift */,
 				A6002101E8428F2BF4C99648 /* Components */,
 			);
@@ -458,6 +464,7 @@
 				825B335B54C2FAD38D5E3EB6 /* ModelsDecodingTests.swift in Sources */,
 				05B34E775C53A4E7B8743C53 /* PeoplePresentationTests.swift in Sources */,
 				A8E1CDB66CC2C3EA3B398103 /* PhotoSyncTests.swift in Sources */,
+				E0504E073931D2EDF0374369 /* SwipeBackTests.swift in Sources */,
 				D7931FA2864863CDF0EB6EEF /* VisitSyncTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -503,6 +510,7 @@
 				172F266470305939F3DBF943 /* ScreenRoute.swift in Sources */,
 				854097E7BA9CE31AF2EF996D /* SeaPathRail.swift in Sources */,
 				1BE05D2879186A107C092786 /* StepDots.swift in Sources */,
+				ACCB1DFFBEF4264776D4FD03 /* SwipeBack.swift in Sources */,
 				9CD912909AD1ACEC79350773 /* TodayView.swift in Sources */,
 				18CEFE84A165DAE4C8B55037 /* Typography.swift in Sources */,
 				4A5DE239414E7F74DD11EEBD /* VisitSync.swift in Sources */,
