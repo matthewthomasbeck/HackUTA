@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		03523954E6FF5DA23FF86B05 /* ContactBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFA318F059492AB2C1179647 /* ContactBuilderTests.swift */; };
+		05B34E775C53A4E7B8743C53 /* PeoplePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FBD8A67C07EB46E613D7F9F /* PeoplePresentationTests.swift */; };
 		064661FD9AFB1256F1112965 /* MomentCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA7E994FE48D2107E9B5BC3 /* MomentCard.swift */; };
 		0B92D28E1121C6A3B27DB62E /* ComponentsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221385F83789EE45B9C7A7F3 /* ComponentsTests.swift */; };
 		0B9E793E6CC3519125895CE1 /* PhotoTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A48544A88801A6AC7BE05C /* PhotoTile.swift */; };
@@ -34,6 +35,7 @@
 		591BFE8A725BCE6C9EC2FF06 /* PaperCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFDA5A290A662F37DB597DB8 /* PaperCard.swift */; };
 		7293061DC2F18B0188E77157 /* ComponentsSpecimen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8738171C3568BB59FCF89B46 /* ComponentsSpecimen.swift */; };
 		75824C05C7BF96024F1E27A3 /* HeroPhoto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F5A886F2AD7621F08FA030F /* HeroPhoto.swift */; };
+		77AA4110B4598AE0593AFB43 /* EditNameSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CEC36B931ED3B3BE18D258D /* EditNameSheet.swift */; };
 		7EF44820026550AC337031A1 /* CalmMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BE49B19EF05F392F73C5F81 /* CalmMessage.swift */; };
 		7F46DBB0D390E1258E5D7BB5 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B350D7FDB84FCD745D02E68 /* Config.swift */; };
 		822A4784C4BBA1A0B4C41C5D /* OFL-Fraunces.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3A9EBD092A4C4DA4B07AEB04 /* OFL-Fraunces.txt */; };
@@ -80,6 +82,7 @@
 		039F204A3910A45258DDF7AC /* Mascot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mascot.swift; sourceTree = "<group>"; };
 		05BDE8C999D8C72BB74C5FF0 /* OFL-Nunito.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-Nunito.txt"; sourceTree = "<group>"; };
 		0ACB2B94AE150CA1A096F52F /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		0CEC36B931ED3B3BE18D258D /* EditNameSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditNameSheet.swift; sourceTree = "<group>"; };
 		172FCEC2FD95E71D4334677C /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		19BA6629159A25F7BB20A7F0 /* ScreenRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenRoute.swift; sourceTree = "<group>"; };
 		1BA8A7316EEF065BD5C1F278 /* CalypsoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalypsoApp.swift; sourceTree = "<group>"; };
@@ -116,6 +119,7 @@
 		90AC15038E2C32668688A5FC /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		998AFCC2F781DF2228746AC0 /* DaySwitcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaySwitcher.swift; sourceTree = "<group>"; };
 		9B79343FDC0FDB82875BCAAF /* PersonChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonChip.swift; sourceTree = "<group>"; };
+		9FBD8A67C07EB46E613D7F9F /* PeoplePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeoplePresentationTests.swift; sourceTree = "<group>"; };
 		A019F55B802A508A2223AAAB /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		AF7C632925D6D48A7D561E07 /* VisitSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisitSync.swift; sourceTree = "<group>"; };
 		AFA318F059492AB2C1179647 /* ContactBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactBuilderTests.swift; sourceTree = "<group>"; };
@@ -129,7 +133,6 @@
 		CB00D30C88C8102CB6EFEA94 /* CalypsoTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CalypsoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CCC8E90F0AA08BAC56087EB2 /* GroupCallHowToView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupCallHowToView.swift; sourceTree = "<group>"; };
 		DD27CA6990D892953719D4B1 /* card.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = card.json; sourceTree = "<group>"; };
-		E26ED4E4BC103197F47F32EA /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
 		E330351A31673814846B7D47 /* DayPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayPresentationTests.swift; sourceTree = "<group>"; };
 		E9DE861182F214754D6B51F7 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		EAB25557BFD3F2F40E9D0D2B /* PersonDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDetailView.swift; sourceTree = "<group>"; };
@@ -160,6 +163,7 @@
 				E330351A31673814846B7D47 /* DayPresentationTests.swift */,
 				73B2520CB080608B20FAAD51 /* DesignSystemTests.swift */,
 				FFFD5920901B83B310B84DF0 /* ModelsDecodingTests.swift */,
+				9FBD8A67C07EB46E613D7F9F /* PeoplePresentationTests.swift */,
 				619D8BAB1B9994414C0F8BFF /* PhotoSyncTests.swift */,
 				67362F56F646B0C8A4C00B65 /* VisitSyncTests.swift */,
 				9DCAAAEC1B328785E547F0C6 /* Fixtures */,
@@ -260,7 +264,7 @@
 		AA1DCDC4D2D2845C9A08745F /* People */ = {
 			isa = PBXGroup;
 			children = (
-				E26ED4E4BC103197F47F32EA /* .gitkeep */,
+				0CEC36B931ED3B3BE18D258D /* EditNameSheet.swift */,
 				66C4426D34E7133D06233BDD /* PeopleListView.swift */,
 				EAB25557BFD3F2F40E9D0D2B /* PersonDetailView.swift */,
 			);
@@ -452,6 +456,7 @@
 				ECCD5911526611BE8E7CC2E5 /* DayPresentationTests.swift in Sources */,
 				AB64BA5BA34F86A82DCC7527 /* DesignSystemTests.swift in Sources */,
 				825B335B54C2FAD38D5E3EB6 /* ModelsDecodingTests.swift in Sources */,
+				05B34E775C53A4E7B8743C53 /* PeoplePresentationTests.swift in Sources */,
 				A8E1CDB66CC2C3EA3B398103 /* PhotoSyncTests.swift in Sources */,
 				D7931FA2864863CDF0EB6EEF /* VisitSyncTests.swift in Sources */,
 			);
@@ -476,6 +481,7 @@
 				14CEEED30611C0920CB3F904 /* DayPresentation.swift in Sources */,
 				3AD7B682CCE8CAFB4FFE65BB /* DaySwitcher.swift in Sources */,
 				C967CFCB52C65A074F932D02 /* Decoration.swift in Sources */,
+				77AA4110B4598AE0593AFB43 /* EditNameSheet.swift in Sources */,
 				E08C90366F8545608632D2F9 /* GroupCallHowToView.swift in Sources */,
 				75824C05C7BF96024F1E27A3 /* HeroPhoto.swift in Sources */,
 				E5605C1A17A0FB6384AD6C27 /* Icon.swift in Sources */,

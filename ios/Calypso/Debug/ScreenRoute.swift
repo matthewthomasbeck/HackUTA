@@ -41,12 +41,50 @@ enum ScreenRoute {
             // Nothing listens on port 9, so every request fails fast.
             let unreachable = APIClient(baseURL: URL(string: "http://127.0.0.1:9")!, token: "dev-token")
             return AnyView(TodayView(client: unreachable))
+        case "people":
+            return AnyView(PeopleListView(client: APIClient.configured))
+        case "people-ax":
+            return AnyView(PeopleListView(client: APIClient.configured).dynamicTypeSize(.accessibility5))
+        case "person-p_sarah":
+            return AnyView(DebugPersonStack(seed: Person(id: "p_sarah", name: "Sarah", relationship: "daughter")))
+        case "person-p_unknown":
+            return AnyView(DebugPersonStack(seed: Person(id: "p_unknown")))
+        case "edit-name-p_unknown":
+            return AnyView(DebugPersonStack(seed: Person(id: "p_unknown"), startEditing: true))
         #endif
         default:
             return AnyView(Text("Unknown route").calypsoFont(.body).padding())
         }
     }
 }
+
+#if DEBUG
+/// Opens a person screen already pushed on a People stack, so the system back button shows as it does in the app.
+private struct DebugPersonStack: View {
+    let seed: Person
+    var startEditing = false
+    @State private var path: [String]
+
+    init(seed: Person, startEditing: Bool = false) {
+        self.seed = seed
+        self.startEditing = startEditing
+        _path = State(initialValue: [seed.id])
+    }
+
+    var body: some View {
+        NavigationStack(path: $path) {
+            Color.paper
+                .ignoresSafeArea()
+                .navigationTitle("People")
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationDestination(for: String.self) { _ in
+                    PersonDetailView(client: APIClient.configured, person: seed, startEditing: startEditing)
+                }
+        }
+        .tint(Color.periwinkleDeep)
+    }
+}
+#endif
 
 struct DesignSystemSpecimen: View {
     private let colors: [(String, Color)] = [
