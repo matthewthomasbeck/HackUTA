@@ -147,8 +147,12 @@ def _migrate(conn: sqlite3.Connection) -> None:
     """Add columns that deployed databases predate."""
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(segments)")}
     if "time_synced" not in cols:
-        conn.execute("ALTER TABLE segments ADD COLUMN time_synced INTEGER NOT NULL DEFAULT 1")
-        conn.commit()
+        try:
+            conn.execute("ALTER TABLE segments ADD COLUMN time_synced INTEGER NOT NULL DEFAULT 1")
+            conn.commit()
+        except sqlite3.OperationalError as exc:  # the API and a worker migrating at the same time
+            if "duplicate column" not in str(exc).lower():
+                raise
 
 
 def dumps(value: Iterable[Any]) -> str:

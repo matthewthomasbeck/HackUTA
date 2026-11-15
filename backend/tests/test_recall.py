@@ -66,7 +66,12 @@ def test_low_confidence_is_none(conn):
     assert r.intent.intent == "none" and r.card is None
 
 
-def test_empty_day_home(conn):
+def test_empty_day_home(conn, monkeypatch):
+    from datetime import datetime, timezone
+
+    from calypso import day_builder
+    # the open visit lasts until "now" at most; pin now to that afternoon
+    monkeypatch.setattr(day_builder, "now_utc", lambda: datetime(2026, 11, 15, 20, tzinfo=timezone.utc))
     conn.execute("INSERT INTO visits (id, arrived, departed, lat, lon, place_name) VALUES (?,?,?,?,?,?)",
                  ("v1", "2026-11-15T14:00:00.000Z", None, 0, 0, "Home"))
     conn.commit()
@@ -114,7 +119,7 @@ def test_recall_photo_excludes_sensitive(conn):
 
 def test_detector_exception_is_none(conn):
     class Boom:
-        def detect(self, lines):
+        def detect(self, lines, today=None):
             raise TimeoutError
 
     r = recall(L("hi"), conn, Settings.from_env(), Boom(), today=DAY)
@@ -135,4 +140,67 @@ def test_haiku_detector_live():
     d = ClaudeDetector()
     for text, want in [("Mom, what did you do today?", "today"), ("the weather today is awful", "none"),
                        ("how was your morning?", "today")]:
-        assert d.detect(L(text)).intent.intent == want
+        assert d.detect(L(text), DAY).intent.intent == want
+
+
+# I6: a date_hint is trusted only within the last 7 days, and other days are titled by date.
+def test_future_date_hint_falls_back_to_today(conn):
+    event(conn, "e1", "2026-11-15T16:30:00.000Z")
+    script("what did you do?", date_hint="2026-11-20")
+    r = run(conn, "what did you do?")
+    assert r.card.title == "Today" and r.card.lines[0].endswith("Coffee with Sarah")
+
+
+def test_old_date_hint_falls_back_to_today(conn):
+    event(conn, "e1", "2026-11-15T16:30:00.000Z")
+    script("what did you do?", date_hint="2026-10-16")  # 30 days ago
+    r = run(conn, "what did you do?")
+    assert r.card.title == "Today" and r.card.lines[0].endswith("Coffee with Sarah")
+
+
+def test_garbage_date_hint_falls_back_to_today(conn):
+    script("what did you do?", date_hint="yesterday")
+    assert run(conn, "what did you do?").card.title == "Today"
+
+
+def test_valid_past_date_hint_titled_by_date(conn):
+    event(conn, "e1", "2026-11-15T16:30:00.000Z", summary="Today's coffee")
+    event(conn, "e0", "2026-11-14T16:30:00.000Z", summary="Yesterday's walk")
+    script("how was yesterday?", date_hint="2026-11-14")
+    r = run(conn, "how was yesterday?")
+    assert r.card.title == "Saturday, Nov 14"
+    assert r.card.lines == ["10:30 AM · Blue Bean Café · Yesterday's walk"]
+    script("anything from Friday?", date_hint="2026-11-13")
+    assert run(conn, "anything from Friday?").card.lines == ["Nothing saved for that day"]
+
+
+def test_past_photo_card_titled_by_date(conn):
+    conn.execute("INSERT INTO photos (id, taken_at, storage_key, sensitive, created_at) VALUES (?,?,?,?,?)",
+                 ("p1", "2026-11-14T16:30:00.000Z", "photos/p1.jpg", 0, "2026-11-14T16:30:00.000Z"))
+    event(conn, "e0", "2026-11-14T16:30:00.000Z", photos=["p1"])
+    script("pics from yesterday?", intent="photo", date_hint="2026-11-14")
+    assert run(conn, "pics from yesterday?").card.title == "Photos from Saturday, Nov 14"
+
+
+def test_detector_prompt_includes_local_date(conn):
+    det = FakeDetector()
+    recall(L("hello"), conn, Settings.from_env(), det, today=DAY)
+    assert "Sunday 2026-11-15" in det.last_prompt and det.last_prompt.endswith("Sarah: hello")
+
+
+def test_today_card_shows_latest_three(conn):
+    for i, h in enumerate([14, 15, 16, 17, 18]):
+        event(conn, f"e{i}", f"2026-11-15T{h}:00:00.000Z", summary=f"event {i}")
+    script("what did you do today?")
+    lines = run(conn, "what did you do today?").card.lines
+    assert [l.rsplit(" · ", 1)[1] for l in lines] == ["event 2", "event 3", "event 4"]
+
+
+def test_detect_model_env(monkeypatch):
+    pytest.importorskip("anthropic")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
+    monkeypatch.delenv("CALYPSO_DETECT_MODEL", raising=False)
+    monkeypatch.setenv("CALYPSO_DETECTOR_MODEL", "old-name")
+    assert ClaudeDetector().model == "old-name"
+    monkeypatch.setenv("CALYPSO_DETECT_MODEL", "plan-name")
+    assert ClaudeDetector().model == "plan-name"
