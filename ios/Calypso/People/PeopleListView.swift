@@ -24,6 +24,7 @@ struct PeopleListView: View {
                 .padding(.bottom, 24)
             }
             .background(Color.paper.ignoresSafeArea())
+            .paperTopEdge()
             // Hidden here and on the detail screen, which draws its own "‹ People" button.
             .navigationTitle("People")
             .toolbar(.hidden, for: .navigationBar)
@@ -70,7 +71,8 @@ struct PeopleListView: View {
                 .buttonStyle(PressableStyle())
             }
         } else if error != nil {
-            CalmMessage(pose: .thinking, title: "We couldn’t load people right now.", message: "",
+            CalmMessage(pose: .thinking, title: "We couldn’t load people right now.",
+                        message: "Please check your connection. Your memories are safe.",
                         buttonTitle: "Try again", scene: false) {
                 Task { await load() }
             }
@@ -110,6 +112,13 @@ enum PeoplePresentation {
         guard let trimmed = relationship?.trimmingCharacters(in: .whitespacesAndNewlines),
               let first = trimmed.first else { return nil }
         return first.uppercased() + trimmed.dropFirst()
+    }
+
+    /// List-row subtitle: "daughter" → "Your daughter".
+    static func rowRelationship(_ relationship: String?) -> String? {
+        guard let trimmed = relationship?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty else { return nil }
+        return "Your " + trimmed.lowercased()
     }
 
     static func rowAccessibilityLabel(_ person: Person) -> String {
@@ -167,7 +176,7 @@ private struct PersonRow: View {
                 Text("Tap to add their name")
                     .calypsoFont(.callout)
                     .foregroundStyle(Color.inkSoft)
-            } else if let relationship = PeoplePresentation.relationshipLabel(person.relationship) {
+            } else if let relationship = PeoplePresentation.rowRelationship(person.relationship) {
                 Text(relationship)
                     .calypsoFont(.callout)
                     .foregroundStyle(Color.ink)

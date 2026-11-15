@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		02F871A0827D56292D33F240 /* PaperTopEdge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55417A041DA0BF8E8F4E5594 /* PaperTopEdge.swift */; };
 		03523954E6FF5DA23FF86B05 /* ContactBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFA318F059492AB2C1179647 /* ContactBuilderTests.swift */; };
 		05B34E775C53A4E7B8743C53 /* PeoplePresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FBD8A67C07EB46E613D7F9F /* PeoplePresentationTests.swift */; };
 		064661FD9AFB1256F1112965 /* MomentCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA7E994FE48D2107E9B5BC3 /* MomentCard.swift */; };
@@ -108,6 +109,7 @@
 		528C68D5A8457E9E471591AD /* Icon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Icon.swift; sourceTree = "<group>"; };
 		5366F45AA4CA4C56A2BBDECF /* Decoration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Decoration.swift; sourceTree = "<group>"; };
 		54636760D52AC52A55B11A13 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		55417A041DA0BF8E8F4E5594 /* PaperTopEdge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperTopEdge.swift; sourceTree = "<group>"; };
 		59A030AB2E35AD8CB7FA5A4B /* Nunito-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Nunito-Bold.ttf"; sourceTree = "<group>"; };
 		5CC9FE748068B7F226F25BD8 /* NavHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavHeader.swift; sourceTree = "<group>"; };
 		5D0D637A2CA5E624A76ED57E /* Logo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logo.swift; sourceTree = "<group>"; };
@@ -202,6 +204,7 @@
 				5366F45AA4CA4C56A2BBDECF /* Decoration.swift */,
 				039F204A3910A45258DDF7AC /* Mascot.swift */,
 				4B6BB8C1DAF0F0A34D244938 /* Palette.swift */,
+				55417A041DA0BF8E8F4E5594 /* PaperTopEdge.swift */,
 				ED6FAFEF92E8AA73E9348CEC /* SwipeBack.swift */,
 				C000207E3BE110C95A3CC700 /* Typography.swift */,
 				A6002101E8428F2BF4C99648 /* Components */,
@@ -526,6 +529,7 @@
 				1990378769632A6B50AE2D5B /* OnboardingView.swift in Sources */,
 				44E94392D6C8D143DC26C5B0 /* Palette.swift in Sources */,
 				591BFE8A725BCE6C9EC2FF06 /* PaperCard.swift in Sources */,
+				02F871A0827D56292D33F240 /* PaperTopEdge.swift in Sources */,
 				FF3AA5B2C38D4CF0D8F76AAD /* PeopleListView.swift in Sources */,
 				198DF353F2A700D7A5431E65 /* PermissionsView.swift in Sources */,
 				CD2727BBBB18285FAAB75DB6 /* PersonChip.swift in Sources */,

@@ -55,6 +55,7 @@ struct PersonDetailView: View {
             .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 1), value: memories)
         }
         .background(Color.paper.ignoresSafeArea())
+        .paperTopEdge()
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $editing) {

@@ -31,6 +31,7 @@ struct AccountView: View {
             .padding(.bottom, 24)
         }
         .background(Color.paper.ignoresSafeArea())
+        .paperTopEdge()
         // The dialog is hosted full screen with a clear background so its scrim also dims the tab bar. The system
         // slide is turned off both ways; the dialog runs its own spring (or fade under Reduce Motion).
         .fullScreenCover(isPresented: $confirmingReset) {

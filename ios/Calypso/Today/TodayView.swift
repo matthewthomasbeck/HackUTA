@@ -45,6 +45,7 @@ struct TodayView: View {
                 .padding(.bottom, 24)
             }
             .background(Color.paper.ignoresSafeArea())
+            .paperTopEdge()
             .refreshable { await load() }
             .task(id: day) { await load() }
             .onChange(of: day) { content.dayChanged() }
@@ -100,7 +101,7 @@ struct TodayView: View {
         switch state {
         case .failed:
             VStack(spacing: 8) {
-                CalmMessage(pose: .thinking, title: "We couldn’t load this day right now.", message: "",
+                CalmMessage(pose: .thinking, title: "We couldn’t load this day right now.", message: "Please check your connection. Your memories are safe.",
                             buttonTitle: "Try again", scene: false) {
                     Task { await load() }
                 }

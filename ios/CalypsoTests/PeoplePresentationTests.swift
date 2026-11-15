@@ -8,6 +8,12 @@ final class PeoplePresentationTests: XCTestCase {
         XCTAssertEqual(PeoplePresentation.relationshipLabel("  daughter "), "Daughter")
     }
 
+    func testRowRelationshipIsYourPlusLowercase() {
+        XCTAssertEqual(PeoplePresentation.rowRelationship("Mother"), "Your mother")
+        XCTAssertEqual(PeoplePresentation.rowRelationship(" daughter "), "Your daughter")
+        XCTAssertNil(PeoplePresentation.rowRelationship("  "))
+    }
+
     func testBlankRelationshipIsHidden() {
         XCTAssertNil(PeoplePresentation.relationshipLabel(nil))
         XCTAssertNil(PeoplePresentation.relationshipLabel("   "))

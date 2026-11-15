@@ -5,16 +5,17 @@ struct GroupCallHowToView: View {
     var onBack: () -> Void
     var onNext: () -> Void
 
-    private let steps: [(icon: String, text: String)] = [
-        ("video.fill", "Open FaceTime and tap New FaceTime"),
-        ("person.2.fill", "Add Mom and Calypso⁻¹"),
-        ("video.circle.fill", "Tap Video"),
+    private let steps = [
+        "Open FaceTime and tap New FaceTime",
+        "Add Mom and Calypso⁻¹",
+        "Tap Video",
     ]
 
     var body: some View {
         OnboardingScaffold(step: .groupCall, onBack: onBack) {
             VStack(alignment: .leading, spacing: 8) {
                 OnboardingHeading(title: "Start a group FaceTime", message: nil)
+                    .padding(.top, 20) // clears the Back button and the gull
                     .overlay(alignment: .topTrailing) {
                         // Stands on the title line, beside the back button, like the Permissions gull.
                         Mascot(pose: .presenting, size: .s, shadow: true)
@@ -22,7 +23,7 @@ struct GroupCallHowToView: View {
                     }
                     .padding(.bottom, 4)
                 ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                    StepCard(number: index + 1, icon: step.icon, text: step.text)
+                    StepCard(number: index + 1, text: step)
                 }
                 Text("Or text Calypso⁻¹: “call Mom with me”")
                     .calypsoFont(.callout)
@@ -38,10 +39,9 @@ struct GroupCallHowToView: View {
     }
 }
 
-/// Apricot Cream number disc with an Ink numeral, then the step's symbol and Headline text.
+/// Apricot Cream number disc with an Ink numeral, then the Headline step text.
 private struct StepCard: View {
     let number: Int
-    let icon: String
     let text: String
     @ScaledMetric(relativeTo: .title2) private var disc: CGFloat = 64
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -66,9 +66,8 @@ private struct StepCard: View {
             .background(Color.apricotCream, in: Circle())
     }
 
-    /// The symbol flows inline with the text so the step wraps across the card's full width.
     private var label: some View {
-        (Text(Image(systemName: icon)).foregroundStyle(Color.periwinkleDeep) + Text("  ") + Text(text))
+        Text(text)
             .calypsoFont(.headline)
             .foregroundStyle(Color.ink)
             .fixedSize(horizontal: false, vertical: true)
