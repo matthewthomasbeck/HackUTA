@@ -49,7 +49,7 @@ struct ResetConfirmDialog: View {
     }
 
     private var card: some View {
-        PaperCard {
+        PaperCard(cornerRadius: 32, bordered: false) { // Figma 20:727
             VStack(spacing: 16) {
                 // 40pt glyph in a 72pt badge; the badge grows with the glyph under Dynamic Type.
                 ResetWarningGlyph(size: 40)
@@ -73,7 +73,7 @@ struct ResetConfirmDialog: View {
             .padding(8)
         }
         // Swallow taps on the card itself so only the scrim keeps everything.
-        .contentShape(RoundedRectangle(cornerRadius: 24))
+        .contentShape(RoundedRectangle(cornerRadius: 32))
         .onTapGesture {}
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.isModal)

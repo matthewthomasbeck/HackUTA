@@ -51,4 +51,19 @@ final class DesignSystemTests: XCTestCase {
     }
 
     private static var appClass: AnyClass { AppDelegate.self }
+
+    func testWordSafeTextShrinksOnlyWhenTheLongestWordDoesNotFit() {
+        let font = CalypsoTextStyle.bodyStrong.scaledUIFont(for: .accessibility5)
+        let word = ("Yesterday" as NSString).size(withAttributes: [.font: font]).width
+        XCTAssertEqual(WordSafeText.scale(text: "‹\u{00A0}Yesterday", font: font, availableWidth: 10_000), 1)
+        XCTAssertEqual(WordSafeText.scale(text: "Saturday, November 14", font: font, availableWidth: 0), 1)
+        let scale = WordSafeText.scale(text: "Friday, Yesterday", font: font, availableWidth: word / 2)
+        XCTAssertLessThan(scale, 0.5)
+        XCTAssertLessThanOrEqual(word * scale, word / 2)
+    }
+
+    func testScaledUIFontGrowsWithDynamicType() {
+        XCTAssertGreaterThan(CalypsoTextStyle.caption.scaledUIFont(for: .accessibility5).pointSize,
+                             CalypsoTextStyle.caption.scaledUIFont(for: .large).pointSize)
+    }
 }

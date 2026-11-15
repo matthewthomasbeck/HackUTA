@@ -15,11 +15,10 @@ struct NavHeader<Accessory: View>: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(caption)
-                    .calypsoFont(.caption)
+                // Word-safe: at AX5 a long word ("November", "Yesterday") shrinks instead of breaking mid-word.
+                WordSafeText(caption, style: .caption)
                     .foregroundStyle(Color.inkSoft)
-                Text(title)
-                    .calypsoFont(.display)
+                WordSafeText(title, style: .display)
                     .foregroundStyle(Color.ink)
                     .accessibilityAddTraits(.isHeader)
             }

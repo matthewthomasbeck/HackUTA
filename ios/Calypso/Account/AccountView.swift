@@ -55,7 +55,7 @@ struct AccountView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 24)
         .frame(maxWidth: .infinity)
-        .background(Color.periwinkleMist, in: RoundedRectangle(cornerRadius: 24))
+        .background(Color.periwinkleMist, in: RoundedRectangle(cornerRadius: 32)) // Figma 20:386
     }
 
     private var connection: some View {

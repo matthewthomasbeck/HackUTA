@@ -27,7 +27,6 @@ struct AddContactView: View {
                 }
                 CalypsoButton("Add to Contacts") { showEditor = true }
                     .disabled(Config.chertPhone.isEmpty)
-                    .opacity(Config.chertPhone.isEmpty ? 0.5 : 1)
                 CalypsoButton("Skip for now", kind: .quiet, action: onNext)
             }
             .padding(.horizontal, 24)

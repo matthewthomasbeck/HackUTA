@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Previous / next day buttons (Today screen, Figma 20:489). Previous is Secondary "‹ <label>".
 /// Next is Secondary "<label> ›" when enabled; when disabled it's Ink Soft text on Paper with a dashed
-/// Periwinkle outline, no chevron and no opacity fade. The pair stacks when it doesn't fit (AX sizes).
+/// Periwinkle outline, no chevron and no opacity fade. The pair stacks when it doesn't fit (AX sizes); a label
+/// too wide for its button shrinks rather than breaking mid-word (`WordSafeText`).
 struct DaySwitcher: View {
     let labels: DaySwitcherLabels
     let onPrevious: () -> Void
@@ -22,7 +23,7 @@ struct DaySwitcher: View {
     }
 
     private var previous: some View {
-        Button(action: onPrevious) { Text("‹ \(labels.previous)")}
+        Button(action: onPrevious) { WordSafeText("‹\u{00A0}\(labels.previous)", style: .bodyStrong, alignment: .center) }
             .buttonStyle(CalypsoButtonStyle(.secondary, horizontalPadding: 12))
             .accessibilityLabel(labels.previous)
             .accessibilityHint("Previous day")
@@ -30,32 +31,16 @@ struct DaySwitcher: View {
 
     @ViewBuilder private var next: some View {
         if labels.nextEnabled {
-            Button(action: onNext) { Text("\(labels.next) ›")}
+            Button(action: onNext) { WordSafeText("\(labels.next)\u{00A0}›", style: .bodyStrong, alignment: .center) }
                 .buttonStyle(CalypsoButtonStyle(.secondary, horizontalPadding: 12))
                 .accessibilityLabel(labels.next)
                 .accessibilityHint("Next day")
         } else {
-            Button(action: {}) { Text(labels.next)}
-                .buttonStyle(DisabledDayStyle())
+            Button(action: {}) { WordSafeText(labels.next, style: .bodyStrong, alignment: .center) }
+                .buttonStyle(CalypsoButtonStyle(.secondary, horizontalPadding: 12))
                 .disabled(true)
                 .accessibilityLabel(labels.next)
         }
-    }
-}
-
-/// Disabled next-day look: Paper fill, 2pt dashed Periwinkle [8,6] outline, Ink Soft text. No fade.
-private struct DisabledDayStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 24)
-        configuration.label
-            .calypsoFont(.bodyStrong)
-            .foregroundStyle(Color.inkSoft)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .frame(maxWidth: .infinity, minHeight: 72)
-            .background(Color.paper, in: shape)
-            .overlay(shape.strokeBorder(Color.periwinkle, style: StrokeStyle(lineWidth: 2, dash: [8, 6])))
     }
 }
 

@@ -38,12 +38,11 @@ struct EditNameSheet: View {
                     .padding(.vertical, 8)
                     .frame(minHeight: 72)
                     .background(Color.card, in: RoundedRectangle(cornerRadius: 24))
-                    .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(Color.periwinkleMist, lineWidth: 2))
+                    .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(Color.ink, lineWidth: 2)) // Figma 20:969
                     .contentShape(RoundedRectangle(cornerRadius: 24))
                     .onTapGesture { fieldFocused = true }
                 CalypsoButton("Save", action: save)
                     .disabled(trimmedName.isEmpty)
-                    .opacity(trimmedName.isEmpty ? 0.45 : 1)
                 CalypsoButton("Cancel", kind: .quiet, action: onCancel)
             }
             .padding(.horizontal, 24)

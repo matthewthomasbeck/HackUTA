@@ -6,6 +6,8 @@ enum CalypsoButtonKind {
 
 /// Figma `Button` (15:95). Primary/Secondary 72pt, Quiet 64pt; full width, radius 24.
 /// Pressed: scale 0.97 plus a slightly darker fill, applied on touch-down. No animation under Reduce Motion.
+/// Disabled (any kind): Ink Soft text on Paper with a 2pt dashed Periwinkle [8,6] outline (the Figma DaySwitcher
+/// disabled look). Never an opacity fade, so the label keeps full contrast.
 struct CalypsoButtonStyle: ButtonStyle {
     let kind: CalypsoButtonKind
     let horizontalPadding: CGFloat
@@ -27,6 +29,7 @@ private struct CalypsoButtonBody<Label: View>: View {
     let label: Label
     let isPressed: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var isEnabled
 
     private static var deepPressed: Color { Color(hex: 0x323C85) }
     private static var cardPressed: Color { Color(hex: 0xEEF0FB) }
@@ -34,7 +37,7 @@ private struct CalypsoButtonBody<Label: View>: View {
     var body: some View {
         label
             .calypsoFont(.bodyStrong)
-            .underline(kind == .quiet)
+            .underline(kind == .quiet && isEnabled)
             .multilineTextAlignment(.center)
             .foregroundStyle(foreground)
             .padding(.horizontal, horizontalPadding)
@@ -47,7 +50,8 @@ private struct CalypsoButtonBody<Label: View>: View {
     }
 
     private var foreground: Color {
-        switch kind {
+        guard isEnabled else { return .inkSoft }
+        return switch kind {
         case .primary: .white
         case .secondary: .ink
         case .quiet: isPressed ? Self.deepPressed : .periwinkleDeep
@@ -55,6 +59,17 @@ private struct CalypsoButtonBody<Label: View>: View {
     }
 
     @ViewBuilder private var background: some View {
+        if !isEnabled {
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color.paper)
+                .overlay(RoundedRectangle(cornerRadius: 24)
+                    .strokeBorder(Color.periwinkle, style: StrokeStyle(lineWidth: 2, dash: [8, 6])))
+        } else {
+            enabledBackground
+        }
+    }
+
+    @ViewBuilder private var enabledBackground: some View {
         switch kind {
         case .primary:
             RoundedRectangle(cornerRadius: 24).fill(isPressed ? Self.deepPressed : .periwinkleDeep)
@@ -120,6 +135,7 @@ private struct PressableBody<Label: View>: View {
         CalypsoButton("Continue", kind: .secondary) {}
         CalypsoButton("Continue", kind: .quiet) {}
         CalypsoButton("Add to Contacts", systemImage: "person.crop.circle.badge.plus") {}
+        CalypsoButton("Add to Contacts") {}.disabled(true)
     }
     .padding(24)
     .background(Color.paper)
