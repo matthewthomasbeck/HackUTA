@@ -53,3 +53,9 @@ The local suites use deterministic Claude tool responses. A small real Claude
 setup-greeting probe was also verified on Vultr after gateway deployment; it
 created no person and its backend call was ended afterward. FaceTime media and
 real speech have not yet passed live acceptance.
+
+## Returning-relative calls
+
+Use `CALYPSO_CALL_MODE=recognize` for silent, single-relative recognition.
+Real matching is the default; fixtures require `CALYPSO_CONTROLLED_RECOGNITION=true`.
+See [the recognition guide](../docs/returning-relative-test.md) for limitations and live acceptance.

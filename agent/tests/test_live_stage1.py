@@ -302,7 +302,7 @@ async def test_gateway_transport_preserves_enrollment_and_closes_remote_session(
         assert request.headers["Authorization"] == "Bearer transport-token"
         body = json.loads(request.content) if request.content else None
         if request.url.path == "/agent/sessions":
-            assert body["controlled"] is True and body["mode"] == "setup"
+            assert body["controlled"] is False and body["mode"] == "setup"
             return httpx.Response(201, json={"session_id": "sid", "call_id": "cid"})
         if request.url.path.endswith("/events") and request.url.path != "/agent/events":
             assert body["kind"] == "utterance" and body["text"] == "Yes"
@@ -333,3 +333,27 @@ def test_portrait_captions_page_without_dropping_words():
         diff = ImageChops.difference(image, Image.new("RGB", CALL_SIZE, BACKGROUND))
         left, top, right, bottom = diff.getbbox()
         assert left >= 40 and right <= 680 and bottom <= 1100
+
+
+@pytest.mark.asyncio
+async def test_real_recognition_does_not_load_stored_fixture(tmp_path):
+    from calypso_agent.gateway import GatewayClient
+    path = tmp_path / "fixture.json"
+    path.write_text('invalid fixture must not be read')
+    def handler(request):
+        body = json.loads(request.content)
+        assert body["mode"] == "recognize"
+        assert body["controlled"] is False
+        assert body["enrolled_person_id"] is None
+        return httpx.Response(201, json={"session_id": "sid"})
+    async with httpx.AsyncClient(base_url="http://test", transport=httpx.MockTransport(handler)) as client:
+        gateway = GatewayClient("http://test", "token", path, client=client)
+        await gateway.start("recognize", "phone", "identified")
+
+
+def test_recognize_configuration_defaults_to_real_matching():
+    env = dict(CALYPSO_CALL_MODE="recognize", CALYPSO_BACKEND_URL="http://localhost",
+               CALYPSO_API_TOKEN="token", XAI_API_KEY="key")
+    assert not Config.from_env(env).controlled
+    env["CALYPSO_CONTROLLED_RECOGNITION"] = "true"
+    assert Config.from_env(env).controlled
