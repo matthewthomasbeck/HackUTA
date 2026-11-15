@@ -196,3 +196,88 @@ def test_unsaved_closing_never_claims_success():
     assert effects.done and effects.cards[0].title != "Saved"
     assert "No introduction was saved" in effects.speech[0]
     assert "Please hang up now" in effects.speech[0]
+
+
+@pytest.mark.asyncio
+async def test_returning_relative_uses_real_result_and_stored_memory():
+    from calypso.claude_controller import ClaudeController, MediaEvent, Session, StartSession
+    model = FakeClaude([("show_identity", {}), None])
+    session = Session("sid", "cid", StartSession(mode="recognize", participant="phone",
+        enrolled_person_id="wrong-fixture", outcome="learning"), {"name": "Mary"})
+    requests = []
+    async def api(method, path, body=None):
+        requests.append((path, body))
+        if path == "/recognize":
+            return {"faces": [{"result": {"status": "identified", "person_id": "real-relative"}}]}
+        assert path == "/people/real-relative"
+        return {"id": "real-relative", "name": "Keanu", "relationship": "brother",
+                "is_patient": False, "facts": ["We visited the lake."]}
+    effects = await ClaudeController(model).respond(session, MediaEvent(kind="frame", jpeg_b64="eA=="), api)
+    assert effects.cards[0].title == "Keanu"
+    assert effects.cards[0].lines == ["Mary's brother", "We visited the lake."]
+    assert not effects.speech
+    assert requests[0][1]["exclude_patient"] is True
+
+
+@pytest.mark.asyncio
+async def test_recognition_voice_only_and_uncertainty_are_safe():
+    from calypso.claude_controller import ClaudeController, MediaEvent, Session, StartSession
+    controller = ClaudeController(FakeClaude([("show_identity", {}), None]))
+    session = Session("sid", "cid", StartSession(mode="recognize", participant="phone"), {"name": "Mary"})
+    status = "identified"
+    async def api(method, path, body=None):
+        if path.endswith("/lines"): return {}
+        if path == "/recognize":
+            assert body["voice_wav_b64"] == "d2F2"
+            return {"faces": [], "voice_only": {"status": status, "person_id": "r"}}
+        return {"id": "r", "name": "Sarah", "is_patient": False}
+    event = MediaEvent(kind="utterance", text="Hello", voice_wav_b64="d2F2")
+    assert (await controller.respond(session, event, api)).cards[0].title == "Sarah"
+    status = "uncertain"
+    effects = await controller.respond(session, event, api)
+    assert effects.cards[0].kind == "learning" and not effects.speech
+    assert session.recognized_id is None
+    with pytest.raises(ValueError, match="remain silent"):
+        await controller.execute("speak", {"text": "Who are you?"}, session, effects, api)
+
+
+@pytest.mark.asyncio
+async def test_recognize_mode_start_is_silent_and_patient_cannot_be_shown():
+    from calypso.claude_controller import ClaudeController, Effects, MediaEvent, Session, StartSession
+    controller = ClaudeController(FakeClaude([]))
+    session = Session("sid", "cid", StartSession(mode="recognize", participant="phone"), {"name": "Mary"})
+    async def api(*args): return {"name": "Mary", "is_patient": True}
+    effects = await controller.respond(session, MediaEvent(kind="start"), api)
+    assert effects.cards and not effects.speech
+    session.recognized_id = "patient"
+    with pytest.raises(ValueError, match="Patient"):
+        await controller.execute("show_identity", {}, session, Effects(session_id="sid"), api)
+
+
+@pytest.mark.asyncio
+async def test_recognize_session_api_accepts_mode_without_model_greeting(gateway_app):
+    from calypso.claude_controller import ClaudeController
+    gateway_app.state.claude_controller = ClaudeController(FakeClaude([]))
+    async with gateway_app.router.lifespan_context(gateway_app):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=gateway_app),
+            base_url="http://test", headers={"Authorization": "Bearer gateway-token"}) as client:
+            await client.post("/people", json={"name": "Mary", "is_patient": True})
+            response = await client.post("/agent/sessions", json={"mode": "recognize", "participant": "phone"})
+            assert response.status_code == 201, response.text
+            sid = response.json()["session_id"]
+            effects = (await client.post(f"/agent/sessions/{sid}/events", json={"kind": "start"})).json()
+            assert effects["speech"] == [] and effects["cards"][0]["kind"] == "learning"
+            assert (await client.post(f"/agent/sessions/{sid}/end")).status_code == 200
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("faces", [[], [{"result": {"status": "identified", "person_id": "a"}},
+                                      {"result": {"status": "identified", "person_id": "b"}}]])
+async def test_missing_or_multiple_faces_never_selects_one(faces):
+    from calypso.claude_controller import ClaudeController, MediaEvent, Session, StartSession
+    session = Session("sid", "cid", StartSession(mode="recognize", participant="phone"), {})
+    session.recognized_id = "previous"
+    async def api(*args): return {"faces": faces}
+    effect = await ClaudeController(FakeClaude([])).respond(session, MediaEvent(kind="frame", jpeg_b64="eA=="), api)
+    assert session.recognized_id is None
+    assert effect.cards[0].kind == "learning" and not effect.speech

@@ -14,13 +14,15 @@ class GatewayClient:
         self.owns_client = client is None
         self.state_file = Path(state_file)
         self.session_id = None
+        self.controlled = False
 
-    async def start(self, mode, participant, outcome, *, caller_phone=None):
+    async def start(self, mode, participant, outcome, *, caller_phone=None, controlled=False):
         enrolled = None
-        if mode == "group" and self.state_file.exists():
+        self.controlled = controlled
+        if controlled and mode in {"group", "recognize"} and self.state_file.exists():
             enrolled = json.loads(self.state_file.read_text()).get("person_id")
         response = await self.http.post("/agent/sessions", json={"mode": mode,
-            "participant": participant, "controlled": True, "outcome": outcome,
+            "participant": participant, "controlled": self.controlled, "outcome": outcome,
             "enrolled_person_id": enrolled, "caller_phone": caller_phone})
         response.raise_for_status()
         self.session_id = response.json()["session_id"]
@@ -41,7 +43,7 @@ class GatewayClient:
 
     async def shown(self, card):
         response = await self.http.post("/agent/events", json={"stage": "card.shown",
-            "payload": {"session_id": self.session_id, "controlled": True, "card": card}})
+            "payload": {"session_id": self.session_id, "controlled": self.controlled, "card": card}})
         response.raise_for_status()
 
     async def close(self):

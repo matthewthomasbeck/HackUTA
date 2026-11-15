@@ -74,7 +74,7 @@ curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
 
 The media transport now delegates decisions to Claude on the backend:
 
-- `POST /agent/sessions`: `{mode: "setup"|"group", participant: str,
+- `POST /agent/sessions`: `{mode: "setup"|"group"|"recognize", participant: str,
   controlled: bool, outcome: "identified"|"learning"|"uncertain",
   enrolled_person_id?: str, caller_phone?: str}` → `{session_id, call_id}`.
 - `POST /agent/sessions/{id}/events`: `{kind: "start"|"utterance"|"silence"|"frame"|"camera_ready",
