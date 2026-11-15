@@ -30,6 +30,17 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# Pairing agent: iOS asks to pair with the puck, and without an agent BlueZ never
+# completes it, so the phone keeps prompting and dropping the link (no `who`
+# updates arrive). This accepts pairing automatically (no PIN, like headphones):
+# any nearby phone can pair while the puck runs. Set PUCK_BT_AUTOPAIR=0 to disable.
+# The unit's KillMode=control-group stops it with the puck.
+if [[ "${PUCK_BT_AUTOPAIR:-1}" == "1" ]]; then
+  echo "starting Bluetooth auto-pair agent" >&2
+  { echo "agent NoInputNoOutput"; sleep 1; echo "default-agent"; sleep 1; echo "pairable on"
+    while true; do sleep 1; echo yes; done; } | bluetoothctl >/dev/null 2>&1 &
+fi
+
 echo "starting BLE peripheral → $WHO_DROP" >&2
 "$PYTHON" "$BLE_SCRIPT" --drop "$WHO_DROP" --name "Calypso Puck" &
 ble_pid=$!

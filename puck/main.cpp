@@ -86,6 +86,8 @@ int main() {
     std::cerr << "mic init failed — set MIC_DEVICE to an ALSA name or 'sine'\n";
     return 1;
   }
+  capture.set_gain(cfg.mic_gain);
+  std::cerr << "capture: MIC_GAIN=" << cfg.mic_gain << "\n";
   if (!link.init(cfg.backend_ip, cfg.backend_port, cfg.api_token)) {
     std::cerr << "backend link init failed\n";
     return 1;
@@ -154,7 +156,8 @@ int main() {
 
   calypso::StateMachine sm(capture, link, models, phone,
                            cfg.offline_segment_ms, spool, clock,
-                           cfg.segment_ms, cfg.min_speech_rms);
+                           cfg.segment_ms, cfg.min_speech_rms,
+                           cfg.voice_min_score);
   calypso::ConnectionListener listener(link, sm, models, cfg.connect_retry_sec,
                                        cfg.connection_check_sec,
                                        force_offline);

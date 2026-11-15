@@ -9,8 +9,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(CALYPSO_BUILD_TESTS "Build puck unit tests" OFF)
 
 add_library(calypso_core STATIC
+  src/who_filter.cpp
   src/config.cpp
   src/capture.cpp
+  src/audio_gain.cpp
   src/backend_link.cpp
   src/models.cpp
   src/state_machine.cpp
@@ -21,6 +23,7 @@ add_library(calypso_core STATIC
   src/offline_buffer.cpp
   src/voice_gallery.cpp
   src/gallery_json.cpp
+  src/people_json.cpp
   src/wav.cpp
   src/util.cpp
   src/segment_spool.cpp
@@ -32,6 +35,9 @@ target_include_directories(calypso_core PUBLIC include)
 
 add_executable(calypso_puck main.cpp)
 target_link_libraries(calypso_puck PRIVATE calypso_core)
+
+add_executable(calypso_enroll enroll_main.cpp)
+target_link_libraries(calypso_enroll PRIVATE calypso_core)
 
 find_package(Threads REQUIRED)
 find_package(CURL REQUIRED)
@@ -124,4 +130,13 @@ if(CALYPSO_BUILD_TESTS)
   add_executable(test_uploader tests/test_uploader.cpp)
   target_link_libraries(test_uploader PRIVATE calypso_core)
   add_test(NAME uploader COMMAND test_uploader)
+  add_executable(test_audio_gain tests/test_audio_gain.cpp)
+  target_link_libraries(test_audio_gain PRIVATE calypso_core)
+  add_test(NAME audio_gain COMMAND test_audio_gain)
+  add_executable(test_who_filter tests/test_who_filter.cpp)
+  target_link_libraries(test_who_filter PRIVATE calypso_core)
+  add_test(NAME who_filter COMMAND test_who_filter)
+  add_executable(test_people_json tests/test_people_json.cpp)
+  target_link_libraries(test_people_json PRIVATE calypso_core)
+  add_test(NAME people_json COMMAND test_people_json)
 endif()

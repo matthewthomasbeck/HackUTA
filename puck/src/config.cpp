@@ -93,6 +93,12 @@ bool load_config(const std::string& path, Config& out) {
       static_cast<std::uint16_t>(parse_int(get("BACKEND_PORT"), 0));
   out.api_token = get("API_TOKEN");
   out.mic_device = get("MIC_DEVICE");
+  out.mic_gain = parse_float(get("MIC_GAIN"), 1.0f);
+  if (!(out.mic_gain >= 1.0f)) {  // also catches NaN
+    out.mic_gain = 1.0f;
+  } else if (out.mic_gain > 32.0f) {
+    out.mic_gain = 32.0f;
+  }
   out.mode = parse_mode_setting(get("MODE"));
   out.chunk_ms = parse_int(get("CHUNK_MS"), 30);
   out.segment_ms = parse_int(get("SEGMENT_MS"), 3000);
@@ -118,6 +124,7 @@ bool load_config(const std::string& path, Config& out) {
   out.voice_match_threshold =
       parse_float(get("VOICE_MATCH_THRESHOLD"), 0.45f);
   out.min_speech_rms = parse_float(get("MIN_SPEECH_RMS"), 0.02f);
+  out.voice_min_score = parse_float(get("VOICE_MIN_SCORE"), 0.2f);
   {
     const std::string d = get("PUCK_SPOOL_DIR");
     if (!d.empty()) {
