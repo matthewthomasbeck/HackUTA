@@ -27,6 +27,7 @@
 		25B6D628C4A6C7E4F920AA99 /* AllSetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 348F8FE257BB4FB58D2A7A54 /* AllSetView.swift */; };
 		2F6DB8893954A584049FC608 /* PersonDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAB25557BFD3F2F40E9D0D2B /* PersonDetailView.swift */; };
 		31DD5362F551F3A11DA1827F /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 172FCEC2FD95E71D4334677C /* APIClient.swift */; };
+		362428DF86F440D3E3E4FADE /* TabBarClearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = A283CAB04985202DD609D612 /* TabBarClearance.swift */; };
 		367C353412EB4741F36914DD /* CalypsoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BA8A7316EEF065BD5C1F278 /* CalypsoApp.swift */; };
 		3AD7B682CCE8CAFB4FFE65BB /* DaySwitcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 998AFCC2F781DF2228746AC0 /* DaySwitcher.swift */; };
 		44E94392D6C8D143DC26C5B0 /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B6BB8C1DAF0F0A34D244938 /* Palette.swift */; };
@@ -137,6 +138,7 @@
 		9B79343FDC0FDB82875BCAAF /* PersonChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonChip.swift; sourceTree = "<group>"; };
 		9FBD8A67C07EB46E613D7F9F /* PeoplePresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeoplePresentationTests.swift; sourceTree = "<group>"; };
 		A019F55B802A508A2223AAAB /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		A283CAB04985202DD609D612 /* TabBarClearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBarClearance.swift; sourceTree = "<group>"; };
 		A47D6D37D73EA18CC2715E71 /* OnboardingStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingStep.swift; sourceTree = "<group>"; };
 		AF7C632925D6D48A7D561E07 /* VisitSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisitSync.swift; sourceTree = "<group>"; };
 		AFA318F059492AB2C1179647 /* ContactBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactBuilderTests.swift; sourceTree = "<group>"; };
@@ -208,6 +210,7 @@
 				4B6BB8C1DAF0F0A34D244938 /* Palette.swift */,
 				55417A041DA0BF8E8F4E5594 /* PaperTopEdge.swift */,
 				ED6FAFEF92E8AA73E9348CEC /* SwipeBack.swift */,
+				A283CAB04985202DD609D612 /* TabBarClearance.swift */,
 				C000207E3BE110C95A3CC700 /* Typography.swift */,
 				A6002101E8428F2BF4C99648 /* Components */,
 			);
@@ -546,6 +549,7 @@
 				854097E7BA9CE31AF2EF996D /* SeaPathRail.swift in Sources */,
 				1BE05D2879186A107C092786 /* StepDots.swift in Sources */,
 				ACCB1DFFBEF4264776D4FD03 /* SwipeBack.swift in Sources */,
+				362428DF86F440D3E3E4FADE /* TabBarClearance.swift in Sources */,
 				9CD912909AD1ACEC79350773 /* TodayView.swift in Sources */,
 				18CEFE84A165DAE4C8B55037 /* Typography.swift in Sources */,
 				4A5DE239414E7F74DD11EEBD /* VisitSync.swift in Sources */,

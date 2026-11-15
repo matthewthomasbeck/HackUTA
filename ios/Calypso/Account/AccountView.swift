@@ -33,6 +33,7 @@ struct AccountView: View {
             .padding(.top, 16)
             .padding(.bottom, 24)
         }
+        .tabBarClearance()
         .background(Color.paper.ignoresSafeArea())
         .paperTopEdge()
         // The dialog is hosted full screen with a clear background so its scrim also dims the tab bar. The system

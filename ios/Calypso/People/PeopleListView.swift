@@ -23,6 +23,7 @@ struct PeopleListView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 24)
             }
+            .tabBarClearance()
             .background(Color.paper.ignoresSafeArea())
             .paperTopEdge()
             // Hidden here and on the detail screen, which draws its own "‹ People" button.

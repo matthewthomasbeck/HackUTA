@@ -44,6 +44,7 @@ struct TodayView: View {
                 }
                 .padding(.bottom, 24)
             }
+            .tabBarClearance()
             .background(Color.paper.ignoresSafeArea())
             .paperTopEdge()
             .refreshable { await load() }
@@ -132,8 +133,7 @@ struct TodayView: View {
 
     private var moments: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HeroPhoto(candidates: DayPresentation.heroPhotoCandidates(events),
-                      photoURL: { client?.photoURL(id: $0) })
+            FamilyPhotoPlaceholder()
             Text("Your day")
                 .calypsoFont(.headline)
                 .foregroundStyle(Color.ink)

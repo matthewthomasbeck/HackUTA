@@ -1,38 +1,33 @@
 import SwiftUI
 
-/// The day's hero photo (Figma 20:503). Tries `candidates` in order and shows the first one that loads; a photo
-/// that fails (sensitive photos 404) moves on to the next. When every candidate fails, or there are none, it
-/// renders nothing, so there's never an empty frame. No caption: there's no data source for one (plan ruling).
-struct HeroPhoto: View {
-    let candidates: [String]
-    let photoURL: (String) -> URL?
-
-    @State private var index = 0
-    /// The candidate list `index` belongs to. When `candidates` changes, the index starts over at 0.
-    @State private var indexCandidates: [String] = []
-
-    private var currentIndex: Int { indexCandidates == candidates ? index : 0 }
-
+/// The day's hero slot (Figma 20:503): the "Family photo" placeholder from the Photo component, Hero size.
+/// There's no family-photo data source yet, so it never loads a real image; event photos stay in their cards.
+struct FamilyPhotoPlaceholder: View {
     var body: some View {
-        if currentIndex < candidates.count {
-            PhotoTile(url: photoURL(candidates[currentIndex]), style: .hero) {
-                let next = currentIndex + 1
-                indexCandidates = candidates
-                index = next
-            }
-            .accessibilityLabel("A photo from this day")
+        let shape = RoundedRectangle(cornerRadius: 16)
+        VStack(spacing: 12) {
+            CalypsoGlyph.photo.image
+                .resizable()
+                .scaledToFit()
+                .frame(width: 72, height: 72)
+                .foregroundStyle(Color.photoGlyph)
+            Text("Family photo")
+                .calypsoFont(.caption)
+                .foregroundStyle(Color.ink)
         }
+        .frame(maxWidth: .infinity)
+        .frame(height: 180)
+        .background(Color.apricotCream)
+        .clipShape(shape)
+        .overlay(shape.strokeBorder(Color.white, lineWidth: 4))
+        .accessibilityHidden(true) // a placeholder carries no information
     }
 }
 
 #if DEBUG
 #Preview {
-    VStack(spacing: 16) {
-        HeroPhoto(candidates: ["missing_a", "b"], photoURL: ComponentSamples.photoURL)
-        HeroPhoto(candidates: ["missing_only"], photoURL: ComponentSamples.photoURL) // renders nothing
-        Text("Your day").calypsoFont(.headline)
-    }
-    .padding(24)
-    .background(Color.paper)
+    FamilyPhotoPlaceholder()
+        .padding(24)
+        .background(Color.paper)
 }
 #endif

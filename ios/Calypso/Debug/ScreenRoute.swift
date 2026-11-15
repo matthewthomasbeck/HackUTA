@@ -64,8 +64,12 @@ enum ScreenRoute {
         case "account":
             return AnyView(HomeView(initialTab: .account))
         case "account-bottom":
-            return AnyView(AccountView().defaultScrollAnchor(.bottom)
-                .safeAreaInset(edge: .bottom, spacing: 0) { CalypsoTabBar(selection: .constant(.account)) })
+            return AnyView(HomeView(initialTab: .account).defaultScrollAnchor(.bottom))
+        // The real HomeView scrolled to the end of a tab: checks nothing hides under the tab bar.
+        case "home-today-bottom":
+            return AnyView(HomeView(initialTab: .today).defaultScrollAnchor(.bottom))
+        case "home-people-bottom":
+            return AnyView(HomeView(initialTab: .people).defaultScrollAnchor(.bottom))
         case "reset":
             // Account with the dialog open, over the same tab bar the app shows.
             return AnyView(AccountView(confirmingReset: true)

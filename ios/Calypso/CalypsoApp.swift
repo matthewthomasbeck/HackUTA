@@ -43,11 +43,12 @@ struct CalypsoApp: App {
     }
 }
 
-/// The system tab bar is hidden (the iOS 26 one is glass) and `CalypsoTabBar` sits in the bottom safe area
-/// instead, so every tab's content scrolls clear of it.
+/// The system tab bar is hidden (the iOS 26 one is glass) and `CalypsoTabBar` is overlaid at the bottom instead.
+/// Its measured height is published as `tabBarClearance`, so every tab's content scrolls clear of it.
 struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var tab: HomeTab
+    @State private var tabBarHeight: CGFloat = 0
     private let client = APIClient.configured
 
     init(initialTab: HomeTab = .today) {
@@ -66,9 +67,15 @@ struct HomeView: View {
                 .tag(HomeTab.account)
                 .toolbar(.hidden, for: .tabBar)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        // An overlay, not a safeAreaInset: TabView doesn't pass insets to its pages, so each scrolling screen
+        // reserves the measured bar height itself (`tabBarClearance()`).
+        .overlay(alignment: .bottom) {
             CalypsoTabBar(selection: $tab)
+                .background(GeometryReader { Color.clear.preference(key: TabBarHeightKey.self, value: $0.size.height) })
+                .ignoresSafeArea(.keyboard)
         }
+        .environment(\.tabBarClearance, tabBarHeight)
+        .onPreferenceChange(TabBarHeightKey.self) { tabBarHeight = $0 }
         .onChange(of: scenePhase, initial: true) { _, phase in
             if phase == .active, let client { Task { await PhotoSync.syncNew(using: client) } }
         }

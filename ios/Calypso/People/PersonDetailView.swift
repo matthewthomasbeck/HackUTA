@@ -54,6 +54,7 @@ struct PersonDetailView: View {
             .padding(.bottom, 32)
             .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 1), value: memories)
         }
+        .tabBarClearance()
         .background(Color.paper.ignoresSafeArea())
         .paperTopEdge()
         .navigationBarBackButtonHidden(true)
