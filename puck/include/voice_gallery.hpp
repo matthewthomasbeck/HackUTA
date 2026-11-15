@@ -8,9 +8,13 @@
 namespace calypso {
 
 // Local enrolled speakers for offline emergency ID.
-// Each entry: display name + L2-normalized embedding (titanet-small → 192-d).
+// Each entry: backend person_id + display fields + L2-normalized embedding
+// (titanet-small → 192-d). Cloud sync replace-alls this list.
 struct EnrolledSpeaker {
-  std::string name;
+  std::string person_id;
+  std::string display_name;
+  std::string relationship;
+  bool is_patient = false;
   std::vector<float> embedding;  // unit vector
 };
 
@@ -20,7 +24,11 @@ class VoiceGallery {
   bool empty() const;
   std::size_t size() const;
 
-  // Add or replace a speaker. Embedding is L2-normalized in place.
+  // Add or replace by person_id (falls back to display_name if id empty).
+  // Embedding is L2-normalized in place.
+  bool add(EnrolledSpeaker speaker);
+
+  // Convenience for local WAV bootstrap (person_id = name).
   bool add(std::string name, std::vector<float> embedding);
 
   // Cosine vs gallery. Best score ≥ threshold → Identified; else Uncertain.

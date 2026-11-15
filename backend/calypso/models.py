@@ -179,6 +179,20 @@ class PuckHealth(BaseModel):
     last_upload_ok: bool | None = None
 
 
+class PuckGallerySpeaker(BaseModel):
+    """One enrolled voice for the puck's offline gallery (mean of stored prints)."""
+    person_id: str
+    display_name: str | None = None
+    relationship: str | None = None
+    is_patient: bool = False
+    embedding: list[float]  # L2-normalized Titanet-small (192-d)
+
+
+class PuckGallery(BaseModel):
+    """Full voice-gallery snapshot for the puck. Replace-all: absences are deletes."""
+    people: list[PuckGallerySpeaker] = []
+
+
 class BBox(BaseModel):
     x: int
     y: int

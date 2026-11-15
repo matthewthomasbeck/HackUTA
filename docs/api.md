@@ -69,6 +69,31 @@ curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   https://<host>/puck/health
 ```
 
+### `GET /puck/gallery`
+Full voice-print snapshot for the puck's offline gallery. Auth: Bearer token.
+
+The puck **replace-syncs** from this on its connection-listener thread (while the backend is reachable). Anyone missing from the response is dropped locally — deletes on the cloud are deletes on the Pi. Each person is the L2-normalized **mean** of their stored Titanet-small prints (192-d). People with no usable voice prints are omitted. Includes the patient.
+
+Response `200`:
+```json
+{
+  "people": [
+    {
+      "person_id": "p_sarah",
+      "display_name": "Sarah",
+      "relationship": "daughter",
+      "is_patient": false,
+      "embedding": [0.01, -0.02]
+    }
+  ]
+}
+```
+`embedding` is a JSON array of floats (length 192 in production). `display_name` / `relationship` may be `null`.
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" https://<host>/puck/gallery
+```
+
 ---
 
 ## Agent (Keanu)

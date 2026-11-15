@@ -51,9 +51,18 @@ voice-fingerprint → Bluetooth "who is talking" to the phone.
    `Models::set_backend` for Coral/NCS2 later)
 3. `PhoneLink::send_who_is_talking(out.who)` → phone app
 
+### Gallery sync (cloud → Pi)
+1. Backend stores Titanet voice prints in SQLite (`voice_prints`) at enroll time
+2. `GET /puck/gallery` returns a full snapshot (mean embedding + person meta)
+3. Connection listener, whenever the backend is reachable, GETs that snapshot
+   and **replace-alls** the in-memory `VoiceGallery` (missing people = deleted)
+4. Local `GALLERY_DIR/<Name>/*.wav` is only a bootstrap until the first sync
+5. Works in `MODE=offline` too (listener still probes HTTP for gallery; run
+   path stays Offline)
+
 ### Mode switching
 1. Connection listener: if connected → Online; if not → wait, retry connect,
-    set Offline/Online
+    set Offline/Online. While reachable, also syncs `/puck/gallery`.
 2. Capture never stops; only the worker path changes. Switching to Online
     clears the offline concat buffer so partial clips do not leak.
 

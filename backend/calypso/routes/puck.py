@@ -1,6 +1,7 @@
-"""Puck intake: speech segments (idempotent on segment_uuid) and health heartbeats."""
+"""Puck intake: speech segments (idempotent on segment_uuid), health, voice gallery."""
 import sqlite3
 
+import numpy as np
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import ValidationError
 
@@ -8,8 +9,9 @@ from ..auth import require_token
 from ..bus import emit
 from ..config import Settings
 from ..deps import get_conn, get_jobs, get_settings
+from ..identity.vectors import from_blob, normalize
 from ..jobs import process_segment
-from ..models import PuckHealth, SegmentAck, SegmentMeta, iso_utc
+from ..models import PuckGallery, PuckGallerySpeaker, PuckHealth, SegmentAck, SegmentMeta, iso_utc
 from ..timeutil import now_iso
 
 router = APIRouter(prefix="/puck", dependencies=[Depends(require_token)])
@@ -81,3 +83,42 @@ def upload_segment(
 def puck_health(health: PuckHealth) -> dict:
     emit("puck.health", health.model_dump(mode="json"))
     return {"ok": True}
+
+
+@router.get("/gallery", response_model=PuckGallery)
+def puck_gallery(conn: sqlite3.Connection = Depends(get_conn)) -> PuckGallery:
+    """Full voice-print snapshot for the puck. Mean of each person's Titanet prints.
+
+    The puck replace-syncs from this: anyone missing here is dropped locally.
+    People with no usable voice prints are omitted. Includes the patient.
+    """
+    people_rows = conn.execute(
+        "SELECT id, name, relationship, is_patient FROM people ORDER BY created_at"
+    ).fetchall()
+    out: list[PuckGallerySpeaker] = []
+    for person in people_rows:
+        blobs = conn.execute(
+            "SELECT vec FROM voice_prints WHERE person_id = ? ORDER BY created_at",
+            (person["id"],),
+        ).fetchall()
+        vecs: list[np.ndarray] = []
+        for row in blobs:
+            stored = from_blob(row["vec"])
+            if stored.size == 0:
+                continue
+            if vecs and stored.shape != vecs[0].shape:
+                continue  # skip prints from a different model dim
+            vecs.append(normalize(stored))
+        if not vecs:
+            continue
+        mean = normalize(np.mean(np.stack(vecs, axis=0), axis=0))
+        out.append(
+            PuckGallerySpeaker(
+                person_id=person["id"],
+                display_name=person["name"],
+                relationship=person["relationship"],
+                is_patient=bool(person["is_patient"]),
+                embedding=mean.astype(np.float32).tolist(),
+            )
+        )
+    return PuckGallery(people=out)

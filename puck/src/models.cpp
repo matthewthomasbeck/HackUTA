@@ -114,8 +114,18 @@ bool Models::ready() const {
   return ready_;
 }
 
-const VoiceGallery& Models::gallery() const {
-  return gallery_;
+std::size_t Models::gallery_size() const {
+  std::lock_guard<std::mutex> lock(gallery_mu_);
+  return gallery_.size();
+}
+
+void Models::replace_gallery(std::vector<EnrolledSpeaker> speakers) {
+  VoiceGallery next;
+  for (auto& sp : speakers) {
+    next.add(std::move(sp));
+  }
+  std::lock_guard<std::mutex> lock(gallery_mu_);
+  gallery_ = std::move(next);
 }
 
 bool Models::embed_pcm(const std::vector<std::int16_t>& pcm, int sample_rate,
@@ -250,13 +260,17 @@ bool Models::infer(const AudioChunk& clip, ModelOutput& out) {
     return false;
   }
   out.voice_embedding = emb;
+  std::lock_guard<std::mutex> lock(gallery_mu_);
   out.who = gallery_.match(emb, match_threshold_);
   return true;
 }
 
 void Models::shutdown() {
   ready_ = false;
-  gallery_.clear();
+  {
+    std::lock_guard<std::mutex> lock(gallery_mu_);
+    gallery_.clear();
+  }
   sherpa_.reset();
   accelerators_ = nullptr;
 }

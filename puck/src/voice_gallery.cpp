@@ -43,18 +43,35 @@ std::size_t VoiceGallery::size() const {
   return speakers_.size();
 }
 
-bool VoiceGallery::add(std::string name, std::vector<float> embedding) {
-  if (name.empty() || !l2_normalize(embedding)) {
+bool VoiceGallery::add(EnrolledSpeaker speaker) {
+  if (speaker.person_id.empty() && speaker.display_name.empty()) {
+    return false;
+  }
+  if (speaker.person_id.empty()) {
+    speaker.person_id = speaker.display_name;
+  }
+  if (speaker.display_name.empty()) {
+    speaker.display_name = speaker.person_id;
+  }
+  if (!l2_normalize(speaker.embedding)) {
     return false;
   }
   for (auto& sp : speakers_) {
-    if (sp.name == name) {
-      sp.embedding = std::move(embedding);
+    if (sp.person_id == speaker.person_id) {
+      sp = std::move(speaker);
       return true;
     }
   }
-  speakers_.push_back(EnrolledSpeaker{std::move(name), std::move(embedding)});
+  speakers_.push_back(std::move(speaker));
   return true;
+}
+
+bool VoiceGallery::add(std::string name, std::vector<float> embedding) {
+  EnrolledSpeaker sp;
+  sp.person_id = name;
+  sp.display_name = std::move(name);
+  sp.embedding = std::move(embedding);
+  return add(std::move(sp));
 }
 
 WhoIsTalking VoiceGallery::match(const std::vector<float>& embedding,
@@ -97,8 +114,9 @@ WhoIsTalking VoiceGallery::match(const std::vector<float>& embedding,
   }
 
   who.status = WhoIsTalking::Status::Identified;
-  who.display_name = best_sp->name;
-  who.person_id = best_sp->name;
+  who.person_id = best_sp->person_id;
+  who.display_name = best_sp->display_name;
+  who.relationship = best_sp->relationship;
   return who;
 }
 

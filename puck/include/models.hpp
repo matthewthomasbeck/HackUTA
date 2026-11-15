@@ -4,8 +4,10 @@
 #include "types.hpp"
 #include "voice_gallery.hpp"
 
+#include <mutex>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace calypso {
 
@@ -20,8 +22,9 @@ class Models {
   Models(const Models&) = delete;
   Models& operator=(const Models&) = delete;
 
-  // Load Titanet ONNX, enroll GALLERY_DIR/<Name>/*.wav, keep Accelerators for
-  // a future TPU swap (ignored on CPU MVP).
+  // Load Titanet ONNX, enroll GALLERY_DIR/<Name>/*.wav (bootstrap until the
+  // first successful cloud gallery sync), keep Accelerators for a future TPU
+  // swap (ignored on CPU MVP).
   bool init(InferBackend backend,
             const std::string& voice_model_path,
             const std::string& stt_model_path,
@@ -32,7 +35,11 @@ class Models {
   bool set_backend(InferBackend backend);
   InferBackend backend() const;
   bool ready() const;
-  const VoiceGallery& gallery() const;
+  std::size_t gallery_size() const;
+
+  // Replace-all from GET /puck/gallery. Empty list clears local speakers
+  // (cloud deleted everyone). Thread-safe vs infer().
+  void replace_gallery(std::vector<EnrolledSpeaker> speakers);
 
   // Embed clip → match gallery → fill out.who (+ out.voice_embedding).
   bool infer(const AudioChunk& clip, ModelOutput& out);
@@ -51,6 +58,7 @@ class Models {
   Accelerators* accelerators_ = nullptr;
   float match_threshold_ = 0.55f;
   VoiceGallery gallery_;
+  mutable std::mutex gallery_mu_;
   std::unique_ptr<SherpaState> sherpa_;
 };
 

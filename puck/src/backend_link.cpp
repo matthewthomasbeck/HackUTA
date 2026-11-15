@@ -4,14 +4,22 @@
 
 #include <curl/curl.h>
 
-#include <iostream>
 #include <chrono>
+#include <iostream>
+#include <string>
 
 namespace calypso {
 namespace {
 
 size_t discard_write(char* /*ptr*/, size_t size, size_t nmemb, void* /*userdata*/) {
   return size * nmemb;
+}
+
+size_t append_write(char* ptr, size_t size, size_t nmemb, void* userdata) {
+  const std::size_t n = size * nmemb;
+  auto* out = static_cast<std::string*>(userdata);
+  out->append(ptr, n);
+  return n;
 }
 
 struct CurlGlobal {
@@ -131,6 +139,40 @@ int BackendLink::post_segment(const std::string& wav, const std::string& meta_js
     std::cerr << "backend: POST /puck/segments curl=" << rc << " http=" << http << "\n";
   }
   return status;
+}
+
+bool BackendLink::get_gallery(std::string& body_out) {
+  body_out.clear();
+  CURL* curl = curl_easy_init();
+  if (!curl) {
+    return false;
+  }
+
+  const std::string url = base_url() + "/puck/gallery";
+  const std::string auth = "Authorization: Bearer " + token_;
+  struct curl_slist* headers = nullptr;
+  headers = curl_slist_append(headers, auth.c_str());
+
+  curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+  curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+  curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, append_write);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body_out);
+
+  const CURLcode rc = curl_easy_perform(curl);
+  long http = 0;
+  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http);
+  curl_slist_free_all(headers);
+  curl_easy_cleanup(curl);
+
+  if (rc != CURLE_OK || http != 200) {
+    std::cerr << "backend: GET /puck/gallery failed curl=" << rc
+              << " http=" << http << "\n";
+    body_out.clear();
+    return false;
+  }
+  return true;
 }
 
 bool BackendLink::post_health(std::size_t queue_depth, bool time_synced,
