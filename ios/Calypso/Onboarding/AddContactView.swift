@@ -2,28 +2,36 @@ import Contacts
 import ContactsUI
 import SwiftUI
 
+/// Figma "Add to Contacts" (20:938).
 struct AddContactView: View {
+    var onBack: () -> Void
     var onNext: () -> Void
     @State private var showEditor = false
 
     var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
-            Image("Logo").resizable().scaledToFit().frame(width: 120).clipShape(Circle())
-            Text("Add Calypso⁻¹ to Contacts").font(.title.bold())
-            Text("So you can start a FaceTime call with Calypso⁻¹ like with anyone else.")
-                .multilineTextAlignment(.center).foregroundStyle(.secondary)
-            Spacer()
-            if Config.chertPhone.isEmpty {
-                Text("Set CHERT_PHONE in Secrets.xcconfig to add the contact.")
-                    .font(.footnote).foregroundStyle(.secondary)
+        OnboardingScaffold(step: .addContact, onBack: onBack) {
+            VStack(alignment: .leading, spacing: 12) {
+                Mascot(pose: .wave, size: .m, shadow: true)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                OnboardingHeading(title: "Add Calypso⁻¹ to your contacts",
+                                  message: "Then you can FaceTime Calypso⁻¹ just like family.")
+                contactPreview
+                Spacer(minLength: 24)
+                if Config.chertPhone.isEmpty {
+                    Text("Set CHERT_PHONE in Secrets.xcconfig to add the contact.")
+                        .calypsoFont(.caption)
+                        .foregroundStyle(Color.inkSoft)
+                        .frame(maxWidth: .infinity)
+                        .multilineTextAlignment(.center)
+                }
+                CalypsoButton("Add to Contacts") { showEditor = true }
+                    .disabled(Config.chertPhone.isEmpty)
+                CalypsoButton("Skip for now", kind: .quiet, action: onNext)
             }
-            Button("Add Calypso⁻¹ to Contacts") { showEditor = true }
-                .buttonStyle(.borderedProminent).controlSize(.large)
-                .disabled(Config.chertPhone.isEmpty)
-            Button("Continue", action: onNext)
+            .padding(.horizontal, 24)
+            .frame(maxHeight: .infinity)
         }
-        .padding()
         .sheet(isPresented: $showEditor) {
             NewContactSheet(contact: ContactBuilder.calypso(phone: Config.chertPhone)) {
                 showEditor = false
@@ -32,6 +40,30 @@ struct AddContactView: View {
             .ignoresSafeArea()
         }
     }
+
+    /// What the new contact will look like. It uses the logo, the contact's real photo, so this screen
+    /// keeps a single gull.
+    private var contactPreview: some View {
+        PaperCard {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 16) { Logo(size: 80); contactText }
+                VStack(alignment: .leading, spacing: 12) { Logo(size: 80); contactText }
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var contactText: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Calypso⁻¹").calypsoFont(.headline).foregroundStyle(Color.ink)
+            Text("FaceTime · Message").calypsoFont(.caption).foregroundStyle(Color.inkSoft)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+#Preview {
+    AddContactView(onBack: {}, onNext: {})
 }
 
 private struct NewContactSheet: UIViewControllerRepresentable {

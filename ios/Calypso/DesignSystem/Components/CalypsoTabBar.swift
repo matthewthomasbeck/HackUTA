@@ -1,0 +1,92 @@
+import SwiftUI
+
+enum HomeTab: Int, CaseIterable {
+    case today, people, account
+
+    var title: String {
+        switch self {
+        case .today: "Today"
+        case .people: "People"
+        case .account: "Account"
+        }
+    }
+
+    var glyph: CalypsoGlyph {
+        switch self {
+        case .today: .today
+        case .people: .people
+        case .account: .account
+        }
+    }
+}
+
+/// Figma `Tab Bar` (17:147): Card background, 2pt Periwinkle Mist top line, Mist pill behind the selected icon
+/// only. The selected icon and label are Periwinkle Deep on Card; unselected items are Ink Soft. The system tab bar is
+/// replaced because the iOS 26 one is glass (plan ruling); VoiceOver semantics are kept by hand.
+struct CalypsoTabBar: View {
+    @Binding var selection: HomeTab
+
+    init(selection: Binding<HomeTab>) {
+        _selection = selection
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(HomeTab.allCases, id: \.self) { tab in
+                item(tab)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.top, 2) // the top line sits above the tabs, as a Figma border does
+        .background(alignment: .top) {
+            Color.card
+                .overlay(alignment: .top) { Color.periwinkleMist.frame(height: 2) }
+                .ignoresSafeArea(edges: .bottom)
+        }
+        // Tab labels are capped like the system bar; the Large Content Viewer covers bigger sizes.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+    }
+
+    private func item(_ tab: HomeTab) -> some View {
+        let selected = tab == selection
+        return Button {
+            selection = tab
+        } label: {
+            VStack(spacing: 2) {
+                CalypsoIcon(tab.glyph, size: 28, relativeTo: .footnote)
+                    .foregroundStyle(selected ? Color.periwinkleDeep : Color.inkSoft)
+                    .frame(width: 64, height: 32)
+                    .background(selected ? Color.periwinkleMist : Color.clear, in: Capsule())
+                Text(tab.title)
+                    .calypsoFont(.caption)
+                    .foregroundStyle(selected ? Color.periwinkleDeep : Color.inkSoft)
+                    // Never scaled below Caption: at the xxxLarge cap "Account" is about 109pt wide, which fits a
+                    // 375pt phone's 120pt tab. Bigger sizes use the Large Content Viewer below.
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.top, 4)
+            .frame(maxWidth: .infinity, minHeight: 64, alignment: .top)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableStyle())
+        .accessibilityLabel(tab.title)
+        .accessibilityHint("Tab, \(tab.rawValue + 1) of \(HomeTab.allCases.count)")
+        .accessibilityAddTraits(selected ? [.isSelected] : [])
+        .accessibilityShowsLargeContentViewer {
+            Label { Text(tab.title) } icon: { tab.glyph.image }
+        }
+    }
+}
+
+#Preview {
+    struct Demo: View {
+        @State var tab: HomeTab = .today
+        var body: some View {
+            VStack(spacing: 0) {
+                Color.paper
+                CalypsoTabBar(selection: $tab)
+            }
+        }
+    }
+    return Demo()
+}

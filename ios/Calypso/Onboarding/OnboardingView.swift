@@ -1,30 +1,72 @@
 import SwiftUI
 
 struct OnboardingView: View {
-    private enum Step { case welcome, addContact, groupCall, permissions }
-
     @AppStorage("onboarded") private var onboarded = false
-    @State private var step = Step.welcome
+    @State private var step: OnboardingStep
+    /// Whether the last move went forward, so the push slides the right way.
+    @State private var forward = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Family already texted from the invite step (DEBUG routes seed it to open on the "sent" state).
+    private let seededInvites: [FamilyInvite.Invitee]
+
+    init(initialStep: OnboardingStep = .welcome, seededInvites: [FamilyInvite.Invitee] = []) {
+        _step = State(initialValue: initialStep)
+        self.seededInvites = seededInvites
+    }
 
     var body: some View {
-        switch step {
-        case .welcome:
-            VStack(spacing: 24) {
-                Spacer()
-                Image("Logo").resizable().scaledToFit().frame(width: 140).clipShape(Circle())
-                Text("Welcome to Calypso⁻¹").font(.largeTitle.bold()).multilineTextAlignment(.center)
-                Text("A gentle memory companion for the people you love.")
-                    .multilineTextAlignment(.center).foregroundStyle(.secondary)
-                Spacer()
-                Button("Get Started") { step = .addContact }.buttonStyle(.borderedProminent).controlSize(.large)
-            }
-            .padding()
-        case .addContact:
-            AddContactView { step = .groupCall }
-        case .groupCall:
-            GroupCallHowToView { step = .permissions }
-        case .permissions:
-            PermissionsView { onboarded = true }
+        ZStack {
+            Color.paper.ignoresSafeArea()
+            screen(for: step)
+                .id(step)
+                .transition(transition)
         }
     }
+
+    @ViewBuilder private func screen(for step: OnboardingStep) -> some View {
+        switch step {
+        case .welcome:
+            WelcomeView(onNext: goNext)
+        case .companion:
+            MeetCompanionView(onBack: goBack, onNext: goNext)
+        case .addContact:
+            AddContactView(onBack: goBack, onNext: goNext)
+        case .groupCall:
+            GroupCallHowToView(onBack: goBack, onNext: goNext)
+        case .permissions:
+            PermissionsView(onBack: goBack, onDone: goNext)
+        case .inviteFamily:
+            InviteFamilyView(onBack: goBack, onNext: goNext, invited: seededInvites)
+        case .allSet:
+            // Only the final step finishes onboarding.
+            AllSetView { onboarded = true }
+        }
+    }
+
+    private var transition: AnyTransition {
+        if reduceMotion { return .opacity }
+        return .asymmetric(insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
+                           removal: .move(edge: forward ? .leading : .trailing).combined(with: .opacity))
+    }
+
+    private func goNext() { move(to: step.next, forward: true) }
+
+    private func goBack() { move(to: step.previous, forward: false) }
+
+    private func move(to target: OnboardingStep?, forward: Bool) {
+        guard let target else { return }
+        let animate = {
+            withAnimation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(response: 0.35, dampingFraction: 1)) {
+                step = target
+            }
+        }
+        guard self.forward != forward else { return animate() }
+        // Let the outgoing screen pick up the new direction before it is removed.
+        self.forward = forward
+        DispatchQueue.main.async(execute: animate)
+    }
+}
+
+#Preview {
+    OnboardingView()
 }

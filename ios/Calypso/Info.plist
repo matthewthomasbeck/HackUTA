@@ -36,6 +36,13 @@
 	<string>Calypso⁻¹ remembers places you visited so it can tell you about your day.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Calypso⁻¹ places your photos on your day's timeline.</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Fraunces-SemiBold.ttf</string>
+		<string>Nunito-Regular.ttf</string>
+		<string>Nunito-SemiBold.ttf</string>
+		<string>Nunito-Bold.ttf</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
