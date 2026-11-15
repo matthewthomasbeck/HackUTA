@@ -14,6 +14,14 @@ enum ScreenRoute {
 
     /// Later tasks add a case per route here.
     static func view(for route: String) -> AnyView {
+        #if DEBUG
+        // "onboarding-<rawValue>" or "onboarding-<name>", e.g. "onboarding-3" / "onboarding-groupCall".
+        if let step = OnboardingStep.allCases.first(where: {
+            route == "onboarding-\($0.rawValue)" || route == "onboarding-\($0)"
+        }) {
+            return AnyView(OnboardingView(initialStep: step))
+        }
+        #endif
         switch route {
         case "design-system":
             return AnyView(DesignSystemSpecimen())

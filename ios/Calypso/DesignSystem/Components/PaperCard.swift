@@ -3,14 +3,20 @@ import SwiftUI
 /// Card container from Figma `Moment Card` (18:225): padding 20, Card fill, 2pt Periwinkle Mist border, radius 24.
 struct PaperCard<Content: View>: View {
     let content: Content
+    let horizontalPadding: CGFloat
+    let verticalPadding: CGFloat
 
-    init(@ViewBuilder content: () -> Content) {
+    /// Figma `Permission / *` cards use 16 × 12 padding; everything else uses the default 20.
+    init(horizontalPadding: CGFloat = 20, verticalPadding: CGFloat = 20, @ViewBuilder content: () -> Content) {
+        self.horizontalPadding = horizontalPadding
+        self.verticalPadding = verticalPadding
         self.content = content()
     }
 
     var body: some View {
         content
-            .padding(20)
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, verticalPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.card, in: RoundedRectangle(cornerRadius: 24))
             .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(Color.periwinkleMist, lineWidth: 2))

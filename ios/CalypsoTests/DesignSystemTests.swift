@@ -38,7 +38,7 @@ final class DesignSystemTests: XCTestCase {
 
     func testDecorationRawValuesHaveAssets() {
         let bundle = Bundle(for: DesignSystemTests.appClass)
-        let all: [Decoration] = [.oliveBranch, .meander, .islandHome, .lighthouse, .wavesCalm, .wavesLively, .seascape]
+        let all = Decoration.allCases
         for d in all { XCTAssertNotNil(UIImage(named: d.rawValue, in: bundle, with: nil), d.rawValue) }
     }
 
