@@ -250,7 +250,9 @@ class ClaudeController:
             session.transcript.append((time.monotonic(), session.last_text))
             self.keep_voice(session, event.voice_wav_b64)
             await api("POST", f"/calls/{session.call_id}/lines", {"speaker": session.config.participant, "text": session.last_text})
-            if session.config.mode == "group":
+            # Group and recognition calls answer "what did you do today?" from saved data
+            # via Haiku-backed /recall. Speech still never identifies anyone here.
+            if session.config.mode in {"group", "recognize"}:
                 if session.awaiting_newcomer_reply:
                     clear_newcomer_reply = True  # the reply to our question goes through Sonnet
                 else:
