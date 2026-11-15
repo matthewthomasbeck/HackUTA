@@ -6,6 +6,7 @@ from conftest import AUTH, post_segment
 from calypso import day_builder, jobs
 from calypso.config import Settings
 from calypso.day_builder import mark_day_dirty, rebuild_dirty_days
+from calypso.timeutil import iso_utc
 
 DAY = date(2026, 11, 14)
 
@@ -62,13 +63,11 @@ def test_one_delayed_job_per_dirty_period(client, conn, monkeypatch):
     assert delay == 60 and func is rebuild_dirty_days
     assert events(client) == []  # not built yet
 
-    # 59 s after the first speech: not due, even though marks kept arriving.
-    monkeypatch.setattr(day_builder, "now_utc", lambda: t0 + timedelta(seconds=59))
-    assert rebuild_dirty_days(*args) == 0
-    # The delayed job runs 60 s after the first mark and builds the day despite later marks.
+    # The one delayed job runs once, 60 s after the first mark, and builds the day despite later marks.
     monkeypatch.setattr(day_builder, "now_utc", lambda: t0 + timedelta(seconds=60))
     assert rebuild_dirty_days(*args) == 1
     assert len(events(client)) == 1 and dirty(conn) == {}
+    assert len(q.delayed) == 1  # nothing left over, so no follow-up job
 
     # New speech after the build starts a new dirty period with exactly one new job.
     monkeypatch.setattr(day_builder, "now_utc", lambda: t0 + timedelta(seconds=63))
@@ -127,3 +126,82 @@ def test_late_visit_upload_rebuilds_day(client):
         "lat": 0, "lon": 0, "place_name": "Blue Bean Café"}])
     assert r.status_code == 200
     assert events(client)[0]["place"] == "Blue Bean Café"
+
+
+def _age(conn, seconds, monkeypatch):
+    t0 = day_builder.now_utc()
+    marked = iso_utc(t0 - timedelta(seconds=seconds))
+    conn.execute("INSERT OR REPLACE INTO dirty_days (day, marked_at) VALUES (?, ?)", (DAY.isoformat(), marked))
+    conn.commit()
+    monkeypatch.setattr(day_builder, "now_utc", lambda: t0)
+    return t0, marked
+
+
+def _delay60(monkeypatch):
+    monkeypatch.setenv("CALYPSO_REBUILD_DELAY_S", "60")
+    q = FakeQueue()
+    monkeypatch.setattr(jobs, "get_jobs", lambda settings: q)
+    return Settings.from_env(), q
+
+
+def test_stale_dirty_row_requeues(conn, monkeypatch):
+    s, q = _delay60(monkeypatch)
+    t0, old = _age(conn, 300, monkeypatch)
+    assert day_builder.schedule_rebuild(conn, DAY, s, q) is True
+    assert len(q.delayed) == 1 and q.delayed[0][0] == 60
+    assert dirty(conn)["2026-11-14"] == iso_utc(t0) != old
+
+
+def test_fresh_dirty_row_does_not_requeue(conn, monkeypatch):
+    s, q = _delay60(monkeypatch)
+    _age(conn, 10, monkeypatch)
+    assert day_builder.schedule_rebuild(conn, DAY, s, q) is False
+    assert q.delayed == []
+
+
+def test_early_run_requeues_for_remaining_time(conn, monkeypatch):
+    s, q = _delay60(monkeypatch)
+    _age(conn, 30, monkeypatch)
+    assert rebuild_dirty_days(s) == 0
+    assert len(q.delayed) == 1
+    delay, func, _ = q.delayed[0]
+    assert func is rebuild_dirty_days and abs(delay - 30) <= 2
+    assert "2026-11-14" in dirty(conn)
+
+
+def test_startup_sweep_queues_job_when_dirty_rows_exist(env, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from calypso import app as app_mod
+    from calypso import db
+
+    monkeypatch.setenv("CALYPSO_REBUILD_DELAY_S", "60")
+    c = db.connect(Settings.from_env().db_path)
+    c.execute("INSERT INTO dirty_days (day, marked_at) VALUES (?, ?)", (DAY.isoformat(), iso_utc(day_builder.now_utc())))
+    c.commit()
+    c.close()
+    q = FakeQueue()
+    monkeypatch.setattr(app_mod, "get_jobs", lambda settings: q)
+    with TestClient(app_mod.create_app()):
+        pass
+    assert len(q.delayed) == 1 and q.delayed[0][0] == 60 and q.delayed[0][1] is rebuild_dirty_days
+
+
+def test_startup_sweep_queues_nothing_when_table_empty(env, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from calypso import app as app_mod
+
+    monkeypatch.setenv("CALYPSO_REBUILD_DELAY_S", "60")
+    q = FakeQueue()
+    monkeypatch.setattr(app_mod, "get_jobs", lambda settings: q)
+    with TestClient(app_mod.create_app()):
+        pass
+    assert q.delayed == []
+
+
+def test_manual_rebuild_clears_dirty_row(client, conn):
+    mark_day_dirty(conn, DAY)
+    assert "2026-11-14" in dirty(conn)
+    assert client.post("/days/2026-11-14/rebuild", headers=AUTH).status_code == 200
+    assert dirty(conn) == {}

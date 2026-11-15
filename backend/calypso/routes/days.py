@@ -41,4 +41,6 @@ def get_events(day: date, conn: sqlite3.Connection = Depends(get_conn),
 def rebuild(day: date, conn: sqlite3.Connection = Depends(get_conn),
             settings: Settings = Depends(get_settings)) -> dict:
     n = len(rebuild_day(conn, day, settings))
+    conn.execute("DELETE FROM dirty_days WHERE day = ?", (day.isoformat(),))
+    conn.commit()
     return {"ok": True, "day": day.isoformat(), "events": n}

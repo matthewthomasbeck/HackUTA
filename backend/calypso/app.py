@@ -21,6 +21,20 @@ from .storage import get_storage
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 
+def _sweep_dirty_days(settings: Settings, jobs) -> None:
+    """A dirty row left from before a restart may have lost its delayed job: queue one."""
+    from .day_builder import rebuild_dirty_days
+
+    conn = db.connect(settings.db_path)
+    try:
+        if conn.execute("SELECT 1 FROM dirty_days LIMIT 1").fetchone():
+            jobs.enqueue_in(settings.rebuild_delay_s, rebuild_dirty_days, None)
+    except Exception:
+        logging.getLogger("calypso.app").exception("startup dirty-day sweep failed")
+    finally:
+        conn.close()
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
 
@@ -29,6 +43,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         settings.warn_if_misconfigured()
         settings.tmp_dir.mkdir(parents=True, exist_ok=True)
         db.connect(settings.db_path).close()  # create the file and schema once
+        _sweep_dirty_days(settings, get_jobs(settings))
         yield
 
     app = FastAPI(title="Calypso⁻¹ backend", version="0.1.0", lifespan=lifespan)

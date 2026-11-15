@@ -157,7 +157,15 @@ def schedule_rebuild(conn, day: date, settings: Settings, jobs=None) -> bool:
     """Mark `day` dirty and, if that starts a new dirty period, queue one delayed
     `rebuild_dirty_days` job. Returns True when a job was queued."""
     if not mark_day_dirty(conn, day):
-        return False
+        # An old row means its delayed job was lost (restart, killed worker, no scheduler):
+        # restart the period and queue a new job.
+        stale_s = max(10.0, 2 * settings.rebuild_delay_s)
+        cutoff = iso_utc(now_utc() - timedelta(seconds=stale_s))
+        cur = conn.execute("UPDATE dirty_days SET marked_at = ? WHERE day = ? AND marked_at < ?",
+                           (iso_utc(now_utc()), day.isoformat(), cutoff))
+        conn.commit()
+        if cur.rowcount != 1:
+            return False
     if jobs is None:
         from .jobs import get_jobs  # lazy: jobs imports this module
 
@@ -191,6 +199,13 @@ def rebuild_dirty_days(settings: Settings | None = None) -> int:
                 schedule_rebuild(conn, date.fromisoformat(d), settings)
                 raise
             n += 1
+        if settings.rebuild_delay_s > 0:  # at 0 every row is due, so this can't loop
+            left = conn.execute("SELECT MAX(marked_at) AS m FROM dirty_days").fetchone()["m"]
+            if left:  # the job ran slightly early; come back when the youngest row is due
+                age = (now_utc() - parse_iso(left)).total_seconds()
+                from .jobs import get_jobs  # lazy: jobs imports this module
+
+                get_jobs(settings).enqueue_in(max(1.0, settings.rebuild_delay_s - age), rebuild_dirty_days, None)
         return n
     finally:
         conn.close()
