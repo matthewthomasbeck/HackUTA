@@ -18,6 +18,7 @@ from .cards import CALL_SIZE, caption_cards, font, render
 from .contract import Card
 
 log = logging.getLogger("calypso.camera")
+speech_log = logging.getLogger("calypso.speech")
 
 
 def wav_bytes(pcm):
@@ -75,6 +76,7 @@ class RoomSpeech:
         self.frames = asyncio.Queue(maxsize=100)
         self.rms_threshold = rms_threshold
         self.speaking = False
+        self.last_wav = None
 
     def feed(self, pcm):
         if self.speaking:
@@ -88,6 +90,7 @@ class RoomSpeech:
             self.frames.get_nowait()
 
     async def listen(self, timeout_s=20):
+        self.last_wav = None
         self.clear()
         deadline = time.monotonic() + timeout_s
         chunks, voiced_s, quiet_s, total_s = [], 0, 0, 0
@@ -112,21 +115,36 @@ class RoomSpeech:
                 break
         if voiced_s < 0.3:
             return None
-        return await self.provider.transcribe(wav_bytes(b"".join(chunks)))
+        audio = wav_bytes(b"".join(chunks))
+        text = await self.provider.transcribe(audio)
+        self.last_wav = audio if text else None
+        return text
 
     async def speak(self, text):
         self.caption(text)
         self.speaking = True
         self.clear()
+        started = time.monotonic()
+        stage = "synthesizing"
+        speech_log.info("speech_synthesis_started characters=%d", len(text))
         try:
             audio = await self.provider.synthesize(text)
             with wave.open(BytesIO(audio), "rb") as wav:
                 if (wav.getframerate(), wav.getnchannels(), wav.getsampwidth()) != (16000, 1, 2):
                     raise ValueError("Expected 16 kHz mono PCM16 TTS")
+                stage = "playing"
+                speech_log.info("speech_playback_started audio_s=%.2f", wav.getnframes() / wav.getframerate())
                 while pcm := wav.readframes(320):
                     await self.source.capture_frame(rtc.AudioFrame(pcm, 16000, 1, len(pcm) // 2))
             await self.source.wait_for_playout()
+            speech_log.info("speech_playback_complete elapsed_s=%.2f", time.monotonic() - started)
             await asyncio.sleep(0.25)
+        except asyncio.CancelledError:
+            speech_log.warning("speech_cancelled stage=%s elapsed_s=%.2f", stage, time.monotonic() - started)
+            raise
+        except Exception as error:
+            speech_log.error("speech_failed stage=%s error_type=%s", stage, type(error).__name__)
+            raise
         finally:
             self.speaking = False
             self.clear()

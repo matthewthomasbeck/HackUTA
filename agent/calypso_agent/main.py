@@ -156,8 +156,10 @@ async def run_call(ctx, config):
                 crops = await samples.collect()
             except ValueError:
                 crops = []
+            voice = getattr(speech, "last_wav", None) if text else None
             effects = await gateway.event("utterance" if text else "silence",
-                text=text, face_jpegs_b64=[b64(crop) for crop in crops])
+                text=text, face_jpegs_b64=[b64(crop) for crop in crops],
+                voice_wav_b64=b64(voice) if voice else None)
             if await apply(effects):
                 return
 
@@ -215,7 +217,10 @@ async def run_call(ctx, config):
                 await provider.close()
 
 
-server = AgentServer()
+# Bound warm workers on the 4 GB instance; SDK production defaults can start
+# many idle processes. Expose health only on the instance's loopback interface.
+server = AgentServer(num_idle_processes=int(os.getenv("CALYPSO_IDLE_PROCESSES", "1")),
+                     host="127.0.0.1", port=int(os.getenv("CALYPSO_MEDIA_PORT", "8081")))
 
 
 @server.rtc_session(agent_name=os.getenv("AGENT_NAME", "calypso-stage1"))
