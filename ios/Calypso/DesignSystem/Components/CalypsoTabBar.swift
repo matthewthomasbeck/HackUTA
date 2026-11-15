@@ -11,11 +11,11 @@ enum HomeTab: Int, CaseIterable {
         }
     }
 
-    var systemImage: String {
+    var glyph: CalypsoGlyph {
         switch self {
-        case .today: "calendar"
-        case .people: "person.2"
-        case .account: "person"
+        case .today: .today
+        case .people: .people
+        case .account: .account
         }
     }
 }
@@ -53,7 +53,7 @@ struct CalypsoTabBar: View {
             selection = tab
         } label: {
             VStack(spacing: 2) {
-                CalypsoIcon(tab.systemImage, size: 28, relativeTo: .footnote)
+                CalypsoIcon(tab.glyph, size: 28, relativeTo: .footnote)
                     .foregroundStyle(selected ? Color.periwinkleDeep : Color.inkSoft)
                     .frame(width: 64, height: 32)
                     .background(selected ? Color.periwinkleMist : Color.clear, in: Capsule())
@@ -72,7 +72,7 @@ struct CalypsoTabBar: View {
         .accessibilityHint("Tab, \(tab.rawValue + 1) of \(HomeTab.allCases.count)")
         .accessibilityAddTraits(selected ? [.isSelected] : [])
         .accessibilityShowsLargeContentViewer {
-            Label(tab.title, systemImage: tab.systemImage)
+            Label { Text(tab.title) } icon: { tab.glyph.image }
         }
     }
 }

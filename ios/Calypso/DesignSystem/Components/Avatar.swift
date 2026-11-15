@@ -66,7 +66,7 @@ struct AvatarSilhouette: View {
     }
 }
 
-/// Unknown-person disc: Periwinkle Mist, dashed Ink Soft outline, leaf glyph in Periwinkle Deep.
+/// Unknown-person disc: Periwinkle Mist, dashed Ink Soft outline, feather glyph (Figma `Icon / Feather`) in Periwinkle Deep.
 struct AvatarUnknownDisc: View {
     let size: CGFloat
     var outlined: Bool = true
@@ -77,9 +77,12 @@ struct AvatarUnknownDisc: View {
             if outlined {
                 Circle().strokeBorder(Color.inkSoft, style: StrokeStyle(lineWidth: size >= 100 ? 2.5 : 2, dash: [7, 5]))
             }
-            Image(systemName: "leaf")
-                .font(.system(size: size * (outlined ? 0.36 : 0.4), weight: .semibold))
+            CalypsoGlyph.feather.image
+                .resizable()
+                .scaledToFit()
+                .frame(width: size * (outlined ? 0.5 : 0.56), height: size * (outlined ? 0.5 : 0.56))
                 .foregroundStyle(Color.periwinkleDeep)
+                .accessibilityHidden(true)
         }
         .frame(width: size, height: size)
     }

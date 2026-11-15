@@ -13,7 +13,7 @@ struct BackButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
-                CalypsoIcon("chevron.left")
+                CalypsoIcon(.chevronLeft)
                 Text(label).calypsoFont(.bodyStrong)
             }
             .foregroundStyle(Color.periwinkleDeep)

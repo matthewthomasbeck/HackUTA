@@ -179,7 +179,7 @@ private struct PersonRow: View {
     }
 
     private var chevron: some View {
-        CalypsoIcon("chevron.right", size: 32, relativeTo: .headline)
+        CalypsoIcon(.chevronRight, size: 32, relativeTo: .headline)
             .foregroundStyle(Color.ink)
     }
 }

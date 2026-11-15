@@ -51,13 +51,13 @@ struct PermissionsView: View {
                         Mascot(pose: .holdingPhoto, size: .s, shadow: true)
                             .alignmentGuide(.top) { $0[.bottom] - 26 }
                     }
-                PermissionCard(icon: "photo", title: "Photos", message: "Show family photos in your day.",
+                PermissionCard(icon: .photo, title: "Photos", message: "Show family photos in your day.",
                                allowed: photosAllowed) {
                     PHPhotoLibrary.requestAuthorization(for: .readWrite) { _ in
                         Task { @MainActor in refreshStatus() }
                     }
                 }
-                PermissionCard(icon: "mappin", title: "Location",
+                PermissionCard(icon: .pin, title: "Location",
                                message: "Know where your day happened.", allowed: locationAllowed) {
                     location.request()
                 }
@@ -84,7 +84,7 @@ struct PermissionsView: View {
 
 /// Figma `Permission / *`: icon disc, Headline title, Callout reason, then Allow or the "Allowed" pill.
 private struct PermissionCard: View {
-    let icon: String
+    let icon: CalypsoGlyph
     let title: String
     let message: String
     let allowed: Bool

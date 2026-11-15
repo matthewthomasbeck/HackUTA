@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 @testable import Calypso
 
 final class ComponentsTests: XCTestCase {
@@ -8,8 +9,15 @@ final class ComponentsTests: XCTestCase {
                        "Place not certain: somewhere with park sounds")
     }
 
-    func testHomeTabOrderAndSymbols() {
+    func testHomeTabOrderAndGlyphs() {
         XCTAssertEqual(HomeTab.allCases.map(\.title), ["Today", "People", "Account"])
-        XCTAssertEqual(HomeTab.allCases.map(\.systemImage), ["calendar", "person.2", "person"])
+        XCTAssertEqual(HomeTab.allCases.map(\.glyph), [.today, .people, .account])
+    }
+
+    func testFigmaGlyphAssetsExist() {
+        for glyph in [CalypsoGlyph.today, .people, .account, .chevronLeft, .pin, .soundWave, .feather, .photo] {
+            XCTAssertNotNil(UIImage(named: glyph.rawValue),
+                            glyph.rawValue)
+        }
     }
 }

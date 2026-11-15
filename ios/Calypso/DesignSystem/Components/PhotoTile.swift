@@ -4,7 +4,7 @@ enum PhotoTileStyle {
     case hero, thumb
 }
 
-/// Figma `Photo` (15:112): Apricot Cream mat, 4pt white border, radius 16. Hero is full width × 220, thumb 96×96.
+/// Figma `Photo` (15:112): Apricot Cream mat, 4pt white border, radius 16. Hero is full width × 180 (fix-wave I-4), thumb 96×96.
 /// While loading it shows the mat with the photo glyph. On failure (sensitive photos 404) or a nil URL it calls
 /// `onFailure()` once and renders nothing, so there's never a broken placeholder.
 struct PhotoTile: View {
@@ -57,8 +57,10 @@ struct PhotoTile: View {
     }
 
     private var placeholderGlyph: some View {
-        Image(systemName: "photo")
-            .font(.system(size: style == .hero ? 56 : 28, weight: .medium))
+        CalypsoGlyph.photo.image
+            .resizable()
+            .scaledToFit()
+            .frame(width: style == .hero ? 72 : 40, height: style == .hero ? 72 : 40)
             .foregroundStyle(Color.photoGlyph)
             .accessibilityHidden(true)
     }
@@ -70,7 +72,7 @@ struct PhotoTile: View {
             .clipShape(shape)
             .overlay(shape.strokeBorder(Color.white, lineWidth: 4))
         switch style {
-        case .hero: tile.frame(maxWidth: .infinity).frame(height: 220)
+        case .hero: tile.frame(maxWidth: .infinity).frame(height: 180)
         case .thumb: tile.frame(width: 96, height: 96)
         }
     }

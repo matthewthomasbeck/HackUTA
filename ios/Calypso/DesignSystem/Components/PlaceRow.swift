@@ -22,7 +22,7 @@ struct PlaceRow: View {
                 uncertain
             } else {
                 HStack(spacing: 12) {
-                    CalypsoIcon("mappin.and.ellipse").foregroundStyle(Color.periwinkleDeep)
+                    CalypsoIcon(.pin).foregroundStyle(Color.periwinkleDeep)
                     Text(place)
                         .calypsoFont(.body)
                         .foregroundStyle(Color.ink)
@@ -38,7 +38,7 @@ struct PlaceRow: View {
     private var uncertain: some View {
         let shape = RoundedRectangle(cornerRadius: 28)
         return HStack(spacing: 10) {
-            CalypsoIcon("waveform", relativeTo: .callout).foregroundStyle(Color.ink)
+            CalypsoIcon(.soundWave, relativeTo: .callout).foregroundStyle(Color.ink)
             Text(place)
                 .calypsoFont(.callout)
                 .foregroundStyle(Color.ink)
