@@ -16,8 +16,14 @@
   const TARGET_CARD_S = 2.5;    // sentence end → card on screen
   const FACE_HOLD_MS = 10000;   // a face identification outranks voice-only results for this long
   const CALLER = "caller";      // participant row for the 1:1 setup-call caller
-  const MODE_LABEL = { setup: "Setup call", recognize: "Recognition call", group: "Group call" };
-  const callLabel = (c) => (c && (MODE_LABEL[c.mode] || MODE_LABEL[c.kind])) || "FaceTime call";
+  const MODE_LABEL = { setup: "Setup call", recognize: "Recognition call", group: "Group call", auto: "1:1 call", group_intro: "Group introductions" };
+  // A 1:1 (auto) call recognizes first, then either ends recognized or interviews a new caller.
+  const PHASE_LABEL = { recognizing: "Recognizing", interviewing: "Interviewing", recognized: "Recognized", saved: "Saved" };
+  const callLabel = (c) => {
+    const base = (c && (MODE_LABEL[c.mode] || MODE_LABEL[c.kind])) || "FaceTime call";
+    return c && c.phase ? `${base} · ${PHASE_LABEL[c.phase]}` : base;
+  };
+  const setupRow = (at) => ({ key: CALLER, status: "setup", personId: null, face: null, voice: null, th: {}, at });
 
   // ---- token ------------------------------------------------------------------
   let token = null;
@@ -145,23 +151,37 @@
         if (S.call && p.call_id === S.call.id && row) {
           Object.assign(row, { status: "enrolled", personId: p.person_id, at, matched: !!p.matched_existing,
             prints: { face: p.face_prints_added ?? 0, voice: p.voice_prints_added ?? 0 } });
+          if (S.call.phase) S.call.phase = "saved";
         }
         loadPeople(); lit("ctrl"); break;
       }
 
       case "call.started":
-        S.call = { id: p.call_id, kind: p.kind || "call", mode: null, started: at };
+        S.call = { id: p.call_id, kind: p.kind || "call", mode: null, phase: null, callerKey: null, started: at };
         S.participants.clear(); S.lines = []; S.intent = null; S.recall = null;
         lit("agent"); break;
       case "agent.session":
         // The call log stores recognize calls as "group"; this carries the real mode.
         if (S.call && p.call_id === S.call.id) {
           S.call.mode = p.mode;
-          if (p.mode === "setup") S.participants.set(CALLER, { key: CALLER, status: "setup", personId: null, face: null, voice: null, th: {}, at });
+          if (p.mode === "setup") S.participants.set(CALLER, setupRow(at));
+          if (p.mode === "auto") {
+            S.call.phase = "recognizing";
+            S.call.callerKey = p.participant || CALLER;
+            S.participants.set(S.call.callerKey, { key: S.call.callerKey, status: "recognizing", personId: null, face: null, voice: null, th: {}, at });
+          }
+        }
+        lit("agent", "ctrl"); break;
+      case "agent.mode":
+        // An auto call found no familiar face in time and switched to the setup interview.
+        if (S.call && p.call_id === S.call.id && p.mode === "setup") {
+          S.call.phase = "interviewing";
+          if (S.call.callerKey) S.participants.delete(S.call.callerKey);
+          S.participants.set(CALLER, setupRow(at));
         }
         lit("agent", "ctrl"); break;
       case "call.ended":
-        if (S.call) S.calls.push({ start: S.call.started, end: at, kind: S.call.kind, mode: S.call.mode });
+        if (S.call) S.calls.push({ start: S.call.started, end: at, kind: S.call.kind, mode: S.call.mode, phase: S.call.phase });
         S.lastCallEnded = at; S.call = null; lit("agent"); break;
       case "call.line":
         S.lines.push({ speaker: p.speaker, text: p.text, at, highlight: false });
@@ -180,7 +200,11 @@
           if (f.person_id && S.people[f.person_id] && S.people[f.person_id].is_patient) continue;
           const prev = S.participants.get(keyFor(i)) || {};
           const identifiedAt = f.status === "identified" ? at : prev.identifiedAt;
-          S.participants.set(keyFor(i), { ...prev, key: keyFor(i), status: f.status, personId: f.person_id,
+          // During a 1:1 call's recognition window, a non-match is "still looking", not a new visitor.
+          const looking = S.call && S.call.phase === "recognizing" && keyFor(i) === S.call.callerKey;
+          if (looking && f.status === "identified") S.call.phase = "recognized";
+          const status = looking && f.status !== "identified" ? "recognizing" : f.status;
+          S.participants.set(keyFor(i), { ...prev, key: keyFor(i), status, personId: status === "recognizing" ? null : f.person_id,
             face: (f.face_top3 || [])[0], voice: voice || prev.voice, th, at, identifiedAt });
         }
         if (!faces.length && p.voice_only) {
@@ -383,8 +407,10 @@
     const known = p.status === "identified" || p.status === "enrolled";
     const pr = known ? S.people[p.personId] : null;
     let name, detail, tag, tagCls = "", dashed = !known;
-    if (p.status === "setup") {
-      name = "Caller"; detail = "Introducing themselves to Calypso⁻¹"; tag = "Setting up"; tagCls = "learning";
+    if (p.status === "recognizing") {
+      name = "Caller"; detail = "Looking for a familiar face…"; tag = "Recognizing"; tagCls = "learning";
+    } else if (p.status === "setup") {
+      name = "Caller"; detail = "Calypso⁻¹ is learning who they are"; tag = "Interviewing"; tagCls = "learning";
     } else if (p.status === "enrolled") {
       name = nameOf(p.personId) || "New relative";
       const prints = p.prints ? `${p.prints.face} face · ${p.prints.voice} voice prints` : "";
@@ -552,6 +578,7 @@
       case "card.queued": case "card.shown": return (p.card && p.card.title) || p.title || "card";
       case "call.started": return `${p.kind || "call"} started`;
       case "agent.session": return `${MODE_LABEL[p.mode] || p.mode}${p.controlled ? " · test mode" : ""}`;
+      case "agent.mode": return p.mode === "setup" ? "no match · interviewing" : `${MODE_LABEL[p.previous] || p.previous} → ${MODE_LABEL[p.mode] || p.mode}`;
       case "call.ended": return "call ended";
       case "call.line": return `${speakerLabel(p.speaker)}: ${p.text}`;
       case "day.built": return `${p.events} moments`;
