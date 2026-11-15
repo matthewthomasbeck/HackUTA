@@ -30,14 +30,19 @@ VOICE_MODEL_PATH=models/nemo_en_titanet_small.onnx   # host embedder / enrollmen
    `embed_speaker` uses the sherpa host delegate. Journal shows  
    `coral/edgetpu: host delegate embed (…)`.
 
-## Stage the model path
+## Convert / stage the model
 
 ```bash
+# Full pipeline (ONNX → int8 TFLite → edgetpu_compiler). Prefer x86_64 Linux.
+./convert_titanet_coral.sh
+
+# Or stage a placeholder path until conversion works:
 ./scripts/setup_voice_id.sh
-./scripts/stage_coral_model.sh   # creates CORAL_MODEL_PATH
+./scripts/stage_coral_model.sh
 ```
 
-Replace the staged file with a real `edgetpu_compiler` output when Titanet is quantized.
+If sherpa’s ONNX fails in `onnx2tf`, export a NeMo encoder-only ONNX (fixed mel
+`[1,80,T]`) and re-run with `ONNX_IN=... ./convert_titanet_coral.sh --force`.
 
 ## Build with live libedgetpu (same trees as Whisker)
 
