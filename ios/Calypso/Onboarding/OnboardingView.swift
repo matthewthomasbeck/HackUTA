@@ -38,15 +38,7 @@ struct OnboardingView: View {
         case .connectPuck:
             ConnectPuckView(onBack: goBack, onNext: goNext)
         case .voiceSetup:
-            // Placeholder until the voice-teaching step lands.
-            OnboardingScaffold(step: .voiceSetup, onBack: goBack) {
-                VStack {
-                    Spacer()
-                    CalypsoButton("Continue", action: goNext)
-                }
-                .padding(.horizontal, 24)
-                .frame(maxHeight: .infinity)
-            }
+            VoiceSetupView(onBack: goBack, onNext: goNext)
         case .inviteFamily:
             InviteFamilyView(onBack: goBack, onNext: goNext, invited: seededInvites)
         case .allSet:
