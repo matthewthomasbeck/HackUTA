@@ -11,6 +11,10 @@ dependencies = [
   "anthropic>=0.40",
   "httpx>=0.27",
   "numpy>=1.26",
+  "redis>=5,<7",      # same ranges as Keanu's RQ worker
+  "rq>=2,<3",
+  "boto3>=1.35,<2",   # Vultr Object Storage (S3-compatible) for face crops and photos
+  "tzdata",           # zoneinfo data on Windows (CALYPSO_TZ)
 ]
 
 [project.optional-dependencies]
