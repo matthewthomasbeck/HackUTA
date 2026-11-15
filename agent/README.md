@@ -56,6 +56,6 @@ real speech have not yet passed live acceptance.
 
 ## Returning-relative calls
 
-Use `CALYPSO_CALL_MODE=recognize` for silent, single-relative recognition.
+Use `CALYPSO_CALL_MODE=recognize` for single-relative recognition with one brief opening greeting.
 Real matching is the default; fixtures require `CALYPSO_CONTROLLED_RECOGNITION=true`.
 See [the recognition guide](../docs/returning-relative-test.md) for limitations and live acceptance.

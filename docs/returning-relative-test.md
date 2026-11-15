@@ -6,11 +6,11 @@ Set `CALYPSO_CALL_MODE=recognize` for an explicitly selected, single-relative re
 
 ## Behavior
 
-- Starts with a neutral waiting card and no enrollment greeting.
+- Starts with a neutral waiting card and one brief greeting to satisfy Chert's audio timeout; it does not start an enrollment interview.
 - Sends clear face crops to backend `/recognize`, excluding the patient.
 - On caller utterances, sends the WAV and, when available, a recent face crop for existing face/voice fusion. Without a face, voice-only results can be used.
 - Claude can display only the backend-identified person, with stored name, relationship to the patient, and memories/facts. Patient profiles are rejected.
-- Uncertainty produces neutral wording; unknown faces debounce into the learning card. Recognition mode cannot speak newcomer questions or enroll anyone.
+- Uncertainty produces neutral wording; unknown faces debounce into the learning card. After the opening greeting, recognition mode cannot speak newcomer questions or enroll anyone.
 
 Voice attribution is valid only under the explicit single-relative assumption. Do not use this mode for group calls. Multi-person tracking and group speaker attribution remain separate work. Existing model thresholds and ambiguity/conflict rules are unchanged.
 
@@ -38,4 +38,6 @@ Use enrolled relatives with usable prints and saved facts. Check:
 
 Watch `recognize`, `card.queued`, and `card.shown` events. Adapter tests do not establish real biometric accuracy; record phone results and lighting/threshold limitations. Chert must accept the call before recognition can be evaluated; prolonged “cleaning up” and missing incoming-call records are provider readiness blockers.
 
-Chert has previously advertised a ten-second greeting requirement after bridge readiness. This mode publishes tracks but remains silent; verify whether that satisfies the current provider requirement. If an audible greeting is mandatory, agree on a brief single-caller greeting or a provider-supported silent mode before accepting this flow. Group-call silence must be evaluated independently.
+Chert has previously advertised a ten-second greeting requirement after bridge readiness. This mode now emits one brief greeting immediately on session start. Verify on a real call that synthesized audio arrives within the deadline. Group-call silence must be evaluated independently.
+
+Identity cards replace displayed/pending neutral placeholders immediately. Other real cards keep their minimum reading time. Missing face crops do not generate uncertainty cards or clear the last match; actual uncertain results clear it and emit neutral wording once per uncertainty transition.

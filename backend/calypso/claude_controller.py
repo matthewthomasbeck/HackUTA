@@ -69,6 +69,7 @@ class Session:
     silence_count: int = 0
     learning_count: int = 0
     recognized_id: str | None = None
+    last_recognition_status: str | None = None
     emitted: set = field(default_factory=set)
     group_question_used: bool = False
     done: bool = False
@@ -179,6 +180,7 @@ class ClaudeController:
             session.started = True
             if session.config.mode == "recognize":
                 effects.cards = [Card(kind="learning", title="Looking for a familiar face…", lines=[])]
+                effects.speech = ["Hi, it's Calypso. One moment while I see who's here."]
                 return effects
         recognition_event = event.kind == "frame" or (session.config.mode == "recognize" and event.kind == "utterance")
         if recognition_event:
@@ -187,9 +189,10 @@ class ClaudeController:
             voice = event.voice_wav_b64 if session.config.mode == "recognize" and event.kind == "utterance" else None
             if not event.jpeg_b64 and not voice:
                 session.learning_count = 0
-                session.recognized_id = None
-                if session.config.mode == "recognize":
-                    effects.cards = [Card(kind="learning", title="Not sure who this is yet…", lines=[])]
+                # A missing crop is not contradictory identity evidence. Keep the
+                # last result; do not queue a new placeholder for a dropped frame.
+                if session.config.mode != "recognize":
+                    session.recognized_id = None
                 return effects
             response = await api("POST", "/recognize", {"face_jpeg_b64": event.jpeg_b64,
                 "voice_wav_b64": voice,
@@ -197,9 +200,12 @@ class ClaudeController:
             faces = response.get("faces", [])
             if len(faces) != 1 and not (not faces and response.get("voice_only")):
                 session.learning_count = 0
-                session.recognized_id = None
-                if session.config.mode == "recognize":
-                    effects.cards = [Card(kind="learning", title="Not sure who this is yet…", lines=[])]
+                if len(faces) > 1 or session.config.mode != "recognize":
+                    session.recognized_id = None
+                if len(faces) > 1 and session.config.mode == "recognize":
+                    if session.last_recognition_status != "uncertain":
+                        effects.cards = [Card(kind="learning", title="Not sure who this is yet…", lines=[])]
+                    session.last_recognition_status = "uncertain"
                 return effects
             result = faces[0]["result"] if faces else response["voice_only"]
             if session.config.controlled:
@@ -208,11 +214,14 @@ class ClaudeController:
                 if result["status"] == "identified" and not result["person_id"]:
                     result = {"status": "learning", "person_id": None}
             status = result["status"]
+            previous_status = session.last_recognition_status
+            session.last_recognition_status = status
             session.learning_count = session.learning_count + 1 if status == "learning" else 0
             session.recognized_id = result.get("person_id") if status == "identified" else None
             key = (status, session.recognized_id)
             if status == "uncertain" and session.config.mode == "recognize":
-                effects.cards = [Card(kind="learning", title="Not sure who this is yet…", lines=[])]
+                if previous_status != "uncertain":
+                    effects.cards = [Card(kind="learning", title="Not sure who this is yet…", lines=[])]
                 return effects
             if status == "uncertain" or (status == "learning" and session.learning_count < 3) or key in session.emitted:
                 return effects
