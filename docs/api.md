@@ -70,6 +70,29 @@ curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
 
 ## Agent (Keanu)
 
+### Claude session gateway
+
+The media transport now delegates decisions to Claude on the backend:
+
+- `POST /agent/sessions`: `{mode: "setup"|"group", participant: str,
+  controlled: bool, outcome: "identified"|"learning"|"uncertain",
+  enrolled_person_id?: str}` → `{session_id, call_id}`.
+- `POST /agent/sessions/{id}/events`: `{kind: "start"|"utterance"|"silence"|"frame"|"camera_ready",
+  text?: str, face_jpegs_b64?: [str], jpeg_b64?: str}` →
+  `{session_id, speech: [str], cards: [Card], done: bool, enrolled_person_id?: str,
+  needs_face_crops: bool}`. When requested, the transport reports `camera_ready`
+  with three recent crops. A confirmed introduction can then be saved without
+  requiring a second spoken confirmation.
+- `POST /agent/sessions/{id}/end`: ends the backend call and removes the session;
+  repeated cleanup returns `{ok: true}`.
+
+These routes require the existing bearer token. `ANTHROPIC_API_KEY` stays on the
+server; `CALYPSO_AGENT_MODEL` defaults to `claude-sonnet-4-6`. Claude tool calls
+are executed by backend code with confirmation/identity guards. `503` indicates
+missing model configuration or model failure; reconnect after failure. Sessions
+are in memory and need a single backend worker. Controlled recognition is a
+visibly labeled integration-test mode, not actual recognition.
+
 ### `POST /recognize`  (stub → Task 4)
 Face first, voice second. Send a frame and/or a voice clip (≥ 2 s of that participant's speech, 16 kHz mono WAV) as base64.
 ```json

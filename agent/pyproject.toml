@@ -5,11 +5,22 @@ description = "Calypso⁻¹ Chert FaceTime agent: recognition loop, cards as out
 requires-python = ">=3.11"
 dependencies = [
   "livekit>=0.17",
-  "pillow>=10",
+  "pillow>=10.1",
   "httpx>=0.27",
   "pydantic>=2.7",
   "anthropic>=0.40",
+  "livekit-agents>=1.0,<2",
+  "opencv-python-headless>=4.10,<5",
+  "numpy>=2",
 ]
 
 [dependency-groups]
-dev = ["pytest>=8", "pytest-asyncio>=0.23"]
+dev = [
+    "fastapi>=0.115",
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "python-multipart>=0.0.9",
+]
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
