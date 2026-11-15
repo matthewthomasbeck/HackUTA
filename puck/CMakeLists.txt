@@ -6,8 +6,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_executable(calypso_puck
-  main.cpp
+option(CALYPSO_BUILD_TESTS "Build puck unit tests" OFF)
+
+add_library(calypso_core STATIC
   src/config.cpp
   src/capture.cpp
   src/backend_link.cpp
@@ -20,19 +21,22 @@ add_executable(calypso_puck
   src/voice_gallery.cpp
   src/wav.cpp
   src/util.cpp
+  src/segment_spool.cpp
 )
+target_include_directories(calypso_core PUBLIC include)
 
-target_include_directories(calypso_puck PRIVATE include)
+add_executable(calypso_puck main.cpp)
+target_link_libraries(calypso_puck PRIVATE calypso_core)
 
 find_package(Threads REQUIRED)
 find_package(CURL REQUIRED)
-target_link_libraries(calypso_puck PRIVATE Threads::Threads CURL::libcurl)
+target_link_libraries(calypso_core PUBLIC Threads::Threads CURL::libcurl)
 
 # ALSA on the Pi / Linux. macOS can still build with MIC_DEVICE=sine.
 find_package(ALSA)
 if(ALSA_FOUND)
-  target_compile_definitions(calypso_puck PRIVATE CALYPSO_HAS_ALSA=1)
-  target_link_libraries(calypso_puck PRIVATE ALSA::ALSA)
+  target_compile_definitions(calypso_core PUBLIC CALYPSO_HAS_ALSA=1)
+  target_link_libraries(calypso_core PUBLIC ALSA::ALSA)
   message(STATUS "ALSA found — real mic capture enabled")
 else()
   message(STATUS "ALSA not found — use MIC_DEVICE=sine for online smoke tests")
@@ -56,9 +60,9 @@ if(CALYPSO_SHERPA_ROOT)
       "${CALYPSO_SHERPA_ROOT}/build/lib"
   )
   if(SHERPA_ONNX_INCLUDE_DIR AND SHERPA_ONNX_LIBRARY)
-    target_compile_definitions(calypso_puck PRIVATE CALYPSO_HAS_SHERPA=1)
-    target_include_directories(calypso_puck PRIVATE "${SHERPA_ONNX_INCLUDE_DIR}")
-    target_link_libraries(calypso_puck PRIVATE "${SHERPA_ONNX_LIBRARY}")
+    target_compile_definitions(calypso_core PUBLIC CALYPSO_HAS_SHERPA=1)
+    target_include_directories(calypso_core PUBLIC "${SHERPA_ONNX_INCLUDE_DIR}")
+    target_link_libraries(calypso_core PUBLIC "${SHERPA_ONNX_LIBRARY}")
     message(STATUS "sherpa-onnx found — offline voice ID enabled")
     message(STATUS "  include: ${SHERPA_ONNX_INCLUDE_DIR}")
     message(STATUS "  library: ${SHERPA_ONNX_LIBRARY}")
@@ -67,4 +71,11 @@ if(CALYPSO_SHERPA_ROOT)
   endif()
 else()
   message(STATUS "CALYPSO_SHERPA_ROOT unset — offline voice ID compiled out")
+endif()
+
+if(CALYPSO_BUILD_TESTS)
+  enable_testing()
+  add_executable(test_segment_spool tests/test_segment_spool.cpp)
+  target_link_libraries(test_segment_spool PRIVATE calypso_core)
+  add_test(NAME segment_spool COMMAND test_segment_spool)
 endif()
