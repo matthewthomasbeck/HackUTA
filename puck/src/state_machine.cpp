@@ -1,12 +1,13 @@
 #include "state_machine.hpp"
 
 #include <chrono>
+#include <iostream>
 #include <thread>
 
 namespace calypso {
 
 StateMachine::StateMachine(Capture& capture, BackendLink& link, Models& models)
-    : capture_(capture), link_(link), models_(models) {}
+    : capture_(capture), link_(link), models_(models), queue_(/*max_chunks=*/200) {}
 
 StateMachine::~StateMachine() {
   stop();
@@ -15,58 +16,77 @@ StateMachine::~StateMachine() {
 void StateMachine::start(RunMode initial) {
   mode_.store(initial);
   stop_.store(false);
-  if (thread_.joinable()) {
+  queue_.reopen();
+  if (listen_thread_.joinable() || worker_thread_.joinable()) {
     return;
   }
-  thread_ = std::thread([this] { run(); });
+  listen_thread_ = std::thread([this] { listen_loop(); });
+  worker_thread_ = std::thread([this] { worker_loop(); });
+  std::cerr << "state_machine: listen + worker threads started ("
+            << (initial == RunMode::Online ? "ONLINE" : "OFFLINE") << ")\n";
 }
 
 void StateMachine::stop() {
   stop_.store(true);
-  if (thread_.joinable()) {
-    thread_.join();
+  queue_.close();
+  if (listen_thread_.joinable()) {
+    listen_thread_.join();
+  }
+  if (worker_thread_.joinable()) {
+    worker_thread_.join();
   }
 }
 
 void StateMachine::set_mode(RunMode mode) {
-  mode_.store(mode);
+  const auto prev = mode_.exchange(mode);
+  if (prev != mode) {
+    std::cerr << "state_machine: mode → "
+              << (mode == RunMode::Online ? "ONLINE" : "OFFLINE") << "\n";
+  }
 }
 
 RunMode StateMachine::mode() const {
   return mode_.load();
 }
 
-void StateMachine::run() {
+void StateMachine::listen_loop() {
   while (!stop_.load()) {
+    AudioChunk chunk;
+    if (!capture_.read_chunk(chunk)) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      continue;
+    }
+    queue_.push(std::move(chunk));
+  }
+}
+
+void StateMachine::worker_loop() {
+  while (!stop_.load()) {
+    auto chunk = queue_.pop_wait([this] { return stop_.load(); });
+    if (!chunk) {
+      if (stop_.load()) {
+        break;
+      }
+      continue;
+    }
     if (mode_.load() == RunMode::Online) {
-      run_online_tick();
+      process_online(*chunk);
     } else {
-      run_offline_tick();
+      process_offline(*chunk);
     }
   }
 }
 
-void StateMachine::run_online_tick() {
-  AudioChunk chunk;
-  if (!capture_.read_chunk(chunk)) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    return;
-  }
+void StateMachine::process_online(const AudioChunk& chunk) {
   if (!link_.send_audio_chunk(chunk)) {
-    // Listener will flip mode; keep looping.
+    // Listener flips to Offline / reconnects; capture keeps filling the queue.
   }
 }
 
-void StateMachine::run_offline_tick() {
-  AudioChunk chunk;
-  if (!capture_.read_chunk(chunk)) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    return;
-  }
+void StateMachine::process_offline(const AudioChunk& chunk) {
   ModelOutput out;
   if (models_.infer(chunk, out)) {
-    // Offline brainstorm: intentionally do nothing with `out` for now.
-    (void)out;
+    (void)out;  // offline brainstorm: unused for now
   }
 }
 

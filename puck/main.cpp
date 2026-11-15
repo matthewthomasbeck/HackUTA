@@ -10,13 +10,17 @@
 #include "types.hpp"
 
 #include <chrono>
+#include <csignal>
+#include <atomic>
 #include <iostream>
 #include <thread>
 
 namespace {
 
-// Wait up to retry_sec for an initial backend session.
-// Returns true → Online; false → start Offline (listener keeps retrying).
+std::atomic<bool> g_run{true};
+
+void on_signal(int) { g_run.store(false); }
+
 bool wait_for_initial_connection(calypso::BackendLink& link, int retry_sec) {
   if (link.connect()) {
     return true;
@@ -29,10 +33,13 @@ bool wait_for_initial_connection(calypso::BackendLink& link, int retry_sec) {
 }  // namespace
 
 int main() {
-  // 2. Config from config/.env (IP, port, mic bus, chunk size, retries).
+  std::signal(SIGINT, on_signal);
+  std::signal(SIGTERM, on_signal);
+
   calypso::Config cfg;
   if (!calypso::load_config("config/.env", cfg)) {
-    std::cerr << "failed to load config/.env\n";
+    std::cerr << "failed to load config/.env "
+                 "(need BACKEND_IP, BACKEND_PORT, API_TOKEN, MIC_DEVICE)\n";
     return 1;
   }
 
@@ -40,20 +47,20 @@ int main() {
   calypso::BackendLink link;
   calypso::Models models;
 
-  // 3. Pre-init peripherals + link + NCS2 models before the state machine.
   if (!capture.init(cfg.mic_device, cfg.chunk_ms)) {
-    std::cerr << "mic init failed (stub)\n";
-    // Stub: continue so the skeleton can be run without hardware.
+    std::cerr << "mic init failed — set MIC_DEVICE to an ALSA name or 'sine'\n";
+    return 1;
   }
-  if (!link.init(cfg.backend_ip, cfg.backend_port)) {
+  if (!link.init(cfg.backend_ip, cfg.backend_port, cfg.api_token,
+                 cfg.segment_ms)) {
     std::cerr << "backend link init failed\n";
     return 1;
   }
+  // Offline models stay stubbed; online path does not need them.
   if (!models.init(cfg.ncs2_device, cfg.stt_model_path, cfg.voice_model_path)) {
-    std::cerr << "NCS2 / model init failed (stub) — offline infer will no-op\n";
+    std::cerr << "models init skipped/stub — offline infer will no-op\n";
   }
 
-  // 4–5. Connect or wait n seconds; then pick Online vs Offline.
   const bool online =
       wait_for_initial_connection(link, cfg.connect_retry_sec);
   const calypso::RunMode initial =
@@ -65,14 +72,14 @@ int main() {
   calypso::ConnectionListener listener(link, sm, cfg.connect_retry_sec,
                                        cfg.connection_check_sec);
 
-  sm.start(initial);       // THREAD 2 — online/offline ticks
-  listener.start();        // THREAD 1 — connection watch + reconnect
+  sm.start(initial);       // listen thread + upload/infer worker
+  listener.start();        // connection watch
 
-  // Block until signal handling exists; systemd Restart= covers crashes.
-  while (true) {
-    std::this_thread::sleep_for(std::chrono::hours(24));
+  while (g_run.load()) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
   }
 
+  std::cerr << "shutting down\n";
   listener.stop();
   sm.stop();
   models.shutdown();

@@ -6,6 +6,38 @@ Your tasks from the [implementation plan](../superpowers/plans/2026-11-14-calyps
 
 Check off steps here as you go (`- [x]`). Shared data shapes live in `backend/calypso/models.py`, so don't change them without telling the team.
 
+## Agreed scope and first milestone progress
+
+Architecture update: Claude on Vultr now owns the live conversation and backend
+tool decisions. The laptop Python entrypoint is media transport only. The gateway
+is deployed and a real Claude greeting probe passed; full FaceTime acceptance is
+still pending. See [`stage1-test.md`](../stage1-test.md). The local scripted
+prototype remains only as an offline regression fixture, not the live agent.
+
+User-directed display override: the live call publishes 720×1280 portrait cards
+with larger text, superseding the original landscape output target for the phone
+experience. Setup greetings address an unknown relative, and successful setup
+ends with a persistent saved card and an explicit instruction to hang up. Native
+automatic hangup remains unavailable under the current Chert CLI credential.
+
+- Puck conversations are passive collection; no live Chert assistance is required
+  for an in-person visit.
+- Patient-requested calling is a separate follow-up workflow: identify the requested
+  stored relative, confirm, attempt connection, and offer another relative if it
+  fails. Notification/message fallback and expanded missing-number handling are
+  outside the first hackathon workflow.
+- The offline enrollment → separate group-call recognition milestone is implemented
+  with fake speech/backend responses. Run `uv run python -m calypso_agent.demo`
+  from `agent/`; see [`agent/README.md`](../../agent/README.md) for module boundaries,
+  checks, and remaining integrations.
+- Renderer, scheduler, recognition state, setup script, and backend HTTP client have
+  local tests. Live media, speech, composite tracking, and group-call learning are
+  pending, so the live task checkboxes below remain open.
+- Stage 1 now has LiveKit input/output, xAI REST speech, explicit call modes,
+  real backend persistence and controlled recognition. See
+  [`stage1-test.md`](../stage1-test.md) for the real-call procedure and complete
+  use-case coverage table. Live acceptance still requires credentials and calls.
+
 ## Global constraints (apply to every task)
 
 - Product name in all user-facing text: **Calypso⁻¹**. Contact name in Contacts: `Calypso⁻¹`. Code identifiers: `calypso` / `calypso_inv`.

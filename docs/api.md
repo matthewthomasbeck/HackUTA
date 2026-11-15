@@ -70,6 +70,35 @@ curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
 
 ## Agent (Keanu)
 
+### Claude session gateway
+
+The media transport now delegates decisions to Claude on the backend:
+
+- `POST /agent/sessions`: `{mode: "setup"|"group", participant: str,
+  controlled: bool, outcome: "identified"|"learning"|"uncertain",
+  enrolled_person_id?: str, caller_phone?: str}` → `{session_id, call_id}`.
+- `POST /agent/sessions/{id}/events`: `{kind: "start"|"utterance"|"silence"|"frame"|"camera_ready",
+  text?: str, face_jpegs_b64?: [str], jpeg_b64?: str}` →
+  `{session_id, speech: [str], cards: [Card], done: bool, enrolled_person_id?: str,
+  needs_face_crops: bool}`. When requested, the transport reports `camera_ready`
+  with three recent crops. A confirmed introduction can then be saved without
+  requiring a second spoken confirmation.
+- `POST /agent/sessions/{id}/end`: ends the backend call and removes the session;
+  repeated cleanup returns `{ok: true}`.
+
+These routes require the existing bearer token. `ANTHROPIC_API_KEY` stays on the
+server; `CALYPSO_AGENT_MODEL` defaults to `claude-sonnet-4-6`. Claude tool calls
+are executed by backend code with confirmation/identity guards. `503` indicates
+missing model configuration or model failure; reconnect after failure. Sessions
+are in memory and need a single backend worker. Controlled recognition is a
+visibly labeled integration-test mode, not actual recognition.
+
+For enrollment, the media transport resolves the `chert-bridge-<call UUID>` against
+Chert's authenticated call record and sends the inbound `from.value` only when
+`from.type` is `phone_number` and the call/project match. This is persisted in the
+existing `Person.phone` field via `/people/from_intro`. Masked callers, email
+identities or failed lookups leave it null; Claude never supplies the number.
+
 ### `POST /recognize`  (stub → Task 4)
 Face first, voice second. Send a frame and/or a voice clip (≥ 2 s of that participant's speech, 16 kHz mono WAV) as base64.
 ```json

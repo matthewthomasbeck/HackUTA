@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from . import db
 from .config import Settings
 from .jobs import get_jobs
-from .routes import app_ingest, calls, days, health, media, people, puck, recall, recognize
+from .routes import agent_sessions, app_ingest, calls, days, health, media, people, puck, recall, recognize
 from .storage import get_storage
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -33,8 +33,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.storage = get_storage(settings)
     app.state.jobs = get_jobs(settings)
+    app.state.agent_sessions = {}
+    app.state.claude_controller = None
 
-    for module in (health, puck, people, media, recognize, recall, calls, days, app_ingest):
+    for module in (health, puck, people, media, recognize, recall, calls, days, app_ingest, agent_sessions):
         app.include_router(module.router)
 
     dashboard = Path(settings.dashboard_dir)
