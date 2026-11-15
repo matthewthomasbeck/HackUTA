@@ -27,3 +27,11 @@ Run tests:
 ```
 xcodebuild test -project ios/Calypso.xcodeproj -scheme Calypso -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
+
+## Fake backend
+Until the real backend is deployed, `scripts/fake_backend.py` serves every endpoint `APIClient` calls: seeded people (including the patient and an unnamed visitor), a day of events anchored on whatever date you pick, a quiet day for dates more than 2 days back, and a sensitive photo that 404s. Uploaded photos and visits are kept in memory and show up in Today on the next refresh.
+
+```
+uv run ios/scripts/fake_backend.py          # prints the API_BASE_URL lines for simulator and device
+```
+Set `API_BASE_URL` (the Mac's LAN IP on a device) and `API_TOKEN = dev-token` in `Secrets.xcconfig`, then rebuild.
