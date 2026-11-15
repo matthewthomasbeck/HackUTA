@@ -1,5 +1,6 @@
 #include <filesystem>
-#include <map>
+#include <atomic>
+#include <thread>
 
 #include "clock_sync.hpp"
 #include "segment_spool.hpp"
@@ -221,6 +222,39 @@ TEST(test_segmenter_assigns_ts_at_close) {
   CHECK_EQ(out->second.boot_id, std::string("b1"));
   CHECK_EQ(out->second.boot_ms_end, 50000);
   CHECK_EQ(out->second.boot_ms_start, 47000);
+}
+
+TEST(test_concurrent_enqueue_and_drain) {
+  SegmentSpool s(fresh_dir(), 1 << 24);
+  std::atomic<bool> done{false};
+  std::thread producer([&] {
+    for (int i = 0; i < 50; ++i) {
+      char buf[16];
+      std::snprintf(buf, sizeof(buf), "10:%02d:%02d", i / 60, i % 60);
+      s.enqueue(pcm(), item(buf));
+    }
+    done = true;
+  });
+  std::thread consumer([&] {
+    while (!done.load()) {
+      for (const auto& it : s.pending()) s.remove(it);
+    }
+  });
+  producer.join();
+  consumer.join();
+  for (const auto& it : s.pending()) s.remove(it);
+  CHECK_EQ(s.depth(), 0u);
+  CHECK(s.pending().empty());
+}
+
+TEST(test_remove_and_rewrite_tolerate_evicted) {
+  SegmentSpool s(fresh_dir(), 1 << 20);
+  auto it = s.enqueue(pcm(), item("10:00:00", false));
+  s.remove(it);
+  s.rewrite_times(it, "2026-11-15T11:00:00.000Z", "2026-11-15T11:00:01.000Z");
+  s.remove(it);
+  CHECK_EQ(s.depth(), 0u);
+  CHECK(!fs::exists(it.json_path));
 }
 
 int main() { return testing::run_all(); }

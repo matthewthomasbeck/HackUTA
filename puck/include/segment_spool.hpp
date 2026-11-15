@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <atomic>
 #include <filesystem>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -18,6 +20,7 @@ struct SpoolItem {
 
 // Durable on-disk spool of audio segments. The .json file is the commit
 // marker: a .wav without its .json is an orphan and is ignored.
+// Thread-safe: all public methods lock mu_.
 class SegmentSpool {
  public:
   SegmentSpool(std::filesystem::path dir, std::uint64_t max_bytes);
@@ -37,7 +40,8 @@ class SegmentSpool {
  private:
   std::filesystem::path dir_;
   std::uint64_t max_bytes_;
-  std::uint64_t evicted_ = 0;
+  mutable std::recursive_mutex mu_;  // public methods call each other
+  std::atomic<std::uint64_t> evicted_{0};
 };
 
 }  // namespace calypso

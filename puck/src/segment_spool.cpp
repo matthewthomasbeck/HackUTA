@@ -125,11 +125,13 @@ SegmentSpool::SegmentSpool(fs::path dir, std::uint64_t max_bytes)
 }
 
 std::string SegmentSpool::meta_json(const SpoolItem& item) const {
+  std::lock_guard<std::recursive_mutex> lock(mu_);
   return item_json(item) + "}";
 }
 
 SpoolItem SegmentSpool::enqueue(const std::vector<std::int16_t>& pcm,
                                 SpoolItem meta) {
+  std::lock_guard<std::recursive_mutex> lock(mu_);
   if (meta.uuid.empty()) meta.uuid = make_segment_uuid();
   const std::string stem = compact_ts(meta.ts_start_iso) + "_" + meta.uuid;
   meta.wav_path = dir_ / (stem + ".wav");
@@ -161,6 +163,7 @@ SpoolItem SegmentSpool::enqueue(const std::vector<std::int16_t>& pcm,
 }
 
 std::vector<SpoolItem> SegmentSpool::pending() const {
+  std::lock_guard<std::recursive_mutex> lock(mu_);
   std::vector<SpoolItem> out;
   std::error_code ec;
   for (const auto& e : fs::directory_iterator(dir_, ec)) {
@@ -189,6 +192,7 @@ std::vector<SpoolItem> SegmentSpool::pending() const {
 }
 
 void SegmentSpool::remove(const SpoolItem& item) {
+  std::lock_guard<std::recursive_mutex> lock(mu_);
   std::error_code ec;
   fs::remove(item.json_path, ec);  // commit marker first
   fs::remove(item.wav_path, ec);
@@ -197,6 +201,9 @@ void SegmentSpool::remove(const SpoolItem& item) {
 void SegmentSpool::rewrite_times(const SpoolItem& item,
                                  const std::string& ts_start_iso,
                                  const std::string& ts_end_iso) {
+  std::lock_guard<std::recursive_mutex> lock(mu_);
+  std::error_code ec;
+  if (!fs::exists(item.json_path, ec) || !fs::exists(item.wav_path, ec)) return;  // evicted
   SpoolItem it = item;
   it.ts_start_iso = ts_start_iso;
   it.ts_end_iso = ts_end_iso;
@@ -205,10 +212,16 @@ void SegmentSpool::rewrite_times(const SpoolItem& item,
   js += ",\"_local\":{\"boot_id\":\"" + json_escape(it.boot_id) +
         "\",\"boot_ms_start\":" + std::to_string(it.boot_ms_start) +
         ",\"boot_ms_end\":" + std::to_string(it.boot_ms_end) + "}}";
-  write_atomic(item.json_path, js);
+  try {
+    write_atomic(item.json_path, js);
+  } catch (const std::exception&) {
+  }
 }
 
-std::uint64_t SegmentSpool::evicted_count() const { return evicted_; }
-std::size_t SegmentSpool::depth() const { return pending().size(); }
+std::uint64_t SegmentSpool::evicted_count() const { return evicted_.load(); }
+std::size_t SegmentSpool::depth() const {
+  std::lock_guard<std::recursive_mutex> lock(mu_);
+  return pending().size();
+}
 
 }  // namespace calypso

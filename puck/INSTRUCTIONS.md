@@ -32,20 +32,20 @@ voice-fingerprint → Bluetooth "who is talking" to the phone.
     the real `time_synced` and `queue_depth`.
 
 ### Offline (emergency voice ID)
-11. Feed the same `CHUNK_MS` frames into `OfflineBuffer` (concat to
+1. Feed the same `CHUNK_MS` frames into `OfflineBuffer` (concat to
    `OFFLINE_SEGMENT_MS` — **does not** touch the online upload buffer)
-12. `Models::infer` on the concatenated clip (CPU now; `INFER_BACKEND` /
+2. `Models::infer` on the concatenated clip (CPU now; `INFER_BACKEND` /
    `Models::set_backend` for Coral/NCS2 later)
-13. `PhoneLink::send_who_is_talking(out.who)` → phone app
+3. `PhoneLink::send_who_is_talking(out.who)` → phone app
 
 ### Mode switching
-11. Connection listener: if connected → Online; if not → wait, retry connect,
+1. Connection listener: if connected → Online; if not → wait, retry connect,
     set Offline/Online
-12. Capture never stops; only the worker path changes. Switching to Online
+2. Capture never stops; only the worker path changes. Switching to Online
     clears the offline concat buffer so partial clips do not leak.
 
 ### Shutdown
-13. On SIGINT/SIGTERM: stop listener + state machine, shut down
+1. On SIGINT/SIGTERM: stop listener + state machine, shut down
     models / phone / accelerators / link / capture
 
 ## Offline voice ID (MVP — implemented)
