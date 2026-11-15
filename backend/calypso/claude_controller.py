@@ -152,6 +152,15 @@ class ClaudeController:
                 effects.speech = ["Hi, it's Calypso. I'm here to help with introductions."]
                 effects.cards = [Card(kind="learning", title="Looking for familiar faces…", lines=[])]
             return effects
+        if event.kind == "utterance":
+            # Mixed call audio only feeds grounded recall: a silent card, never speech,
+            # and never identity (that stays face-only below).
+            text = (event.text or "").strip()
+            if session.started and text:
+                session.transcript.append((time.monotonic(), text))
+                await api("POST", f"/calls/{session.call_id}/lines", {"speaker": session.config.participant, "text": text})
+                await self.direct_recall(session, effects, api)
+            return effects
         if event.kind != "frame" or not session.started:
             return effects
         now = time.monotonic()

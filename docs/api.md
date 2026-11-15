@@ -201,7 +201,7 @@ Response: `{"intent": {"intent": "today", ...}, "card": {"kind": "today", "title
 - Day-event summaries name only the people and place that passed the evidence gates; any other capitalized name in a summary replaces it with "Talked with someone".
 - Photos flagged `sensitive` are never included. Emits the `recall.detect` bus stage.
 - The agent drops recall cards older than 4 s and logs `recall_latency_ms`.
-- Callers: in `group`, `recognize` and `auto` (while it is still recognizing) calls, every caller line goes straight to `/recall` (no Sonnet), at most one recall card per 10 s. Setup and enrollment conversations never use recall.
+- Callers: in `group`, `group_intro`, `recognize` and `auto` (while it is still recognizing) calls, every caller line goes straight to `/recall` (no Sonnet), at most one recall card per 10 s. Setup and enrollment conversations never use recall.
 
 ### `POST /agent/events`
 Dashboard events from the agent, e.g. `card.shown`. Body `{"stage": "card.shown", "payload": {...}}`.
@@ -280,4 +280,4 @@ uv run --env-file ../.env rq worker --with-scheduler --url "$CALYPSO_REDIS_URL" 
 
 In `auto` sessions, effects include the current `mode` (`recognize` then `setup` if unmatched). The transport sends `recognition_timeout` after the five-second opening window; the backend enforces the elapsed-time guard and ignores repeated/early timeout events. A confident face match completes the flow with an identity card and hang-up instruction. No-match transitions reuse the same session and call log for enrollment.
 
-`group_intro` sessions require the existing sole patient Mary and real recognition. Frame events may include `source_key` (track SID, max 200 characters) to isolate per-video confirmation histories. Full frames support multiple face results; two consecutive confident observations are required per relative/source. Effects contain the grounded announcement and card and remain `done=false`. See `manual-group-introductions.md` for the live topology checkpoint.
+`group_intro` sessions require the existing sole patient Mary and real recognition. Frame events may include `source_key` (track SID, max 200 characters) to isolate per-video confirmation histories. Full frames support multiple face results; two consecutive confident observations are required per relative/source. Effects contain the grounded announcement and card and remain `done=false`. `utterance` events (text from the bridge's mixed audio) go only to grounded `/recall` and may return a silent Today/memory card; they never affect identity. See `manual-group-introductions.md` for the live topology checkpoint.
