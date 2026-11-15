@@ -34,7 +34,8 @@ protocol PuckLink: AnyObject {
 @MainActor
 final class PuckConnection: ObservableObject {
     /// The phone treats the speaker as gone after this long with no `who` message.
-    static let speakerExpiry: TimeInterval = 20
+    /// The puck reports every ~3 s while someone speaks, so 8 s bridges a short pause without leaving a stale name up.
+    static let speakerExpiry: TimeInterval = 8
 
     @Published private(set) var state: PuckConnectionState
     @Published private(set) var speaker: WhoIsTalking?
