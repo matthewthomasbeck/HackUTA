@@ -120,8 +120,14 @@ class RecallBackend(Backend):
 TODAY = {"kind": "today", "title": "Today", "lines": ["4:07 AM · somewhere · Had coffee with someone"]}
 
 
+@pytest.fixture
+def no_recall_delay(monkeypatch):
+    import calypso.claude_controller as module
+    monkeypatch.setattr(module, "GROUP_INTRO_RECALL_DELAY_S", 0)
+
+
 @pytest.mark.asyncio
-async def test_group_intro_utterance_shows_recall_card_silently():
+async def test_group_intro_utterance_shows_recall_card_silently(no_recall_delay):
     state, api, controller = session(), RecallBackend(card=TODAY), ClaudeController()
     await controller.respond(state, MediaEvent(kind="start"), api)
     effects = await controller.respond(state, MediaEvent(kind="utterance", text="Mom, what did you do today?"), api)
@@ -132,7 +138,7 @@ async def test_group_intro_utterance_shows_recall_card_silently():
 
 
 @pytest.mark.asyncio
-async def test_group_intro_unrelated_speech_no_card_and_no_identity_change():
+async def test_group_intro_unrelated_speech_no_card_and_no_identity_change(no_recall_delay):
     state, api, controller = session(), RecallBackend(card=None), ClaudeController()
     await controller.respond(state, MediaEvent(kind="start"), api)
     effects = await controller.respond(state, MediaEvent(kind="utterance", text="I'm Sarah"), api)
@@ -140,7 +146,7 @@ async def test_group_intro_unrelated_speech_no_card_and_no_identity_change():
 
 
 @pytest.mark.asyncio
-async def test_group_intro_recall_failure_never_raises():
+async def test_group_intro_recall_failure_never_raises(no_recall_delay):
     state, api, controller = session(), RecallBackend(card=TODAY, delay=5), ClaudeController()
     await controller.respond(state, MediaEvent(kind="start"), api)
     effects = await controller.respond(state, MediaEvent(kind="utterance", text="what did you do today"), api)
@@ -148,9 +154,24 @@ async def test_group_intro_recall_failure_never_raises():
 
 
 @pytest.mark.asyncio
-async def test_group_intro_ignores_utterance_before_start_and_empty_text():
+async def test_group_intro_ignores_utterance_before_start_and_empty_text(no_recall_delay):
     state, api, controller = session(), RecallBackend(card=TODAY), ClaudeController()
     assert not (await controller.respond(state, MediaEvent(kind="utterance", text="what did you do today"), api)).cards
     await controller.respond(state, MediaEvent(kind="start"), api)
     assert not (await controller.respond(state, MediaEvent(kind="utterance", text="  "), api)).cards
     assert not [p for _, p, _ in api.requests if p == "/recall"]
+
+
+@pytest.mark.asyncio
+async def test_group_intro_recall_waits_for_first_five_seconds(monkeypatch):
+    import calypso.claude_controller as module
+    now = [100.0]
+    monkeypatch.setattr(module.time, "monotonic", lambda: now[0])
+    state, api, controller = session(), RecallBackend(card=TODAY), ClaudeController()
+    await controller.respond(state, MediaEvent(kind="start"), api)
+    now[0] = 104.9  # faces get the opening window to themselves
+    assert not (await controller.respond(state, MediaEvent(kind="utterance", text="what did you do today"), api)).cards
+    assert not [p for _, p, _ in api.requests if p == "/recall"]
+    now[0] = 105.0
+    effects = await controller.respond(state, MediaEvent(kind="utterance", text="what did you do today"), api)
+    assert [c.kind for c in effects.cards] == ["today"]
