@@ -11,7 +11,7 @@ Tester: ______  Date: ______  Backend commit: ______  Puck commit: ______
 ## 1. Capture to FaceTime card
 Wear the puck, say "Sarah and I are having coffee" near the patient, then in a FaceTime call ask "Mom, what did you do today?"
 - [ ] `puck.segment` appeared on the dashboard. Time seen: ______
-- [ ] A day event exists for today (`GET /days/{today}/events`) with the right place and people. Result: ______
+- [ ] A day event exists for today (`GET /days/{today}/events`) with the right place and people, within about 60 s of the first speech (`CALYPSO_REBUILD_DELAY_S`; under `CALYPSO_JOBS=rq` the worker must run with `--with-scheduler`). Result: ______
 - [ ] The agent showed a "today" card listing it. Result: ______
 
 ## 2. Re-upload creates no duplicate
@@ -42,4 +42,4 @@ Ask five recall questions in a live call. Copy `recall_latency_ms=` from the age
 | 4 | | | |
 | 5 | | | |
 
-Cards older than 4 s are discarded; that is proven by `test_stale_recall_card_dropped`, not by this checklist. Target: end of sentence to card on screen of 2.5 s or less. Median: ______ ms.
+Note: the latency clock (`sentence_end`) starts when the agent's STT returns the sentence, so `recall_latency_ms` and the 4 s staleness check exclude STT time. Add the STT time when comparing against the 2.5 s end-to-end target. Cards older than 4 s are discarded; that is proven by `test_stale_recall_card_dropped`, not by this checklist. Target: end of sentence to card on screen of 2.5 s or less. Median: ______ ms.

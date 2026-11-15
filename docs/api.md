@@ -171,7 +171,9 @@ The detector (`CALYPSO_DETECTOR`, Haiku) classifies the **last line** only: `tod
 
 Response: `{"intent": {"intent": "today", ...}, "card": {"kind": "today", "title": "Today", "lines": ["9:10 AM · Blue Bean Café · Coffee with Sarah"], "image_urls": []}}`.
 - No match, or an ambiguous question ("the weather today is awful") gives `{"intent": {"intent": "none", ...}, "card": null}`.
-- `today` with no events gives a neutral card: "A quiet day at home" if the day is a home day (`CALYPSO_HOME_LABEL`), else "Nothing saved yet today".
+- `today` lists the latest three events of the day. With no events it gives a neutral card: "A quiet day at home" if the day is a home day (`CALYPSO_HOME_LABEL`), else "Nothing saved yet today".
+- The detector is told the patient's local date. Its `date_hint` is used only if it falls within the last 7 days (never the future); otherwise the card is for today. A card for another day is titled by date (`"Saturday, Nov 14"`, `"Photos from Saturday, Nov 14"`), and an empty one says "Nothing saved for that day".
+- Day-event summaries name only the people and place that passed the evidence gates; any other capitalized name in a summary replaces it with "Talked with someone".
 - Photos flagged `sensitive` are never included. Emits the `recall.detect` bus stage.
 - The agent drops recall cards older than 4 s and logs `recall_latency_ms`.
 
@@ -191,7 +193,7 @@ Finds the patient (for "I help **Mary** remember…").
 | `GET /people/{id}` | | `PersonDetail`: a flat Person plus `memories: [String]` (up to 5, newest first, e.g. `"Nov 14 · Blue Bean Café · Coffee with Sarah"`) |
 | `PATCH /people/{id}` | `{"name": "Eric"}` (also `relationship`, `facts`, `phone`) | `Person` |
 | `GET /days/{yyyy-MM-dd}/events` | | `[DayEvent]` for that local day; `people` holds person ids, patient excluded |
-| `POST /days/{yyyy-MM-dd}/rebuild` | | `{"ok": true, "events": n}`: really rebuilds that local day (episodes split on gaps, places from visits, Sonnet summaries via `CALYPSO_SUMMARIZER`). Idempotent. Segment ingestion also marks the day dirty and rebuilds it (inline, or debounced 60 s under `rq`) |
+| `POST /days/{yyyy-MM-dd}/rebuild` | | `{"ok": true, "events": n}`: really rebuilds that local day (episodes split on gaps, places from visits, Sonnet summaries via `CALYPSO_SUMMARIZER`). Idempotent. A segment that produced utterances, and a late visit or photo upload, also marks its local day dirty; the day is rebuilt once, `CALYPSO_REBUILD_DELAY_S` (60 s) after the **first** mark, even while the puck keeps uploading (inline: a timer thread; `rq`: a delayed job, so the worker needs `--with-scheduler`). Silent segments don't mark the day. Open visits (`departed: null`) count for at most 12 h, up to now, or until the next visit |
 | `POST /app/visits` | JSON array of `Visit`; `departed: null` while the visit is still going on | `{"ok": true, "count": n}`; upserts by `id` |
 | `POST /app/photos` | multipart: `meta` (JSON `{id, taken_at, lat, lon}`) + `image` (JPEG) | `{"ok": true, "id": ..., "duplicate": bool}`; a repeat `id` is ignored |
 | `GET /media/faces/{person_id}.jpg` | public | JPEG or `404` |
@@ -231,7 +233,8 @@ Finds the patient (for "I help **Mary** remember…").
 | `CALYPSO_SUMMARIZER` | `claude` if `ANTHROPIC_API_KEY` set, else `fake` | Day-event summaries |
 | `CALYPSO_DETECTOR` | `claude` if `ANTHROPIC_API_KEY` set, else `fake` | Recall intent detection |
 | `CALYPSO_SUMMARY_MODEL` | `claude-sonnet-4-6` | Model for summaries |
-| `CALYPSO_DETECTOR_MODEL` | `claude-haiku-4-5` | Model for recall detection (the code reads this name, not `CALYPSO_DETECT_MODEL`) |
+| `CALYPSO_DETECT_MODEL` | `claude-haiku-4-5` | Model for recall detection (the older name `CALYPSO_DETECTOR_MODEL` still works as a fallback) |
+| `CALYPSO_REBUILD_DELAY_S` | `60` | Seconds from the first new speech of a day to its rebuild (at most one rebuild per day per period). `0` rebuilds synchronously (tests) |
 | `CALYPSO_HOME_LABEL` | `Home` | Visit place name that counts as home for "quiet day at home" |
 | `PUCK_SPOOL_DIR` | `/var/lib/calypso-puck/spool` (example) | Puck on-disk segment spool |
 | `PUCK_SPOOL_MAX_MB` | `512` | Spool cap; oldest segments are evicted past it |
@@ -242,9 +245,9 @@ From `backend/` (copy `.env.example` to `.env` at the repo root first):
 ```bash
 uv run --group dev pytest                                                   # tests
 uv run uvicorn calypso.app:app --host 127.0.0.1 --port 8000 --env-file ../.env   # API
-uv run --env-file ../.env rq worker --url "$CALYPSO_REDIS_URL" recordings  # worker (when CALYPSO_JOBS=rq)
+uv run --env-file ../.env rq worker --with-scheduler --url "$CALYPSO_REDIS_URL" recordings  # worker (when CALYPSO_JOBS=rq)
 ```
 - `CALYPSO_JOBS=inline` (default) processes uploads inside the API, with no Redis needed. Use it on laptops and in tests.
-- `CALYPSO_JOBS=rq` queues them on Redis for the worker. Use it on Vultr.
+- `CALYPSO_JOBS=rq` queues them on Redis for the worker. Use it on Vultr. The worker **must** run with `--with-scheduler`: day rebuilds are delayed jobs, and RQ only runs those on a worker with the scheduler.
 - `CALYPSO_STORAGE=local` (default) keeps face crops and photos under `data/files/`. `s3` uses the Vultr enrollment bucket.
 - On Vultr, uvicorn runs on `127.0.0.1:8000` behind Caddy for HTTPS.

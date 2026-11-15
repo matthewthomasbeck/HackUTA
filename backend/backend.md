@@ -206,7 +206,8 @@ curl -N http://127.0.0.1:8000/stream          # watch live events; leave it open
 **Worker mode** (on the Vultr box, with Keanu's Redis reachable at `127.0.0.1:6379`):
 ```bash
 # in .env: CALYPSO_JOBS=rq
-uv run --env-file ../.env rq worker --url redis://127.0.0.1:6379/0 recordings
+uv run --env-file ../.env rq worker --with-scheduler --url redis://127.0.0.1:6379/0 recordings
+# --with-scheduler is required: day rebuilds are delayed (enqueue_in) jobs
 ```
 
 **Deploying (planned):** uvicorn listens on `127.0.0.1:8000`, and **Caddy** in front of it provides HTTPS on a domain. `CALYPSO_PUBLIC_URL` and the app's `API_BASE_URL` are both that `https://` address.
