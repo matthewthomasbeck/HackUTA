@@ -22,6 +22,7 @@ def env(monkeypatch, tmp_path):
     monkeypatch.setenv("CALYPSO_PUBLIC_URL", "https://calypso.example.com")
     monkeypatch.setenv("CALYPSO_FACE", "fake")
     monkeypatch.setenv("CALYPSO_VOICE", "fake")
+    monkeypatch.setenv("CALYPSO_REBUILD_DELAY_S", "0")  # day rebuild runs synchronously in tests
     return tmp_path
 
 

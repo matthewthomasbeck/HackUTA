@@ -2,13 +2,15 @@
 
 The RQ worker runs this repo's code on the host, from `backend/`:
 
-    uv run --env-file ../.env rq worker --url "$CALYPSO_REDIS_URL" recordings
+    uv run --env-file ../.env rq worker --with-scheduler --url "$CALYPSO_REDIS_URL" recordings
 
-so it imports `calypso.jobs.process_segment` and opens the same SQLite file.
+`--with-scheduler` is required: the day rebuild is a delayed job (`enqueue_in`), and
+RQ only runs delayed jobs on a worker started with the scheduler. It imports `calypso.jobs.process_segment` and opens the same SQLite file.
 A worker can't reach the API's in-memory bus, so it reports progress by
 POSTing to the API's `/events` endpoint.
 """
 import logging
+import threading
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Callable
@@ -19,7 +21,7 @@ import httpx
 from . import db
 from .bus import emit
 from .config import Settings
-from .day_builder import DEBOUNCE_S, mark_day_dirty, rebuild_day, rebuild_dirty_days
+from .day_builder import schedule_rebuild
 from .identity import ModelUnavailable
 from .identity.audio import AudioError
 from .identity.vectors import best_scores, ranked
@@ -41,7 +43,13 @@ class InlineJobs:
             _log.exception("inline job %s failed", func.__name__)
 
     def enqueue_in(self, delay_s: float, func: Callable, *args: Any) -> None:
-        self.enqueue(func, *args)  # no clock to wait on: run now
+        """Run after `delay_s` on a daemon timer thread; 0 runs it now (tests)."""
+        if delay_s <= 0:
+            self.enqueue(func, *args)
+            return
+        t = threading.Timer(delay_s, self.enqueue, args=(func, *args))
+        t.daemon = True
+        t.start()
 
 
 class RQJobs:
@@ -63,8 +71,10 @@ class RQJobs:
             job_timeout=300, result_ttl=3600, retry=Retry(max=3, interval=[10, 30, 60]),
         )
 
-
     def enqueue_in(self, delay_s: float, func: Callable, *args: Any) -> None:
+        if delay_s <= 0:
+            self.enqueue(func, *args)
+            return
         self.queue.enqueue_in(timedelta(seconds=delay_s), f"{func.__module__}.{func.__name__}", *args)
 
 
@@ -120,6 +130,10 @@ def process_segment(segment_uuid: str, wav_path: str) -> list[str]:
         seg = conn.execute("SELECT * FROM segments WHERE segment_uuid = ?", (segment_uuid,)).fetchone()
         if seg is None:
             raise LookupError(f"unknown segment {segment_uuid}")
+        if seg["status"] == "done":  # a re-run of a job that already committed
+            Path(wav_path).unlink(missing_ok=True)
+            return [r["id"] for r in conn.execute(
+                "SELECT id FROM utterances WHERE segment_uuid = ? ORDER BY ts_start, id", (segment_uuid,))]
         utterance_ids: list[str] = []
         try:
             wav = Path(wav_path).read_bytes()
@@ -158,13 +172,10 @@ def process_segment(segment_uuid: str, wav_path: str) -> list[str]:
             raise
         try:
             local_day = parse_iso(seg["ts_start"]).astimezone(ZoneInfo(settings.tz)).date()
-            mark_day_dirty(conn, local_day)
-            if settings.jobs == "rq":
-                get_jobs(settings).enqueue_in(DEBOUNCE_S, rebuild_dirty_days, None)
-            else:
-                rebuild_day(conn, local_day, settings)
+            if utterance_ids:  # silence changes nothing on the timeline
+                schedule_rebuild(conn, local_day, settings, get_jobs(settings))
         except Exception:
-            _log.exception("mark_day_dirty failed for %s", segment_uuid)
+            _log.exception("scheduling the day rebuild failed for %s", segment_uuid)
         Path(wav_path).unlink(missing_ok=True)  # audio is never kept
         notify(settings, "puck.processed", {"segment_uuid": segment_uuid, "utterance_ids": utterance_ids})
         return utterance_ids

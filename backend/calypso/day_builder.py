@@ -11,7 +11,6 @@ from .summarizer import ClaudeSummarizer, FakeSummarizer, Summarizer, get_summar
 from .timeutil import iso_utc, local_day_bounds, now_utc, parse_iso
 
 GAP = timedelta(minutes=20)
-DEBOUNCE_S = 60
 
 
 @dataclass
@@ -116,29 +115,57 @@ def rebuild_day(conn, day: date, settings: Settings, summarizer: Summarizer | No
     return events
 
 
-def mark_day_dirty(conn, day: date) -> None:
-    conn.execute(
-        "INSERT INTO dirty_days (day, marked_at) VALUES (?, ?)"
-        " ON CONFLICT(day) DO UPDATE SET marked_at = excluded.marked_at",
+def mark_day_dirty(conn, day: date) -> bool:
+    """Mark `day` as needing a rebuild. True only when this starts a new dirty period.
+
+    The first mark's time is kept (later marks don't refresh it), so the rebuild is a
+    rate limit, not a trailing debounce: it runs about `rebuild_delay_s` after the
+    first new speech even while the puck keeps uploading.
+    """
+    cur = conn.execute(
+        "INSERT INTO dirty_days (day, marked_at) VALUES (?, ?) ON CONFLICT(day) DO NOTHING",
         (day.isoformat(), iso_utc(now_utc())))
     conn.commit()
+    return cur.rowcount == 1
+
+
+def schedule_rebuild(conn, day: date, settings: Settings, jobs=None) -> bool:
+    """Mark `day` dirty and, if that starts a new dirty period, queue one delayed
+    `rebuild_dirty_days` job. Returns True when a job was queued."""
+    if not mark_day_dirty(conn, day):
+        return False
+    if jobs is None:
+        from .jobs import get_jobs  # lazy: jobs imports this module
+
+        jobs = get_jobs(settings)
+    jobs.enqueue_in(settings.rebuild_delay_s, rebuild_dirty_days, None)
+    return True
 
 
 def rebuild_dirty_days(settings: Settings | None = None) -> int:
-    """Rebuild days marked at least 60 s ago and clear their marks. Returns how many."""
+    """Rebuild every day first marked at least `rebuild_delay_s` ago. Returns how many.
+
+    Each row is claimed (deleted) before its build, so a mark that arrives during the
+    build starts a new dirty period with its own delayed job. A failed build re-marks
+    the day so it is retried.
+    """
     settings = settings or Settings.from_env()
     conn = db.connect(settings.db_path)
     try:
-        cutoff = iso_utc(now_utc() - timedelta(seconds=DEBOUNCE_S))
+        cutoff = iso_utc(now_utc() - timedelta(seconds=settings.rebuild_delay_s))
         days = [r["day"] for r in conn.execute("SELECT day FROM dirty_days WHERE marked_at <= ?", (cutoff,))]
-        summarizer = get_summarizer(settings)
+        summarizer = get_summarizer(settings) if days else None
         n = 0
         for d in days:
-            marked = conn.execute("SELECT marked_at FROM dirty_days WHERE day = ?", (d,)).fetchone()
-            rebuild_day(conn, date.fromisoformat(d), settings, summarizer)
-            # clear only if not re-marked while building
-            conn.execute("DELETE FROM dirty_days WHERE day = ? AND marked_at = ?", (d, marked["marked_at"]))
+            claimed = conn.execute("DELETE FROM dirty_days WHERE day = ? AND marked_at <= ?", (d, cutoff))
             conn.commit()
+            if claimed.rowcount != 1:
+                continue  # another worker took it
+            try:
+                rebuild_day(conn, date.fromisoformat(d), settings, summarizer)
+            except Exception:
+                schedule_rebuild(conn, date.fromisoformat(d), settings)
+                raise
             n += 1
         return n
     finally:
