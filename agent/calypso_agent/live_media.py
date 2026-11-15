@@ -12,9 +12,9 @@ import wave
 
 from livekit import rtc
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image
 
-from .cards import CALL_SIZE, caption_cards, font, render
+from .cards import CALL_SIZE, CONNECTING, caption_cards, render, stamp_footer
 from .contract import Card
 
 log = logging.getLogger("calypso.camera")
@@ -162,7 +162,7 @@ class RoomSpeech:
 class Publisher:
     def __init__(self, room, scheduler=None, *, on_shown=lambda card: None):
         self.room, self.scheduler = room, scheduler
-        self.status = Card(kind="memory", title="Connecting…", lines=[])
+        self.status = Card(kind="memory", title=CONNECTING, lines=[])
         self.source = rtc.VideoSource(*CALL_SIZE)
         self.audio = rtc.AudioSource(16000, 1)
         self.publications = []
@@ -203,11 +203,12 @@ class Publisher:
             key = (card.model_dump_json() if card else "idle", self.camera_status)
             if key != previous:
                 picture = render(card, {}, size=CALL_SIZE)
-                draw = ImageDraw.Draw(picture)
-                if self.camera_status:
-                    status = self.camera_status.replace("Camera: ", "").replace(" clear face samples", " face samples")
-                    draw.text((48, 1138), status, font=font(26), fill=(112, 224, 199), anchor="lt")
-                draw.text((48, 1200), "TEST MODE", font=font(26), fill=(255, 206, 105), anchor="lt")
+                status = (
+                    self.camera_status.replace("Camera: ", "").replace(" clear face samples", " face samples")
+                    if self.camera_status
+                    else None
+                )
+                stamp_footer(picture, status=status, test=True)
                 frame = rtc.VideoFrame(*CALL_SIZE, rtc.VideoBufferType.RGB24, picture.tobytes())
                 previous = key
                 if key[0] != previous_card:
