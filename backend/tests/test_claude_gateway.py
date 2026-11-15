@@ -495,3 +495,21 @@ async def test_auto_session_api_starts_recognition_and_cleans_up(gateway_app):
             effects = (await client.post(f"/agent/sessions/{sid}/events", json={"kind": "start"})).json()
             assert effects["mode"] == "recognize" and len(effects["speech"]) == 1
             assert (await client.post(f"/agent/sessions/{sid}/end")).status_code == 200
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("name,controlled,status", [("Mary", False, 201), ("Mary", True, 422), ("Other", False, 409)])
+async def test_manual_group_api_requires_fixed_patient_and_real_recognition(gateway_app, name, controlled, status):
+    from calypso.claude_controller import ClaudeController
+    gateway_app.state.claude_controller = ClaudeController(FakeClaude([]))
+    async with gateway_app.router.lifespan_context(gateway_app):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=gateway_app),
+            base_url="http://test", headers={"Authorization": "Bearer gateway-token"}) as client:
+            await client.post("/people", json={"name": name, "is_patient": True})
+            response = await client.post("/agent/sessions", json={"mode": "group_intro", "participant": "bridge", "controlled": controlled})
+            assert response.status_code == status, response.text
+            if status == 201:
+                sid = response.json()["session_id"]
+                effects = (await client.post(f"/agent/sessions/{sid}/events", json={"kind": "start"})).json()
+                assert len(effects["speech"]) == 1 and not effects["done"]
+                assert (await client.post(f"/agent/sessions/{sid}/end")).status_code == 200

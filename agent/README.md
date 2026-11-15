@@ -63,3 +63,7 @@ See [the recognition guide](../docs/returning-relative-test.md) for limitations 
 Use `CALYPSO_CALL_MODE=auto` for a five-second face-only check followed by either
 a matched identity/hang-up instruction or the existing enrollment conversation.
 See the recognition guide for timing and acceptance tests.
+
+For the manual three-party milestone, use `CALYPSO_CALL_MODE=group_intro`.
+See [manual group introductions](../docs/manual-group-introductions.md) for patient assumptions,
+face confirmation rules, the Chert topology checkpoint and live acceptance.
