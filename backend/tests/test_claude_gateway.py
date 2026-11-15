@@ -606,3 +606,11 @@ async def test_route_picks_group_for_patient_phone_and_1to1_otherwise(gateway_ap
             assert not any("555" in str(r) for r in routes)  # the number never reaches the event stream
             assert (await client.post("/agent/sessions/route", json={"caller_phone": None},
                                       headers={"Authorization": "Bearer wrong"})).status_code == 401
+
+
+def test_is_yes_accepts_repeated_and_combined_yes_words_only():
+    from calypso.claude_controller import is_yes
+    for answer in ["yes", "yes. yes", "yes, that's right", "yeah yes", "correct. yes"]:
+        assert is_yes(answer), answer
+    for answer in ["", "no", "yes. no", "no, that's wrong", "yes but my name is sam"]:
+        assert not is_yes(answer), answer

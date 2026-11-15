@@ -22,6 +22,12 @@ from .models import Card
 log = logging.getLogger("calypso.controller")
 GROUP_INTRO_RECALL_DELAY_S = 5  # faces get the opening of a group_intro call to themselves
 YES = {"yes", "yeah", "yep", "correct", "that's right", "that is right"}
+
+
+def is_yes(answer):
+    """True when every part of the answer is a yes: "Yes. Yes.", "Yes, that's right", "yeah yes"."""
+    parts = [p.strip() for p in answer.replace("!", ".").replace("?", ".").replace(",", ".").split(".") if p.strip()]
+    return bool(parts) and all(p in YES or all(w in YES for w in p.split()) for p in parts)
 CAMERA_PERMISSION = {"you may capture my face", "you can capture my face", "please capture my face", "capture my face", "go ahead"}
 
 
@@ -251,7 +257,7 @@ class ClaudeController:
             session.last_text = (event.text or "").strip()
             answer = session.last_text.lower().strip(" .!?")
             if session.pending_intro:
-                if answer in YES:
+                if is_yes(answer):
                     session.intro_confirmed = True
                 elif not (session.intro_confirmed and answer in CAMERA_PERMISSION):
                     session.pending_intro = None
