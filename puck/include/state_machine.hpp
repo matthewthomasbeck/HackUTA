@@ -3,9 +3,12 @@
 #include "backend_link.hpp"
 #include "capture.hpp"
 #include "chunk_queue.hpp"
+#include "clock_sync.hpp"
 #include "models.hpp"
 #include "offline_buffer.hpp"
 #include "phone_link.hpp"
+#include "segment_spool.hpp"
+#include "segmenter.hpp"
 #include "types.hpp"
 
 #include <atomic>
@@ -16,12 +19,14 @@ namespace calypso {
 // Capture never shares a thread with upload/infer (those block on HTTP / BT / NPU).
 //
 //   THREAD listen  — ALSA/sine → ChunkQueue (never waits on network)
-//   THREAD worker  — Online:  queue → BackendLink (SEGMENT_MS buffer)
-//                    Offline: queue → OfflineBuffer → Models::infer → PhoneLink
+//   THREAD worker  — BOTH modes: queue → Segmenter → SegmentSpool (durable;
+//                    the Uploader thread drains it to the backend)
+//                    Offline additionally: queue → OfflineBuffer → Models::infer → PhoneLink
 class StateMachine {
  public:
   StateMachine(Capture& capture, BackendLink& link, Models& models,
-               PhoneLink& phone, int offline_segment_ms,
+               PhoneLink& phone, int offline_segment_ms, SegmentSpool& spool,
+               const ClockSource& clock, int segment_ms,
                float min_speech_rms = 0.02f);
   ~StateMachine();
 
@@ -37,13 +42,15 @@ class StateMachine {
  private:
   void listen_loop();
   void worker_loop();
-  void process_online(const AudioChunk& chunk);
+  void spool_chunk(const AudioChunk& chunk);
   void process_offline(const AudioChunk& chunk);
 
   Capture& capture_;
   BackendLink& link_;
   Models& models_;
   PhoneLink& phone_;
+  SegmentSpool& spool_;
+  Segmenter segmenter_;
   OfflineBuffer offline_buf_;
   float min_speech_rms_ = 0.02f;
   ChunkQueue queue_;

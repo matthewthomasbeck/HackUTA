@@ -4,17 +4,24 @@
 #include "accelerators.hpp"
 #include "backend_link.hpp"
 #include "capture.hpp"
+#include "clock_sync.hpp"
 #include "config.hpp"
 #include "connection_listener.hpp"
 #include "models.hpp"
 #include "phone_link.hpp"
+#include "segment_spool.hpp"
 #include "state_machine.hpp"
 #include "types.hpp"
+#include "uploader.hpp"
 
 #include <atomic>
 #include <chrono>
 #include <csignal>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <memory>
+#include <stdexcept>
 #include <thread>
 
 namespace {
@@ -45,6 +52,30 @@ int main() {
     return 1;
   }
 
+  // The spool is where every segment lands, so fail fast and clearly if it
+  // can't be created (systemd's StateDirectory= makes /var/lib/calypso-puck).
+  std::unique_ptr<calypso::SegmentSpool> spool_ptr;
+  try {
+    spool_ptr = std::make_unique<calypso::SegmentSpool>(
+        cfg.spool_dir,
+        static_cast<std::uint64_t>(cfg.spool_max_mb > 0 ? cfg.spool_max_mb : 512) *
+            1024ull * 1024ull);
+    const std::filesystem::path probe =
+        std::filesystem::path(cfg.spool_dir) / ".write_test";
+    std::ofstream(probe) << "ok";
+    if (!std::filesystem::exists(probe)) {
+      throw std::runtime_error("directory is not writable");
+    }
+    std::filesystem::remove(probe);
+  } catch (const std::exception& e) {
+    std::cerr << "cannot use spool dir PUCK_SPOOL_DIR=" << cfg.spool_dir << ": "
+              << e.what()
+              << "\n  create it and make it writable by this user, or set "
+                 "PUCK_SPOOL_DIR (systemd unit uses StateDirectory=calypso-puck)\n";
+    return 1;
+  }
+  calypso::SegmentSpool& spool = *spool_ptr;
+
   calypso::Capture capture;
   calypso::BackendLink link;
   calypso::Accelerators accelerators;
@@ -55,8 +86,7 @@ int main() {
     std::cerr << "mic init failed — set MIC_DEVICE to an ALSA name or 'sine'\n";
     return 1;
   }
-  if (!link.init(cfg.backend_ip, cfg.backend_port, cfg.api_token,
-                 cfg.segment_ms)) {
+  if (!link.init(cfg.backend_ip, cfg.backend_port, cfg.api_token)) {
     std::cerr << "backend link init failed\n";
     return 1;
   }
@@ -94,8 +124,37 @@ int main() {
             << (initial == calypso::RunMode::Online ? "ONLINE" : "OFFLINE")
             << " mode\n";
 
+  calypso::SystemClock clock;
+  std::atomic<bool> upload_stop{false};
+  std::atomic<bool> last_upload_ok{true};
+  calypso::Uploader uploader(
+      spool,
+      [&](const std::string& wav, const std::string& meta) {
+        const int st = link.post_segment(wav, meta);
+        last_upload_ok.store(st >= 200 && st < 300);
+        return st;
+      },
+      clock);
+  std::thread upload_thread([&] { uploader.run(upload_stop); });
+  std::thread health_thread([&] {
+    std::size_t last_rejected = 0;
+    while (!upload_stop.load()) {
+      link.post_health(spool.depth(), clock.now().synced, last_upload_ok.load());
+      const std::size_t rejected = uploader.rejected_count();
+      if (rejected != last_rejected) {  // not in /puck/health (shared contract)
+        std::cerr << "health: rejected/ holds " << rejected << " segments (cap "
+                  << calypso::Uploader::kMaxRejected << ")\n";
+        last_rejected = rejected;
+      }
+      for (int i = 0; i < 100 && !upload_stop.load(); ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      }
+    }
+  });
+
   calypso::StateMachine sm(capture, link, models, phone,
-                           cfg.offline_segment_ms, cfg.min_speech_rms);
+                           cfg.offline_segment_ms, spool, clock,
+                           cfg.segment_ms, cfg.min_speech_rms);
   calypso::ConnectionListener listener(link, sm, cfg.connect_retry_sec,
                                        cfg.connection_check_sec,
                                        force_offline);
@@ -110,6 +169,9 @@ int main() {
   std::cerr << "shutting down\n";
   listener.stop();
   sm.stop();
+  upload_stop.store(true);  // uploader finishes its in-flight POST, then exits
+  upload_thread.join();
+  health_thread.join();
   models.shutdown();
   phone.shutdown();
   accelerators.shutdown();

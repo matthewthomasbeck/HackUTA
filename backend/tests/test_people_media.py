@@ -133,3 +133,19 @@ def test_add_voice_stores_print_not_audio(client, env):
     assert not list((env / "data").rglob("*.wav"))
     bad = client.post(f"/people/{p['id']}/voice", headers=AUTH, files={"audio": ("v.wav", io.BytesIO(b"RIFF"), "audio/wav")})
     assert bad.status_code == 422
+
+
+def test_memories_skip_unsynced_puck_utterances(conn):
+    from calypso.routes.people import _memories
+
+    pid = db.insert_person(conn, name="Sarah")["id"]
+    for uuid_, synced, text in [("s-ok", 1, "trusted"), ("s-bad", 0, "untrusted")]:
+        conn.execute("INSERT INTO segments (segment_uuid, ts_start, ts_end, status, received_at, time_synced)"
+                     " VALUES (?, '2026-11-14T16:00:00.000Z', '2026-11-14T16:00:03.000Z', 'done',"
+                     " '2026-11-14T16:00:05.000Z', ?)", (uuid_, synced))
+        conn.execute("INSERT INTO utterances (id, segment_uuid, ts_start, ts_end, text, source, person_id)"
+                     " VALUES (?, ?, '2026-11-14T16:00:00.000Z', '2026-11-14T16:00:03.000Z', ?, 'puck', ?)",
+                     (db.new_id(), uuid_, text, pid))
+    conn.commit()
+    lines = _memories(conn, pid, "America/Chicago")
+    assert any("trusted" in l for l in lines) and not any("untrusted" in l for l in lines)

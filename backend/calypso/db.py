@@ -56,7 +56,8 @@ CREATE TABLE IF NOT EXISTS segments (
   status TEXT NOT NULL DEFAULT 'queued',
   error TEXT,
   received_at TEXT NOT NULL,
-  processed_at TEXT
+  processed_at TEXT,
+  time_synced INTEGER NOT NULL DEFAULT 1
 );
 CREATE TABLE IF NOT EXISTS utterances (
   id TEXT PRIMARY KEY,
@@ -119,6 +120,7 @@ CREATE TABLE IF NOT EXISTS day_events (
   photo_ids TEXT NOT NULL DEFAULT '[]'
 );
 CREATE INDEX IF NOT EXISTS idx_events_start ON day_events(start_ts);
+CREATE TABLE IF NOT EXISTS dirty_days (day TEXT PRIMARY KEY, marked_at TEXT NOT NULL);
 """
 
 
@@ -137,7 +139,20 @@ def connect(path: str, init: bool = True) -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys=ON")
     if init:
         conn.executescript(SCHEMA)
+        _migrate(conn)
     return conn
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Add columns that deployed databases predate."""
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(segments)")}
+    if "time_synced" not in cols:
+        try:
+            conn.execute("ALTER TABLE segments ADD COLUMN time_synced INTEGER NOT NULL DEFAULT 1")
+            conn.commit()
+        except sqlite3.OperationalError as exc:  # the API and a worker migrating at the same time
+            if "duplicate column" not in str(exc).lower():
+                raise
 
 
 def dumps(value: Iterable[Any]) -> str:

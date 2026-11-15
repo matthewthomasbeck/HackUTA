@@ -118,6 +118,13 @@ bool load_config(const std::string& path, Config& out) {
   out.voice_match_threshold =
       parse_float(get("VOICE_MATCH_THRESHOLD"), 0.45f);
   out.min_speech_rms = parse_float(get("MIN_SPEECH_RMS"), 0.02f);
+  {
+    const std::string d = get("PUCK_SPOOL_DIR");
+    if (!d.empty()) {
+      out.spool_dir = d;
+    }
+  }
+  out.spool_max_mb = parse_int(get("PUCK_SPOOL_MAX_MB"), 512);
   out.bt_adapter = get("BT_ADAPTER");
   out.bt_peer_name = get("BT_PEER_NAME");
   {

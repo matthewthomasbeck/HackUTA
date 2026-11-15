@@ -33,7 +33,8 @@ One voiced speech segment. The puck captures 30 ms frames for VAD, then uploads 
   "ts_start": "2026-11-14T15:30:00.000Z",
   "ts_end":   "2026-11-14T15:30:04.500Z",
   "sound_tags": [ { "ts": "2026-11-14T15:30:01.000Z", "label": "Espresso machine", "score": 0.81 } ],
-  "local_text": "let me grab a coffee"
+  "local_text": "let me grab a coffee",
+  "time_synced": true
 }
 ```
 Response `200`:
@@ -43,7 +44,9 @@ Response `200`:
 Rules:
 - Generate `segment_uuid` **once** when the segment is cut, store it in the queue, and **reuse it on every retry**. The server dedupes on it.
 - Ack (remove from the queue) on any `2xx`, including `duplicate: true`. On a network error or `5xx`, keep it and retry with backoff. `503` means the server couldn't queue processing; retry later.
-- `local_text` (whisper.cpp) is optional. It's the fallback text if server STT fails.
+- `local_text` (whisper.cpp) is optional. If present it wins; otherwise the server transcribes the audio (`CALYPSO_STT`). Confident voice matches set the utterance's person.
+- `time_synced` (bool, default `true`) is new on `SegmentMeta`. Send `false` when the Pi's clock wasn't NTP-synced when the segment was cut; the server stores it, and the day builder ignores unsynced segments (their timestamps can be wrong). Older pucks that omit it are treated as synced.
+- The puck spools every segment to disk first (`PUCK_SPOOL_DIR`, capped by `PUCK_SPOOL_MAX_MB`, oldest evicted) and uploads oldest-first, so reboots and offline stretches lose nothing.
 - The server never keeps the audio: it is deleted right after processing.
 
 ```bash
@@ -160,11 +163,19 @@ POST /calls/c1/lines       → {"speaker": "sarah", "text": "Hi Mom!", "ts": "20
 POST /calls/c1/end         ← the Call with "ended" set
 ```
 
-### `POST /recall`  (stub → Task 8)
+### `POST /recall`
 ```json
 { "lines": [ { "speaker": "Sarah", "text": "Mom, what did you do today?" } ] }
 ```
-Response: `{"intent": {"intent": "today", ...}, "card": {"kind": "today", "title": "Today", "lines": ["9:10 · Blue Bean Café · coffee with Sarah"], "image_urls": []}}`. **Stub today:** always `{"intent": {"intent": "none", ...}, "card": null}`.
+The detector (`CALYPSO_DETECTOR`, Haiku) classifies the **last line** only: `today | person | memory | photo | none`. Below `RECALL_MIN` confidence it returns `none`. The model never writes card text; every line comes from saved day events, people, memories and photos.
+
+Response: `{"intent": {"intent": "today", ...}, "card": {"kind": "today", "title": "Today", "lines": ["9:10 AM · Blue Bean Café · Coffee with Sarah"], "image_urls": []}}`.
+- No match, or an ambiguous question ("the weather today is awful") gives `{"intent": {"intent": "none", ...}, "card": null}`.
+- `today` lists the latest three events of the day. With no events it gives a neutral card: "A quiet day at home" if the day is a home day (`CALYPSO_HOME_LABEL`), else "Nothing saved yet today".
+- The detector is told the patient's local date. Its `date_hint` is used only if it falls within the last 7 days (never the future); otherwise the card is for today. A card for another day is titled by date (`"Saturday, Nov 14"`, `"Photos from Saturday, Nov 14"`), and an empty one says "Nothing saved for that day".
+- Day-event summaries name only the people and place that passed the evidence gates; any other capitalized name in a summary replaces it with "Talked with someone".
+- Photos flagged `sensitive` are never included. Emits the `recall.detect` bus stage.
+- The agent drops recall cards older than 4 s and logs `recall_latency_ms`.
 
 ### `POST /agent/events`
 Dashboard events from the agent, e.g. `card.shown`. Body `{"stage": "card.shown", "payload": {...}}`.
@@ -182,7 +193,7 @@ Finds the patient (for "I help **Mary** remember…").
 | `GET /people/{id}` | | `PersonDetail`: a flat Person plus `memories: [String]` (up to 5, newest first, e.g. `"Nov 14 · Blue Bean Café · Coffee with Sarah"`) |
 | `PATCH /people/{id}` | `{"name": "Eric"}` (also `relationship`, `facts`, `phone`) | `Person` |
 | `GET /days/{yyyy-MM-dd}/events` | | `[DayEvent]` for that local day; `people` holds person ids, patient excluded |
-| `POST /days/{yyyy-MM-dd}/rebuild` | | `{"ok": true, ...}` (stub → Task 7) |
+| `POST /days/{yyyy-MM-dd}/rebuild` | | `{"ok": true, "events": n}`: really rebuilds that local day (episodes split on gaps, places from visits, Sonnet summaries via `CALYPSO_SUMMARIZER`). Idempotent. A segment that produced utterances, and a late visit or photo upload, also marks its local day dirty; the day is rebuilt once, `CALYPSO_REBUILD_DELAY_S` (60 s) after the **first** mark, even while the puck keeps uploading (inline: a timer thread; `rq`: a delayed job, so the worker needs `--with-scheduler`). If that delayed job is lost (API restart, killed worker, no scheduler), a dirty row older than twice the delay (min 10 s) is retried by the next mark, the API queues one job at startup when any dirty row exists, a job that runs early re-queues for the remaining time, and a manual `POST /days/{day}/rebuild` clears the day's dirty row. Silent segments don't mark the day. Open visits (`departed: null`) count for at most 12 h, up to now, or until the next visit |
 | `POST /app/visits` | JSON array of `Visit`; `departed: null` while the visit is still going on | `{"ok": true, "count": n}`; upserts by `id` |
 | `POST /app/photos` | multipart: `meta` (JSON `{id, taken_at, lat, lon}`) + `image` (JPEG) | `{"ok": true, "id": ..., "duplicate": bool}`; a repeat `id` is ignored |
 | `GET /media/faces/{person_id}.jpg` | public | JPEG or `404` |
@@ -214,15 +225,29 @@ Finds the patient (for "I help **Mary** remember…").
 
 ---
 
+## Passive-recall environment variables
+
+| Var | Default | Meaning |
+|---|---|---|
+| `CALYPSO_STT` | `grok` if `XAI_API_KEY` set, else `fake` | Server speech-to-text for segments without `local_text` |
+| `CALYPSO_SUMMARIZER` | `claude` if `ANTHROPIC_API_KEY` set, else `fake` | Day-event summaries |
+| `CALYPSO_DETECTOR` | `claude` if `ANTHROPIC_API_KEY` set, else `fake` | Recall intent detection |
+| `CALYPSO_SUMMARY_MODEL` | `claude-sonnet-4-6` | Model for summaries |
+| `CALYPSO_DETECT_MODEL` | `claude-haiku-4-5` | Model for recall detection (the older name `CALYPSO_DETECTOR_MODEL` still works as a fallback) |
+| `CALYPSO_REBUILD_DELAY_S` | `60` | Seconds from the first new speech of a day to its rebuild (at most one rebuild per day per period). `0` rebuilds synchronously (tests) |
+| `CALYPSO_HOME_LABEL` | `Home` | Visit place name that counts as home for "quiet day at home" |
+| `PUCK_SPOOL_DIR` | `/var/lib/calypso-puck/spool` (example) | Puck on-disk segment spool |
+| `PUCK_SPOOL_MAX_MB` | `512` | Spool cap; oldest segments are evicted past it |
+
 ## Running it
 
 From `backend/` (copy `.env.example` to `.env` at the repo root first):
 ```bash
 uv run --group dev pytest                                                   # tests
 uv run uvicorn calypso.app:app --host 127.0.0.1 --port 8000 --env-file ../.env   # API
-uv run --env-file ../.env rq worker --url "$CALYPSO_REDIS_URL" recordings  # worker (when CALYPSO_JOBS=rq)
+uv run --env-file ../.env rq worker --with-scheduler --url "$CALYPSO_REDIS_URL" recordings  # worker (when CALYPSO_JOBS=rq)
 ```
 - `CALYPSO_JOBS=inline` (default) processes uploads inside the API, with no Redis needed. Use it on laptops and in tests.
-- `CALYPSO_JOBS=rq` queues them on Redis for the worker. Use it on Vultr.
+- `CALYPSO_JOBS=rq` queues them on Redis for the worker. Use it on Vultr. The worker **must** run with `--with-scheduler`: day rebuilds are delayed jobs, and RQ only runs those on a worker with the scheduler.
 - `CALYPSO_STORAGE=local` (default) keeps face crops and photos under `data/files/`. `s3` uses the Vultr enrollment bucket.
 - On Vultr, uvicorn runs on `127.0.0.1:8000` behind Caddy for HTTPS.
