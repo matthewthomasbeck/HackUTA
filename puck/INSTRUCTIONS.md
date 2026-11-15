@@ -113,6 +113,18 @@ cmake -S . -B build && cmake --build build
 
 Dashboard should show `puck.segment` / `puck.health` on `/stream` when online.
 
+## Enroll a voice from the puck mic
+
+Voice prints made from FaceTime audio don't match the lav mic. Enroll through the puck mic instead (the person must already exist in the app):
+
+```bash
+sudo systemctl stop calypso-puck          # the puck owns the mic
+./build/calypso_enroll --name Keanu --samples 3 --seconds 8
+sudo systemctl start calypso-puck
+```
+
+Each sample is uploaded to `POST /people/{id}/voice`. Samples quieter than `MIN_SPEECH_RMS` are skipped: clip the mic closer or raise `MIC_GAIN`. Options: `--config config/.env` (default).
+
 ## systemd (puck + BLE together)
 
 One unit runs `scripts/start_puck.sh`, which starts `ble_who_peripheral.py` then `build/calypso_puck`.
