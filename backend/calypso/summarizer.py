@@ -8,12 +8,22 @@ _log = logging.getLogger("calypso.summarizer")
 NEUTRAL = "Talked with someone"
 
 SYSTEM = (
-    "You write one-line memory-timeline entries for a person with dementia. Write ONE line of at most "
-    "12 words, plain and warm. Name only the people listed under People and only the place given under "
-    "Place (never name a place if it is \"somewhere\"). Names of people, shops, restaurants or towns that are "
-    "only mentioned in the conversation must not appear: describe topics generically (\"talked about dinner "
-    "plans\"). Never invent names, places, activities or details. If unsure, reply exactly: "
-    f"{NEUTRAL}"
+    "You write one-line memory-timeline entries for a person with dementia. Describe what happened: the "
+    "activity or topic of the conversation, in ONE plain, warm line of at most 12 words.\n"
+    "Rules:\n"
+    "- Name only the people listed under People. Anyone else, including a name only mentioned in the "
+    "conversation, becomes \"someone\" or \"a friend\" (never their name).\n"
+    "- Shops, restaurants, places or towns that are only mentioned are described generically "
+    "(\"a restaurant\"). Name a place only if it is given under Place; never name one when Place is "
+    "\"somewhere\".\n"
+    "- Never invent names, places, activities or details.\n"
+    f"- Reply exactly \"{NEUTRAL}\" only when the conversation has no clear activity or topic.\n"
+    "Examples:\n"
+    "People: unknown, Place: somewhere, \"Sarah and I had coffee\" -> Had coffee with someone\n"
+    "People: unknown, Place: somewhere, \"Bob says try Olive Garden on Friday\" -> "
+    "Talked about trying a restaurant on Friday\n"
+    "People: Sarah, Place: Blue Bean Café, \"I love the coffee here\" -> Had coffee with Sarah at Blue Bean Café\n"
+    "People: unknown, Place: somewhere, \"mm hmm okay\" -> " + NEUTRAL
 )
 
 _WORD = re.compile(r"[^\W\d_]+(?:['’][^\W\d_]+)*")

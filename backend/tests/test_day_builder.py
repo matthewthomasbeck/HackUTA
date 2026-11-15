@@ -207,3 +207,21 @@ def test_open_home_visit_not_next_day(conn):
     assert is_home_day(conn, DAY, s)
     assert not is_home_day(conn, date(2026, 11, 15), s)
     assert not is_home_day(conn, date(2026, 11, 20), s)
+
+
+def test_grounded_keeps_activity_with_someone_and_rejects_name():
+    from calypso.summarizer import NEUTRAL, grounded
+    lines = ["Sarah and I had coffee"]
+    assert grounded("Had coffee with someone", lines, []) == "Had coffee with someone"
+    assert grounded("Had coffee with Sarah", lines, []) == NEUTRAL
+
+
+@pytest.mark.live
+def test_claude_summarizer_keeps_activity_live():
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        pytest.skip("no ANTHROPIC_API_KEY")
+    from calypso.day_builder import ClaudeSummarizer
+    from calypso.summarizer import grounded
+    lines = ["Sarah and I had coffee"]
+    out = grounded(ClaudeSummarizer(Settings.from_env()).summarize(lines, [], "somewhere"), lines, [])
+    assert "coffee" in out.lower() and "Sarah" not in out
