@@ -43,6 +43,11 @@ bool load_config(const std::string& path, Config& out) {
     if (line.empty() || line[0] == '#') {
       continue;
     }
+    // Strip inline comments: KEY=value  # note
+    const auto hash = line.find('#');
+    if (hash != std::string::npos) {
+      line = trim(line.substr(0, hash));
+    }
     const auto eq = line.find('=');
     if (eq == std::string::npos) {
       continue;

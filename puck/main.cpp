@@ -72,8 +72,8 @@ int main() {
   calypso::ConnectionListener listener(link, sm, cfg.connect_retry_sec,
                                        cfg.connection_check_sec);
 
-  sm.start(initial);
-  listener.start();
+  sm.start(initial);       // listen thread + upload/infer worker
+  listener.start();        // connection watch
 
   while (g_run.load()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(200));

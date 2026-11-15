@@ -6,7 +6,7 @@ Teammates need: mic (or `sine`) → buffer `SEGMENT_MS` → `POST /puck/segments
 
 1. `Capture` — ALSA on Linux, or `MIC_DEVICE=sine` anywhere  
 2. `BackendLink` — `GET /health` to connect; buffer audio; multipart `POST /puck/segments`; `POST /puck/health` on connect  
-3. `StateMachine` online tick — `read_chunk` → `send_audio_chunk`  
+3. `StateMachine` — **listen** thread (mic → queue) + **worker** thread (online: upload / offline: infer). Capture never blocks on HTTP.  
 4. `ConnectionListener` — flips Offline on drop, retries every `CONNECT_RETRY_SEC`
 
 Offline / Coral / NCS2 still stubbed.
