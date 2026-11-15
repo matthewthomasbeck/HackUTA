@@ -24,6 +24,19 @@ struct PersonDetail: Decodable, Equatable {
     private enum CodingKeys: String, CodingKey { case memories }
 }
 
+private struct PersonDetailsPatch: Encodable {
+    let name: String
+    let phone: String?
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(name, forKey: .name)
+        try c.encode(phone, forKey: .phone) // explicit null clears the phone
+    }
+
+    private enum CodingKeys: String, CodingKey { case name, phone }
+}
+
 enum APIError: Error {
     case badStatus(Int)
 }
@@ -52,6 +65,19 @@ struct APIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let data = try await send(request, body: JSONEncoder.calypso.encode(["name": name]))
         return try JSONDecoder.calypso.decode(Person.self, from: data)
+    }
+
+    /// `PATCH /people/{id}` with the name and phone. A nil phone is sent as JSON `null`, which clears it.
+    func updatePersonDetails(id: String, name: String, phone: String?) async throws -> Person {
+        var request = makeRequest("people/\(id)", method: "PATCH")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let data = try await send(request, body: Self.personDetailsBody(name: name, phone: phone))
+        return try JSONDecoder.calypso.decode(Person.self, from: data)
+    }
+
+    /// `{"name": …, "phone": …}`, always with both keys (a nil phone is `null`, not left out).
+    static func personDetailsBody(name: String, phone: String?) throws -> Data {
+        try JSONEncoder.calypso.encode(PersonDetailsPatch(name: name, phone: phone))
     }
 
     func events(day: String) async throws -> [DayEvent] {

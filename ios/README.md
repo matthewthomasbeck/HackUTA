@@ -35,3 +35,12 @@ Until the real backend is deployed, `scripts/fake_backend.py` serves every endpo
 uv run ios/scripts/fake_backend.py          # prints the API_BASE_URL lines for simulator and device
 ```
 Set `API_BASE_URL` (the Mac's LAN IP on a device) and `API_TOKEN = dev-token` in `Secrets.xcconfig`, then rebuild.
+
+## Smoke test against the real backend
+`scripts/smoke_test.sh` compiles the app's real `Core/{Models,APIClient,Config}.swift` with `scripts/smoke/main.swift` into a macOS CLI and calls every `APIClient` endpoint: auth, people, person detail, rename, day events, photo upload and retry, photo and face media, and visit open then depart. It doesn't touch the Xcode project or DerivedData.
+
+```
+ios/scripts/smoke_test.sh               # runs backend/ on :8765 with a throwaway DB, seeds it, tests
+ios/scripts/smoke_test.sh URL TOKEN     # a deployed backend; leaves "Smoke …" people and smoke-* photos/visits behind
+```
+Against a deployed backend there's no day-event seeding, so the events check only checks decoding.

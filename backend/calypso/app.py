@@ -12,6 +12,8 @@ from fastapi.staticfiles import StaticFiles
 
 from . import db
 from .config import Settings
+from .identity.face import get_face_embedder
+from .identity.voice import get_voice_embedder
 from .jobs import get_jobs
 from .routes import agent_sessions, app_ingest, calls, days, health, media, people, puck, recall, recognize
 from .storage import get_storage
@@ -33,6 +35,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.storage = get_storage(settings)
     app.state.jobs = get_jobs(settings)
+    app.state.face_embedder = get_face_embedder(settings)  # models load lazily on first use
+    app.state.voice_embedder = get_voice_embedder(settings)
     app.state.agent_sessions = {}
     app.state.claude_controller = None
 

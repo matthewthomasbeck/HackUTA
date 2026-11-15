@@ -26,11 +26,16 @@ struct CalypsoApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if onboarded {
-                HomeView()
-            } else {
-                OnboardingView()
+            Group {
+                if let route = ScreenRoute.current {
+                    ScreenRoute.view(for: route)
+                } else if onboarded {
+                    HomeView()
+                } else {
+                    OnboardingView()
+                }
             }
+            .preferredColorScheme(.light)
         }
         .onChange(of: onboarded) { _, done in
             if done { delegate.startVisitSync() }
@@ -38,16 +43,39 @@ struct CalypsoApp: App {
     }
 }
 
+/// The system tab bar is hidden (the iOS 26 one is glass) and `CalypsoTabBar` is overlaid at the bottom instead.
+/// Its measured height is published as `tabBarClearance`, so every tab's content scrolls clear of it.
 struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @State private var tab: HomeTab
+    @State private var tabBarHeight: CGFloat = 0
     private let client = APIClient.configured
 
+    init(initialTab: HomeTab = .today) {
+        _tab = State(initialValue: initialTab)
+    }
+
     var body: some View {
-        TabView {
-            TodayView(client: client).tabItem { Label("Today", systemImage: "clock") }
-            PeopleListView(client: client).tabItem { Label("People", systemImage: "person.2") }
-            AccountView().tabItem { Label("Account", systemImage: "person.crop.circle") }
+        TabView(selection: $tab) {
+            TodayView(client: client)
+                .tag(HomeTab.today)
+                .toolbar(.hidden, for: .tabBar)
+            PeopleListView(client: client)
+                .tag(HomeTab.people)
+                .toolbar(.hidden, for: .tabBar)
+            AccountView()
+                .tag(HomeTab.account)
+                .toolbar(.hidden, for: .tabBar)
         }
+        // An overlay, not a safeAreaInset: TabView doesn't pass insets to its pages, so each scrolling screen
+        // reserves the measured bar height itself (`tabBarClearance()`).
+        .overlay(alignment: .bottom) {
+            CalypsoTabBar(selection: $tab)
+                .background(GeometryReader { Color.clear.preference(key: TabBarHeightKey.self, value: $0.size.height) })
+                .ignoresSafeArea(.keyboard)
+        }
+        .environment(\.tabBarClearance, tabBarHeight)
+        .onPreferenceChange(TabBarHeightKey.self) { tabBarHeight = $0 }
         .onChange(of: scenePhase, initial: true) { _, phase in
             if phase == .active, let client { Task { await PhotoSync.syncNew(using: client) } }
         }

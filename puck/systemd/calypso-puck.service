@@ -1,0 +1,17 @@
+[Unit]
+Description=Calypso⁻¹ puck (mic → backend / offline models)
+After=network-online.target sound.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=matthewthomasbeck
+Group=audio
+WorkingDirectory=/home/matthewthomasbeck/Projects/HackUTA/puck
+EnvironmentFile=-/home/matthewthomasbeck/Projects/HackUTA/puck/config/.env
+ExecStart=/home/matthewthomasbeck/Projects/HackUTA/puck/build/calypso_puck
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

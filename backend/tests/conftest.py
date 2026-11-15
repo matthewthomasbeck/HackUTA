@@ -20,6 +20,8 @@ def env(monkeypatch, tmp_path):
     monkeypatch.setenv("CALYPSO_STORAGE", "local")
     monkeypatch.setenv("CALYPSO_TZ", "America/Chicago")
     monkeypatch.setenv("CALYPSO_PUBLIC_URL", "https://calypso.example.com")
+    monkeypatch.setenv("CALYPSO_FACE", "fake")
+    monkeypatch.setenv("CALYPSO_VOICE", "fake")
     return tmp_path
 
 
@@ -51,6 +53,29 @@ def wav_bytes(seconds: float = 0.5, rate: int = 16000) -> bytes:
 
 
 JPEG = b"\xff\xd8\xff\xe0fake-jpeg-bytes\xff\xd9"
+
+
+def tone_wav(freq: float, seconds: float = 3.0, rate: int = 16000, channels: int = 1, amp: float = 0.3) -> bytes:
+    """A steady tone. With the fake voice embedder, one pitch = one 'speaker'."""
+    import numpy as np
+    import wave
+
+    t = np.arange(int(seconds * rate)) / rate
+    x = (amp * np.sin(2 * np.pi * freq * t) * 32767).astype("<i2")
+    if channels > 1:
+        x = np.repeat(x[:, None], channels, axis=1).ravel()
+    out = io.BytesIO()
+    with wave.open(out, "wb") as w:
+        w.setnchannels(channels)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(x.tobytes())
+    return out.getvalue()
+
+
+def face(name: str) -> bytes:
+    """A fake 'photo' the fake face embedder reads as one face of `name` (comma-separate for several)."""
+    return f"FAKEFACE:{name}".encode()
 
 
 def post_segment(client, segment_uuid=None, **meta):
