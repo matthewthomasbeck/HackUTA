@@ -19,7 +19,7 @@ struct Config {
 
   int chunk_ms = 30;              // mic read size (both modes)
   int segment_ms = 3000;          // online: buffer then POST
-  int offline_segment_ms = 2000;  // offline: concat then infer (separate)
+  int offline_segment_ms = 3000;  // offline: longer clips → stabler embeddings
   int connect_retry_sec = 5;
   int connection_check_sec = 2;
 
@@ -30,7 +30,8 @@ struct Config {
   std::string voice_model_path =
       "models/nemo_en_titanet_small.onnx";  // titanet-small
   std::string gallery_dir = "gallery";
-  float voice_match_threshold = 0.55f;
+  float voice_match_threshold = 0.45f;  // 0.55 was too strict for lav + 1 speaker
+  float min_speech_rms = 0.02f;         // skip quiet windows before embed
 
   std::string bt_adapter;     // e.g. hci0
   std::string bt_peer_name;   // phone / app advertisement name

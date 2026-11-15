@@ -95,7 +95,7 @@ int main() {
             << " mode\n";
 
   calypso::StateMachine sm(capture, link, models, phone,
-                           cfg.offline_segment_ms);
+                           cfg.offline_segment_ms, cfg.min_speech_rms);
   calypso::ConnectionListener listener(link, sm, cfg.connect_retry_sec,
                                        cfg.connection_check_sec,
                                        force_offline);

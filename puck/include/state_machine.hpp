@@ -21,7 +21,8 @@ namespace calypso {
 class StateMachine {
  public:
   StateMachine(Capture& capture, BackendLink& link, Models& models,
-               PhoneLink& phone, int offline_segment_ms);
+               PhoneLink& phone, int offline_segment_ms,
+               float min_speech_rms = 0.02f);
   ~StateMachine();
 
   StateMachine(const StateMachine&) = delete;
@@ -44,6 +45,7 @@ class StateMachine {
   Models& models_;
   PhoneLink& phone_;
   OfflineBuffer offline_buf_;
+  float min_speech_rms_ = 0.02f;
   ChunkQueue queue_;
   std::atomic<RunMode> mode_{RunMode::Offline};
   std::atomic<bool> stop_{false};
