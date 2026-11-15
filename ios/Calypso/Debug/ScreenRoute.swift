@@ -23,9 +23,9 @@ enum ScreenRoute {
         }
         #endif
         switch route {
+        #if DEBUG
         case "design-system":
             return AnyView(DesignSystemSpecimen())
-        #if DEBUG
         case "components":
             return AnyView(ComponentsSpecimen(page: 1))
         case "components-2":
@@ -105,6 +105,7 @@ private struct DebugPersonStack: View {
 }
 #endif
 
+#if DEBUG
 struct DesignSystemSpecimen: View {
     private let colors: [(String, Color)] = [
         ("paper", .paper), ("card", .card), ("ink", .ink), ("inkSoft", .inkSoft),
@@ -149,3 +150,4 @@ struct DesignSystemSpecimen: View {
         .background(Color.paper)
     }
 }
+#endif

@@ -88,7 +88,7 @@ final class DayPresentationTests: XCTestCase {
         let e = try event(start: "2026-11-14T15:00:00-06:00", place: "Somewhere with park sounds", conf: 0.42,
                           people: ["p_tom", "p_x"], summary: "A walk")
         XCTAssertEqual(DayPresentation.accessibilityLabel(for: e, names: ["p_tom": "Tom"], timeZone: tz, locale: en),
-                       "3:00 PM, A walk, place not certain: Somewhere with park sounds, with Tom, someone new")
+                       "3:00 PM, A walk, place not certain: somewhere with park sounds, with Tom, someone new")
     }
 
     func testDayChangeClearsPreviousDaysMoments() throws {
@@ -104,5 +104,52 @@ final class DayPresentationTests: XCTestCase {
         var content = DayContent(events: [], state: .failed)
         content.dayChanged()
         XCTAssertEqual(content.state, .loading)
+    }
+
+    func testAccessibilityTimeFollows24HourLocale() throws {
+        let e = try event(start: "2026-11-14T14:30:00-06:00", summary: "Lunch")
+        let label = DayPresentation.accessibilityLabel(for: e, names: [:], timeZone: tz,
+                                                       locale: Locale(identifier: "en_GB"))
+        XCTAssertTrue(label.hasPrefix("14:30, Lunch"), label)
+    }
+
+    func testChipNameTreatsBlankAsSomeoneNew() {
+        XCTAssertNil(DayPresentation.chipName(for: "p_a", names: ["p_a": ""]))
+        XCTAssertNil(DayPresentation.chipName(for: "p_a", names: ["p_a": "   "]))
+        XCTAssertEqual(DayPresentation.chipName(for: "p_a", names: ["p_a": " Sarah "]), "Sarah")
+    }
+
+    // MARK: Stale loads (a load never writes under a day that's no longer selected)
+
+    func testApplyWritesWhenTheDayIsStillSelected() throws {
+        var content = DayContent()
+        let e = try event(id: "sat", start: "2026-11-14T12:00:00Z")
+        XCTAssertTrue(content.apply(.loaded([e]), for: "2026-11-14", selectedKey: "2026-11-14"))
+        XCTAssertEqual(content, DayContent(events: [e], state: .loaded))
+    }
+
+    func testRefreshThatLandsAfterADayChangeIsDropped() throws {
+        // Saturday refresh still running; the user moves to Friday and Friday's load finishes first.
+        var content = DayContent()
+        let friday = try event(id: "fri", start: "2026-11-13T12:00:00Z")
+        content.dayChanged()
+        content.apply(.loaded([friday]), for: "2026-11-13", selectedKey: "2026-11-13")
+        let saturday = try event(id: "sat", start: "2026-11-14T12:00:00Z")
+        XCTAssertFalse(content.apply(.loaded([saturday]), for: "2026-11-14", selectedKey: "2026-11-13"))
+        XCTAssertFalse(content.apply(.failed, for: "2026-11-14", selectedKey: "2026-11-13"))
+        XCTAssertEqual(content, DayContent(events: [friday], state: .loaded))
+    }
+
+    func testCancelledLoadIsDropped() throws {
+        var content = DayContent()
+        let e = try event(id: "sat", start: "2026-11-14T12:00:00Z")
+        XCTAssertFalse(content.apply(.loaded([e]), for: "2026-11-14", selectedKey: "2026-11-14", cancelled: true))
+        XCTAssertEqual(content, DayContent())
+    }
+
+    func testFailureForTheSelectedDayClearsMoments() throws {
+        var content = DayContent(events: [try event(start: "2026-11-14T12:00:00Z")], state: .loaded)
+        content.apply(.failed, for: "2026-11-14", selectedKey: "2026-11-14")
+        XCTAssertEqual(content, DayContent(events: [], state: .failed))
     }
 }

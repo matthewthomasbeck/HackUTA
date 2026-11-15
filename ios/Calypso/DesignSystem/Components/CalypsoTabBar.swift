@@ -60,8 +60,9 @@ struct CalypsoTabBar: View {
                 Text(tab.title)
                     .calypsoFont(.caption)
                     .foregroundStyle(selected ? Color.periwinkleDeep : Color.inkSoft)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    // Never scaled below Caption: at the xxxLarge cap "Account" is about 109pt wide, which fits a
+                    // 375pt phone's 120pt tab. Bigger sizes use the Large Content Viewer below.
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.top, 4)
             .frame(maxWidth: .infinity, minHeight: 64, alignment: .top)

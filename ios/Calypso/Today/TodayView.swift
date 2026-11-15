@@ -102,9 +102,7 @@ struct TodayView: View {
         case .failed:
             VStack(spacing: 8) {
                 CalmMessage(pose: .thinking, title: "We couldn’t load this day right now.", message: "Please check your connection. Your memories are safe.",
-                            buttonTitle: "Try again", scene: false) {
-                    Task { await load() }
-                }
+                            buttonTitle: "Try again", scene: false, action: retry)
                 CalypsoButton("Look at another day", kind: .quiet, action: previousDay)
             }
             .padding(.horizontal, 24)
@@ -176,23 +174,34 @@ struct TodayView: View {
     // MARK: Loading
 
     private func load() async {
+        let key = Self.dayFormatter.string(from: day)
         guard let client else { content.state = .failed; return }
         do {
-            let key = Self.dayFormatter.string(from: day)
             async let loaded = client.events(day: key)
-            if let people = try? await client.people() {
-                names = Dictionary(uniqueKeysWithValues: people.compactMap { p in p.name.map { (p.id, $0) } })
+            if let people = try? await client.people(), isCurrent(key) {
+                names = Dictionary(uniqueKeysWithValues: people.compactMap { p in p.displayName.map { (p.id, $0) } })
             }
-            content.events = try await loaded.sorted { $0.start < $1.start }
-            content.state = .loaded
+            let sorted = try await loaded.sorted { $0.start < $1.start }
+            content.apply(.loaded(sorted), for: key, selectedKey: selectedKey, cancelled: Task.isCancelled)
         } catch is CancellationError {
             return
         } catch let error as URLError where error.code == .cancelled {
             return
         } catch {
-            content.events = []
-            content.state = .failed
+            content.apply(.failed, for: key, selectedKey: selectedKey, cancelled: Task.isCancelled)
         }
+    }
+
+    /// The key of the day selected now, read after each `await` so a load can tell it has gone stale.
+    private var selectedKey: String { Self.dayFormatter.string(from: day) }
+
+    private func isCurrent(_ key: String) -> Bool {
+        DayContent.isCurrent(key, selectedKey: selectedKey, cancelled: Task.isCancelled)
+    }
+
+    private func retry() {
+        content.state = .loading // the spinner shows at once, so the tap visibly does something
+        Task { await load() }
     }
 
     private static let dayFormatter: DateFormatter = {

@@ -93,12 +93,12 @@ struct PeopleListView: View {
 
     private func load() async {
         defer { hasLoaded = true }
-        guard let client else { error = "App isn't configured"; return }
+        guard let client else { error = "App isn’t configured"; return }
         do {
             people = try await client.people()
             error = nil
         } catch {
-            self.error = "Couldn't load people"
+            self.error = "Couldn’t load people"
         }
     }
 }
@@ -122,7 +122,7 @@ enum PeoplePresentation {
     }
 
     static func rowAccessibilityLabel(_ person: Person) -> String {
-        guard let name = person.name else { return "\(unknownName) Tap to add their name." }
+        guard let name = person.displayName else { return "\(unknownName) Tap to add their name." }
         return [name, relationshipLabel(person.relationship)].compactMap { $0 }.joined(separator: ", ")
     }
 }
@@ -163,16 +163,16 @@ private struct PersonRow: View {
     }
 
     private var avatar: some View {
-        Avatar(urlString: person.facePhotoUrl, isKnown: person.name != nil, size: 64)
+        Avatar(urlString: person.facePhotoUrl, isKnown: person.displayName != nil, size: 64)
     }
 
     private var text: some View {
         VStack(alignment: .leading, spacing: 4) {
             // Figma 20:264 sets the long unknown wording in Body Strong so it fits on two lines.
-            Text(person.name ?? PeoplePresentation.unknownName)
-                .calypsoFont(person.name == nil ? .bodyStrong : .headline)
+            Text(person.displayName ?? PeoplePresentation.unknownName)
+                .calypsoFont(person.displayName == nil ? .bodyStrong : .headline)
                 .foregroundStyle(Color.ink)
-            if person.name == nil {
+            if person.displayName == nil {
                 Text("Tap to add their name")
                     .calypsoFont(.callout)
                     .foregroundStyle(Color.inkSoft)

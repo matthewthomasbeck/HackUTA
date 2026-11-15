@@ -30,4 +30,13 @@ final class PeoplePresentationTests: XCTestCase {
         let sarah = Person(id: "p_sarah", name: "Sarah", relationship: "daughter")
         XCTAssertEqual(PeoplePresentation.rowAccessibilityLabel(sarah), "Sarah, Daughter")
     }
+
+    func testBlankNameIsUnnamedEverywhere() {
+        XCTAssertNil(Person(id: "p_a").displayName)
+        XCTAssertNil(Person(id: "p_a", name: "").displayName)
+        XCTAssertNil(Person(id: "p_a", name: " \n\t ").displayName)
+        XCTAssertEqual(Person(id: "p_a", name: "  Sarah ").displayName, "Sarah")
+        XCTAssertEqual(PeoplePresentation.rowAccessibilityLabel(Person(id: "p_a", name: "  ")),
+                       PeoplePresentation.rowAccessibilityLabel(Person(id: "p_a")))
+    }
 }

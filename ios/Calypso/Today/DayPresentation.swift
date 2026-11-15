@@ -60,9 +60,9 @@ struct DaySwitcherLabels: Equatable {
 
 enum DayPresentation {
     /// nil when the person is unknown or unnamed, so the chip reads "Someone new".
+    /// Blank or whitespace-only names count as unnamed, the same as `Person.displayName`.
     static func chipName(for personId: String, names: [String: String]) -> String? {
-        guard let name = names[personId], !name.isEmpty else { return nil }
-        return name
+        PersonName.display(names[personId])
     }
 
     /// All photo ids in event-start order, deduped, first occurrence kept.
@@ -75,13 +75,17 @@ enum DayPresentation {
 
     static func accessibilityLabel(for event: DayEvent, names: [String: String],
                                    timeZone: TimeZone = .current, locale: Locale = .current) -> String {
+        // Same short time style as the card's visible time tag, so a 24-hour setting reads "14:30" both ways.
         let f = DateFormatter()
         f.locale = locale
         f.timeZone = timeZone
-        f.dateFormat = "h:mm a"
+        f.dateStyle = .none
+        f.timeStyle = .short
+        let time = f.string(from: event.start).replacingOccurrences(of: "\u{202F}", with: " ")
         let place = PlaceCertainty.isUncertain(event.placeConfidence)
-            ? "place not certain: \(event.place)" : "at \(event.place)"
-        var parts = [f.string(from: event.start), event.summary, place]
+            ? "place not certain: " + event.place.prefix(1).lowercased() + event.place.dropFirst()
+            : "at \(event.place)"
+        var parts = [time, event.summary, place]
         if !event.people.isEmpty {
             let who = event.people.map { chipName(for: $0, names: names) ?? "someone new" }
             parts.append("with " + who.joined(separator: ", "))
@@ -102,5 +106,33 @@ struct DayContent: Equatable {
     mutating func dayChanged() {
         events = []
         state = .loading
+    }
+
+    enum LoadResult {
+        case loaded([DayEvent])
+        case failed
+    }
+
+    /// Whether a load started for `key` may still write to the screen: its task wasn't cancelled and the day it
+    /// loaded is still the selected day.
+    static func isCurrent(_ key: String, selectedKey: String, cancelled: Bool) -> Bool {
+        !cancelled && key == selectedKey
+    }
+
+    /// Writes a finished load, unless it's stale (cancelled, or for a day that's no longer selected). A stale
+    /// result is dropped, so a slow refresh or an old day's load never lands under a new day's header.
+    /// Returns whether the result was applied.
+    @discardableResult
+    mutating func apply(_ result: LoadResult, for key: String, selectedKey: String, cancelled: Bool = false) -> Bool {
+        guard Self.isCurrent(key, selectedKey: selectedKey, cancelled: cancelled) else { return false }
+        switch result {
+        case .loaded(let loaded):
+            events = loaded
+            state = .loaded
+        case .failed:
+            events = []
+            state = .failed
+        }
+        return true
     }
 }

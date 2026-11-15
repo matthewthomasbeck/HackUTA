@@ -5,6 +5,9 @@ import SwiftUI
 struct AccountView: View {
     @AppStorage("onboarded") private var onboarded = true
     @State private var confirmingReset: Bool
+    /// Set by the dialog's "Reset this phone"; the reset runs once the cover has dismissed, so tearing down this
+    /// screen never happens under a presented cover.
+    @State private var resetRequested = false
 
     init(confirmingReset: Bool = false) {
         _confirmingReset = State(initialValue: confirmingReset)
@@ -34,8 +37,11 @@ struct AccountView: View {
         .paperTopEdge()
         // The dialog is hosted full screen with a clear background so its scrim also dims the tab bar. The system
         // slide is turned off both ways; the dialog runs its own spring (or fade under Reduce Motion).
-        .fullScreenCover(isPresented: $confirmingReset) {
-            ResetConfirmDialog(onKeep: { setConfirmingReset(false) }, onReset: reset)
+        .fullScreenCover(isPresented: $confirmingReset, onDismiss: resetIfRequested) {
+            ResetConfirmDialog(onKeep: { setConfirmingReset(false) }, onReset: {
+                resetRequested = true
+                setConfirmingReset(false)
+            })
                 .presentationBackground(.clear)
         }
     }
@@ -106,6 +112,12 @@ struct AccountView: View {
         var transaction = Transaction()
         transaction.disablesAnimations = true
         withTransaction(transaction) { confirmingReset = value }
+    }
+
+    private func resetIfRequested() {
+        guard resetRequested else { return }
+        resetRequested = false
+        reset()
     }
 
     private func reset() {

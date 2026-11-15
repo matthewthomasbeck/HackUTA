@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Person (Figma 20:668 named, 20:852 someone new). The navigation bar is hidden (the iOS 26 system back button
 /// is a glass circle) and the paper-cut "‹ People" button sits at the top of the content, as in Figma; swipe-back
-/// still works through `SwipeBack.swift`. An unknown person is never titled "Unnamed visitor".
+/// still works through `.swipeBackEnabled()` (`SwipeBack.swift`). An unknown person is never titled "Unnamed visitor".
 /// `startEditing` opens the edit-name sheet on appear (DEBUG `-screen edit-name-…` route).
 struct PersonDetailView: View {
     let client: APIClient?
@@ -22,17 +22,17 @@ struct PersonDetailView: View {
         _person = State(initialValue: person)
         self.onUpdate = onUpdate
         _editing = State(initialValue: startEditing)
-        _draftName = State(initialValue: person.name ?? "")
+        _draftName = State(initialValue: person.displayName ?? "")
     }
 
-    private var isKnown: Bool { person.name != nil }
+    private var isKnown: Bool { person.displayName != nil }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
                 BackButton("People") { dismiss() }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                if let name = person.name {
+                if let name = person.displayName {
                     namedIdentity(name)
                     facts
                     recentMoments
@@ -58,6 +58,7 @@ struct PersonDetailView: View {
         .paperTopEdge()
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
+        .swipeBackEnabled()
         .sheet(isPresented: $editing) {
             EditNameSheet(initialName: draftName, onSave: { name in
                 draftName = name
@@ -69,7 +70,7 @@ struct PersonDetailView: View {
     }
 
     private func startEditing() {
-        draftName = person.name ?? ""
+        draftName = person.displayName ?? ""
         editing = true
     }
 
@@ -201,7 +202,7 @@ struct PersonDetailView: View {
             onUpdate(person)
             error = nil
         } catch {
-            self.error = "Couldn't save the name"
+            self.error = "Couldn’t save the name"
         }
     }
 }
