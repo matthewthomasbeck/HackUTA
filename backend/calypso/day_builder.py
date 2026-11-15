@@ -7,10 +7,11 @@ from datetime import date, datetime, timedelta
 from . import db
 from .config import Settings
 from .models import DayEvent
-from .summarizer import ClaudeSummarizer, FakeSummarizer, Summarizer, get_summarizer  # noqa: F401
+from .summarizer import ClaudeSummarizer, FakeSummarizer, Summarizer, get_summarizer, grounded  # noqa: F401
 from .timeutil import iso_utc, local_day_bounds, now_utc, parse_iso
 
 GAP = timedelta(minutes=20)
+OPEN_VISIT_MAX = timedelta(hours=12)
 
 
 @dataclass
@@ -26,11 +27,30 @@ def place_from_sound_tags(conn, start: datetime, end: datetime) -> tuple[str, fl
     return None
 
 
-def _visit_at(visits: list[sqlite3.Row], ts: datetime) -> sqlite3.Row | None:
-    for v in visits:
-        arrived = parse_iso(v["arrived"])
-        departed = parse_iso(v["departed"]) if v["departed"] else None
-        if arrived <= ts and (departed is None or ts <= departed):
+def _visit_spans(visits: list[sqlite3.Row], now: datetime | None = None) -> list[tuple[sqlite3.Row, datetime, datetime]]:
+    """(visit, arrived, end) for each visit, sorted by arrival.
+
+    An open visit (`departed` NULL: iOS posts arrivals before departures, and CLVisit
+    departures are often late or missing) ends at the earliest of now, arrived + 12 h
+    and the next visit's arrival, so it can't label later hours or days with its place.
+    """
+    now = now or now_utc()
+    rows = sorted(((v, parse_iso(v["arrived"])) for v in visits), key=lambda x: x[1])
+    spans = []
+    for i, (v, arrived) in enumerate(rows):
+        if v["departed"]:
+            end = parse_iso(v["departed"])
+        else:
+            end = min(now, arrived + OPEN_VISIT_MAX)
+            if i + 1 < len(rows):
+                end = min(end, rows[i + 1][1])
+        spans.append((v, arrived, end))
+    return spans
+
+
+def _visit_at(spans: list[tuple[sqlite3.Row, datetime, datetime]], ts: datetime) -> sqlite3.Row | None:
+    for v, arrived, end in spans:
+        if arrived <= ts <= end:
             return v
     return None
 
@@ -41,7 +61,7 @@ def episodes_for_day(conn, day: date, tz: str) -> list[Episode]:
         "SELECT u.* FROM utterances u JOIN segments s ON s.segment_uuid = u.segment_uuid"
         " WHERE u.source = 'puck' AND s.time_synced = 1 AND u.ts_start >= ? AND u.ts_start < ?"
         " ORDER BY u.ts_start, u.id", (iso_utc(lo), iso_utc(hi))).fetchall()
-    visits = conn.execute("SELECT * FROM visits ORDER BY arrived").fetchall()
+    visits = _visit_spans(conn.execute("SELECT * FROM visits ORDER BY arrived").fetchall())
     episodes: list[Episode] = []
     cur_vid = None
     for u in utts:
@@ -60,11 +80,9 @@ def episodes_for_day(conn, day: date, tz: str) -> list[Episode]:
 
 def is_home_day(conn, day: date, settings: Settings) -> bool:
     lo, hi = local_day_bounds(day, settings.tz)
-    for v in conn.execute("SELECT * FROM visits WHERE place_name IS NOT NULL"):
-        if v["place_name"].strip().lower() != settings.home_label.strip().lower():
-            continue
-        departed = parse_iso(v["departed"]) if v["departed"] else None
-        if parse_iso(v["arrived"]) < hi and (departed is None or departed >= lo):
+    home = settings.home_label.strip().lower()
+    for v, arrived, end in _visit_spans(conn.execute("SELECT * FROM visits").fetchall()):
+        if (v["place_name"] or "").strip().lower() == home and arrived < hi and end >= lo:
             return True
     return False
 
@@ -72,7 +90,9 @@ def is_home_day(conn, day: date, settings: Settings) -> bool:
 def rebuild_day(conn, day: date, settings: Settings, summarizer: Summarizer | None = None) -> list[DayEvent]:
     summarizer = summarizer or get_summarizer(settings)
     patient_ids = {r["id"] for r in conn.execute("SELECT id FROM people WHERE is_patient = 1")}
-    names = {r["id"]: r["name"] for r in conn.execute("SELECT id, name FROM people")}
+    rows = conn.execute("SELECT id, name, relationship FROM people").fetchall()
+    names = {r["id"]: r["name"] for r in rows}
+    relationships = {r["id"]: r["relationship"] for r in rows}
     events: list[DayEvent] = []
     for ep in episodes_for_day(conn, day, settings.tz):
         if ep.visit is not None and ep.visit["place_name"]:
@@ -91,7 +111,11 @@ def rebuild_day(conn, day: date, settings: Settings, summarizer: Summarizer | No
             "SELECT id FROM photos WHERE sensitive = 0 AND taken_at >= ? AND taken_at <= ? ORDER BY taken_at, id",
             (iso_utc(ep.start), iso_utc(ep.end)))]
         person_names = [names[p] for p in people if names.get(p)]
-        summary = summarizer.summarize([u["text"] for u in ep.utterances], person_names, place)
+        lines = [u["text"] for u in ep.utterances]
+        allowed = person_names + [relationships[p] for p in people if relationships.get(p)]
+        if place != "somewhere":
+            allowed.append(place)
+        summary = grounded(summarizer.summarize(lines, person_names, place), lines, allowed)
         events.append(DayEvent(
             id=hashlib.sha1((day.isoformat() + evidence[0]).encode()).hexdigest()[:32],
             start=ep.start, end=ep.end, place=place, place_confidence=conf, people=people,

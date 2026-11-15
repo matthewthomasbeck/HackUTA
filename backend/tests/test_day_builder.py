@@ -145,3 +145,65 @@ def test_claude_summarizer_live():
     assert len(out.split()) <= 12
     for bad in ("Mike", "John", "Emma"):
         assert bad not in out
+    # A name and a place heard in passing, but not in People or Place, must not be named.
+    out = ClaudeSummarizer(Settings.from_env()).summarize(
+        ["Bob says we should try Olive Garden on Friday", "that sounds lovely"], [], "somewhere")
+    for bad in ("Bob", "Olive", "Garden"):
+        assert bad not in out
+
+
+# I4: a summary may only name the people and place that cleared the evidence gates.
+class ScriptedSummarizer:
+    def __init__(self, out):
+        self.out = out
+
+    def summarize(self, lines, people, place):
+        return self.out
+
+
+def test_summary_naming_unknown_person_is_neutral(conn):
+    utt(conn, utc(10), "Bob is coming over later")
+    (ev,) = rebuild_day(conn, DAY, Settings.from_env(), ScriptedSummarizer("Bob came by for coffee"))
+    assert ev.summary == "Talked with someone"
+    (ev,) = rebuild_day(conn, DAY, Settings.from_env(), ScriptedSummarizer("Coffee and a chat with Bob"))
+    assert ev.summary == "Talked with someone"
+
+
+def test_summary_naming_place_heard_in_passing_is_neutral(conn):
+    utt(conn, utc(10), "let's go to Olive Garden on Friday")
+    (ev,) = rebuild_day(conn, DAY, Settings.from_env(), ScriptedSummarizer("Lunch at Olive Garden"))
+    assert ev.place == "somewhere" and ev.summary == "Talked with someone"
+
+
+def test_summary_with_allowed_names_kept(conn):
+    sarah = db.insert_person(conn, name="Sarah", relationship="daughter")["id"]
+    visit(conn, utc(9), utc(11), "Blue Bean Café")
+    utt(conn, utc(10), "I love the coffee here", person=sarah)
+    out = "Coffee with Sarah at Blue Bean Café"
+    (ev,) = rebuild_day(conn, DAY, Settings.from_env(), ScriptedSummarizer(out))
+    assert ev.summary == out
+
+
+# I5: an open visit (no departure yet) must not cover all later time.
+def test_open_visit_does_not_name_later_utterance(conn):
+    visit(conn, utc(8), None, "Blue Bean Café")
+    utt(conn, utc(8, 30))
+    utt(conn, "2026-11-15T03:30:00.000Z")  # 21:30 local, 13 h after arrival
+    evs = build(conn)
+    assert [e.place for e in evs] == ["Blue Bean Café", "somewhere"]
+
+
+def test_open_visit_ends_at_next_visit(conn):
+    visit(conn, utc(8), None, "Blue Bean Café")
+    visit(conn, utc(10), utc(11), "Library")
+    utt(conn, utc(12))
+    (ev,) = build(conn)
+    assert ev.place == "somewhere"
+
+
+def test_open_home_visit_not_next_day(conn):
+    s = Settings.from_env()
+    visit(conn, utc(8), None, "Home")
+    assert is_home_day(conn, DAY, s)
+    assert not is_home_day(conn, date(2026, 11, 15), s)
+    assert not is_home_day(conn, date(2026, 11, 20), s)
