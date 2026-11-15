@@ -321,7 +321,7 @@ async def test_gateway_transport_preserves_enrollment_and_closes_remote_session(
 
 
 def test_portrait_captions_page_without_dropping_words():
-    from calypso_agent.cards import CALL_SIZE, BACKGROUND, caption_cards, render
+    from calypso_agent.cards import CALL_SIZE, PAPER, caption_cards, render
     from PIL import ImageChops
     text = " ".join(f"word{i}" for i in range(100))
     pages = caption_cards(text)
@@ -330,9 +330,10 @@ def test_portrait_captions_page_without_dropping_words():
     for page in pages:
         image = render(page, {}, size=CALL_SIZE)
         assert image.size == (720, 1280)
-        diff = ImageChops.difference(image, Image.new("RGB", CALL_SIZE, BACKGROUND))
+        content = image.crop((0, 120, 720, 1216))  # between header art and wave strip
+        diff = ImageChops.difference(content, Image.new("RGB", content.size, PAPER))
         left, top, right, bottom = diff.getbbox()
-        assert left >= 40 and right <= 680 and bottom <= 1100
+        assert left >= 40 and right <= 680 and bottom <= 1216 - 120 - 32
 
 
 @pytest.mark.asyncio
