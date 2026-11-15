@@ -15,6 +15,7 @@ final class ModelsDecodingTests: XCTestCase {
         XCTAssertFalse(person.isPatient)
         XCTAssertEqual(person.facePhotoUrl, "https://example.com/faces/p_mom.jpg")
         XCTAssertEqual(person.facts.count, 2)
+        XCTAssertEqual(person.phone, "+15551234567")
     }
 
     func testPersonDefaultsWhenOptionalFieldsAbsent() throws {
@@ -23,6 +24,7 @@ final class ModelsDecodingTests: XCTestCase {
         XCTAssertNil(person.name)
         XCTAssertFalse(person.isPatient)
         XCTAssertEqual(person.facts, [])
+        XCTAssertNil(person.phone)
     }
 
     func testDecodeDayEvent() throws {

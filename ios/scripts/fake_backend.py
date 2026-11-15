@@ -211,7 +211,7 @@ class Handler(BaseHTTPRequestHandler):
         return f"{proto}://{host}"
 
     def person_json(self, p: dict) -> dict:
-        return {**p, "face_photo_url": f"{self.base_url()}/media/faces/{p['id']}.jpg"}
+        return {"phone": None, **p, "face_photo_url": f"{self.base_url()}/media/faces/{p['id']}.jpg"}
 
     def send_json(self, body, status: int = 200):
         data = json.dumps(body).encode()

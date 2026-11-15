@@ -4,5 +4,6 @@
   "relationship": "mother",
   "is_patient": false,
   "face_photo_url": "https://example.com/faces/p_mom.jpg",
-  "facts": ["Loves gardening", "Calls every Sunday"]
+  "facts": ["Loves gardening", "Calls every Sunday"],
+  "phone": "+15551234567"
 }
