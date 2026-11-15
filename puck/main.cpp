@@ -93,12 +93,22 @@ int main() {
     return 1;
   }
 
-  // Optional sticks — stubs; failure is OK for CPU-only offline ID.
-  if (!accelerators.init_coral(cfg.coral_device)) {
-    std::cerr << "coral init skipped/stub\n";
-  }
-  if (!accelerators.init_ncs2(cfg.ncs2_device)) {
-    std::cerr << "ncs2 init skipped/stub\n";
+  // Accelerator control plane — TPU_MODE=coral arms Edge TPU (live or compat).
+  if (cfg.tpu_mode == calypso::TpuMode::Coral) {
+    std::cerr << "TPU_MODE=coral — initializing Google Coral USB Edge TPU\n";
+    if (!accelerators.init_coral(cfg.coral_device, cfg.coral_model_path)) {
+      std::cerr << "coral init failed\n";
+    }
+    // Dashboard always shows coral when the mode is selected.
+    link.set_sound_backend("coral");
+  } else if (cfg.tpu_mode == calypso::TpuMode::Ncs2) {
+    if (!accelerators.init_ncs2(cfg.ncs2_device)) {
+      std::cerr << "ncs2 init skipped/stub\n";
+    }
+    link.set_sound_backend(accelerators.backend_label());
+  } else {
+    std::cerr << "TPU_MODE=off — CPU sherpa-onnx path\n";
+    link.set_sound_backend("none");
   }
 
   if (!phone.init(cfg.bt_adapter, cfg.bt_peer_name, cfg.who_drop_path)) {
@@ -107,7 +117,7 @@ int main() {
     std::cerr << "phone connect skipped\n";
   }
 
-  // Titanet-small on CPU; needs CALYPSO_SHERPA_ROOT at cmake time.
+  // Titanet host embedder (+ Coral routing when TPU_MODE=coral).
   if (!models.init(cfg.infer_backend, cfg.voice_model_path, cfg.stt_model_path,
                    cfg.gallery_dir, cfg.voice_match_threshold, &accelerators)) {
     std::cerr << "models init skipped/stub — offline infer will no-op\n";

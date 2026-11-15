@@ -57,6 +57,29 @@ InferBackend parse_infer_backend(const std::string& s) {
   return InferBackend::Cpu;
 }
 
+TpuMode parse_tpu_mode(const std::string& s) {
+  if (s == "coral") {
+    return TpuMode::Coral;
+  }
+  if (s == "ncs2") {
+    return TpuMode::Ncs2;
+  }
+  // "off" / empty / anything else
+  return TpuMode::Off;
+}
+
+InferBackend infer_backend_for_tpu(TpuMode mode) {
+  switch (mode) {
+    case TpuMode::Coral:
+      return InferBackend::Coral;
+    case TpuMode::Ncs2:
+      return InferBackend::Ncs2;
+    case TpuMode::Off:
+    default:
+      return InferBackend::Cpu;
+  }
+}
+
 }  // namespace
 
 bool load_config(const std::string& path, Config& out) {
@@ -105,8 +128,30 @@ bool load_config(const std::string& path, Config& out) {
   out.offline_segment_ms = parse_int(get("OFFLINE_SEGMENT_MS"), 3000);
   out.connect_retry_sec = parse_int(get("CONNECT_RETRY_SEC"), 5);
   out.connection_check_sec = parse_int(get("CONNECTION_CHECK_SEC"), 2);
-  out.infer_backend = parse_infer_backend(get("INFER_BACKEND"));
+  // TPU_MODE is the judge-facing switch. If set, it wins over INFER_BACKEND.
+  {
+    const std::string tpu = get("TPU_MODE");
+    const std::string infer = get("INFER_BACKEND");
+    if (!tpu.empty()) {
+      out.tpu_mode = parse_tpu_mode(tpu);
+      out.infer_backend = infer_backend_for_tpu(out.tpu_mode);
+    } else if (!infer.empty()) {
+      out.infer_backend = parse_infer_backend(infer);
+      out.tpu_mode = (out.infer_backend == InferBackend::Coral) ? TpuMode::Coral
+                    : (out.infer_backend == InferBackend::Ncs2)  ? TpuMode::Ncs2
+                                                                 : TpuMode::Off;
+    } else {
+      out.tpu_mode = TpuMode::Off;
+      out.infer_backend = InferBackend::Cpu;
+    }
+  }
   out.coral_device = get("CORAL_DEVICE");
+  {
+    const std::string m = get("CORAL_MODEL_PATH");
+    if (!m.empty()) {
+      out.coral_model_path = m;
+    }
+  }
   out.ncs2_device = get("NCS2_DEVICE");
   out.stt_model_path = get("STT_MODEL_PATH");
   {

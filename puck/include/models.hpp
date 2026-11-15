@@ -11,8 +11,10 @@
 
 namespace calypso {
 
-// Offline voice fingerprint with nemo_en_titanet_small (192-d) via sherpa-onnx.
-// Build with -DCALYPSO_SHERPA_ROOT=... to enable real inference; otherwise init
+// Offline voice fingerprint with nemo_en_titanet_small (192-d).
+//   TPU_MODE=off   → sherpa-onnx CPU
+//   TPU_MODE=coral → Accelerators Edge TPU path (live Invoke or host delegate)
+// Build with -DCALYPSO_SHERPA_ROOT=... for the host embedder; otherwise init
 // fails closed and offline infer no-ops.
 class Models {
  public:
@@ -22,9 +24,8 @@ class Models {
   Models(const Models&) = delete;
   Models& operator=(const Models&) = delete;
 
-  // Load Titanet ONNX, enroll GALLERY_DIR/<Name>/*.wav (bootstrap until the
-  // first successful cloud gallery sync), keep Accelerators for a future TPU
-  // swap (ignored on CPU MVP).
+  // Load Titanet ONNX (host), enroll GALLERY_DIR/<Name>/*.wav, wire Coral
+  // host embedder when backend==Coral.
   bool init(InferBackend backend,
             const std::string& voice_model_path,
             const std::string& stt_model_path,
@@ -49,6 +50,8 @@ class Models {
  private:
   struct SherpaState;  // only defined when CALYPSO_HAS_SHERPA
 
+  bool embed_pcm_host(const std::vector<std::int16_t>& pcm, int sample_rate,
+                      std::vector<float>& out_embedding);
   bool embed_pcm(const std::vector<std::int16_t>& pcm, int sample_rate,
                  std::vector<float>& out_embedding);
   bool enroll_gallery_dir(const std::string& gallery_dir);

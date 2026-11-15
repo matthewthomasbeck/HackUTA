@@ -83,12 +83,24 @@ cmake --build build && ./build/calypso_puck
 # journalctl -u calypso-puck -f   →  who is talking: Sarah (score=0.72)
 ```
 
+## Coral Edge TPU
+
+```bash
+# config/.env
+TPU_MODE=coral
+CORAL_MODEL_PATH=models/nemo_en_titanet_small_edgetpu.tflite
+./scripts/stage_coral_model.sh
+# details: docs/CORAL_TPU.md
+```
+
+Offline embeds go through `Accelerators::embed_speaker` (live stick or compat host delegate). Health reports `sound_backend: coral`.
+
 ## Still stubbed
 
 | Piece | Files | Role |
 |---|---|---|
-| `Accelerators` | `accelerators.*` | Coral / NCS2 |
 | `PhoneLink` | `phone_link.*` | BT to app |
+| NCS2 | `accelerators.*` | OpenVINO MYRIAD reserved |
 
 ## Config (`config/.env`)
 
@@ -97,7 +109,7 @@ cp config/.env.example config/.env
 # set BACKEND_IP, BACKEND_PORT, API_TOKEN (= CALYPSO_API_TOKEN), MIC_DEVICE
 # MODE=offline to force-test emergency path (spool uploads still run); MODE=online for normal ops
 # PUCK_SPOOL_DIR (default /var/lib/calypso-puck/spool; use ./spool for manual runs), PUCK_SPOOL_MAX_MB
-# optional: OFFLINE_SEGMENT_MS, INFER_BACKEND=cpu, BT_ADAPTER, BT_PEER_NAME
+# optional: OFFLINE_SEGMENT_MS, TPU_MODE=coral, CORAL_MODEL_PATH, BT_ADAPTER, BT_PEER_NAME
 ```
 
 ## Build / run

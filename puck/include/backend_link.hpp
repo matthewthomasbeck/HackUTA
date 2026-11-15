@@ -28,6 +28,9 @@ class BackendLink {
 
   bool is_connected() const;
 
+  // Label for POST /puck/health sound_backend (e.g. "coral", "none").
+  void set_sound_backend(std::string backend);
+
   // POST /puck/segments. Returns the HTTP status, or -1 on a transport error.
   // Updates connected_ (false on transport error / 5xx, true otherwise).
   int post_segment(const std::string& wav_bytes, const std::string& meta_json);
@@ -48,6 +51,7 @@ class BackendLink {
   std::string ip_;
   std::uint16_t port_ = 0;
   std::string token_;
+  std::string sound_backend_ = "none";
   bool connected_ = false;
 
   mutable std::mutex mu_;  // guards connected_ only

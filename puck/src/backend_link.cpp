@@ -175,6 +175,13 @@ bool BackendLink::get_gallery(std::string& body_out) {
   return true;
 }
 
+void BackendLink::set_sound_backend(std::string backend) {
+  if (backend.empty()) {
+    backend = "none";
+  }
+  sound_backend_ = std::move(backend);
+}
+
 bool BackendLink::post_health(std::size_t queue_depth, bool time_synced,
                               bool last_upload_ok) {
   CURL* curl = curl_easy_init();
@@ -185,7 +192,8 @@ bool BackendLink::post_health(std::size_t queue_depth, bool time_synced,
   const std::string body =
       std::string("{\"ts\":\"") + format_iso8601_utc(std::chrono::system_clock::now()) +
       "\",\"queue_depth\":" + std::to_string(queue_depth) +
-      ",\"sound_backend\":\"none\",\"ms_per_segment\":null,\"time_synced\":" +
+      ",\"sound_backend\":\"" + sound_backend_ +
+      "\",\"ms_per_segment\":null,\"time_synced\":" +
       (time_synced ? "true" : "false") + ",\"battery_pct\":null,\"last_upload_ok\":" +
       (last_upload_ok ? "true" : "false") + "}";
 

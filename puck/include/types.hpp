@@ -20,9 +20,20 @@ enum class ModeSetting {
   Offline,
 };
 
-// Where offline voice-fingerprint inference runs. Default CPU; TPU later.
+// Where offline voice-fingerprint inference runs.
+// Prefer TPU_MODE= in config/.env (maps onto this).
 enum class InferBackend {
   Cpu,
+  Coral,
+  Ncs2,
+};
+
+// config TPU_MODE= — Edge TPU / NCS2 control plane for offline infer.
+// off   = CPU (sherpa-onnx Titanet)
+// coral = Google Coral USB Accelerator path (libedgetpu + *_edgetpu.tflite)
+// ncs2  = reserved (OpenVINO MYRIAD)
+enum class TpuMode {
+  Off,
   Coral,
   Ncs2,
 };

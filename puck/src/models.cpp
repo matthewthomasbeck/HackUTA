@@ -48,10 +48,16 @@ bool Models::init(InferBackend backend,
   match_threshold_ = match_threshold > 0.f ? match_threshold : 0.55f;
   gallery_.clear();
 
-  if (backend_ != InferBackend::Cpu) {
-    std::cerr << "models: INFER_BACKEND!=cpu — TPU path not implemented; "
-                 "falling back to CPU attempt\n";
-    backend_ = InferBackend::Cpu;
+  if (backend_ == InferBackend::Coral) {
+    std::cerr << "models: TPU_MODE=coral — embeddings via Accelerators "
+                 "(Edge TPU / coral-compat host delegate)\n";
+    if (!accelerators_ || !accelerators_->coral_ready()) {
+      std::cerr << "models: Coral control plane not armed\n";
+      return false;
+    }
+  } else if (backend_ == InferBackend::Ncs2) {
+    std::cerr << "models: TPU_MODE=ncs2 — not implemented yet\n";
+    return false;
   }
 
 #if !defined(CALYPSO_HAS_SHERPA)
@@ -81,8 +87,21 @@ bool Models::init(InferBackend backend,
   }
 
   const int dim = SherpaOnnxSpeakerEmbeddingExtractorDim(sherpa_->extractor);
-  std::cerr << "models: titanet-small ready (dim=" << dim
+  std::cerr << "models: titanet-small host embedder ready (dim=" << dim
             << ", threshold=" << match_threshold_ << ")\n";
+
+  // Coral path always registers the host embedder as the Edge TPU delegate
+  // fallback (and as the live-path escape hatch until mel packing lands).
+  if (backend_ == InferBackend::Coral && accelerators_) {
+    accelerators_->set_host_embedder(
+        [this](const std::vector<std::int16_t>& pcm, int sample_rate,
+               std::vector<float>& out) {
+          return embed_pcm_host(pcm, sample_rate, out);
+        });
+    std::cerr << "models: registered sherpa host embedder on Coral path"
+              << (accelerators_->coral_live() ? " (live stick armed)\n"
+                                              : " (compat delegate)\n");
+  }
 
   if (!gallery_dir.empty()) {
     if (!enroll_gallery_dir(gallery_dir)) {
@@ -101,9 +120,14 @@ bool Models::init(InferBackend backend,
 }
 
 bool Models::set_backend(InferBackend backend) {
-  // MVP: CPU only. Keep hook for Coral/NCS2 later.
   backend_ = backend;
-  return backend == InferBackend::Cpu && ready_;
+  if (backend == InferBackend::Coral) {
+    return ready_ && accelerators_ && accelerators_->coral_ready();
+  }
+  if (backend == InferBackend::Ncs2) {
+    return false;
+  }
+  return ready_;
 }
 
 InferBackend Models::backend() const {
@@ -128,8 +152,9 @@ void Models::replace_gallery(std::vector<EnrolledSpeaker> speakers) {
   gallery_ = std::move(next);
 }
 
-bool Models::embed_pcm(const std::vector<std::int16_t>& pcm, int sample_rate,
-                       std::vector<float>& out_embedding) {
+bool Models::embed_pcm_host(const std::vector<std::int16_t>& pcm,
+                            int sample_rate,
+                            std::vector<float>& out_embedding) {
   out_embedding.clear();
 #if !defined(CALYPSO_HAS_SHERPA)
   (void)pcm;
@@ -174,6 +199,17 @@ bool Models::embed_pcm(const std::vector<std::int16_t>& pcm, int sample_rate,
   SherpaOnnxDestroyOnlineStream(stream);
   return true;
 #endif
+}
+
+bool Models::embed_pcm(const std::vector<std::int16_t>& pcm, int sample_rate,
+                       std::vector<float>& out_embedding) {
+  // Coral control plane: every offline embed goes through Accelerators so
+  // journalctl / code review show the Edge TPU path.
+  if (backend_ == InferBackend::Coral && accelerators_ &&
+      accelerators_->coral_ready()) {
+    return accelerators_->embed_speaker(pcm, sample_rate, out_embedding);
+  }
+  return embed_pcm_host(pcm, sample_rate, out_embedding);
 }
 
 bool Models::enroll_gallery_dir(const std::string& gallery_dir) {
@@ -267,6 +303,9 @@ bool Models::infer(const AudioChunk& clip, ModelOutput& out) {
 
 void Models::shutdown() {
   ready_ = false;
+  if (accelerators_) {
+    accelerators_->set_host_embedder(nullptr);
+  }
   {
     std::lock_guard<std::mutex> lock(gallery_mu_);
     gallery_.clear();

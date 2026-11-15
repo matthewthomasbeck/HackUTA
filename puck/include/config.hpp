@@ -24,12 +24,17 @@ struct Config {
   int connect_retry_sec = 5;
   int connection_check_sec = 2;
 
+  // TPU_MODE drives offline infer. INFER_BACKEND is kept as a mirror.
+  TpuMode tpu_mode = TpuMode::Off;
   InferBackend infer_backend = InferBackend::Cpu;
-  std::string coral_device;
+  std::string coral_device;  // optional USB path hint
+  // Edge-TPU-compiled Titanet (or staged placeholder until edgetpu_compiler).
+  std::string coral_model_path =
+      "models/nemo_en_titanet_small_edgetpu.tflite";
   std::string ncs2_device;
   std::string stt_model_path;
   std::string voice_model_path =
-      "models/nemo_en_titanet_small.onnx";  // titanet-small
+      "models/nemo_en_titanet_small.onnx";  // titanet-small (host / sherpa)
   std::string gallery_dir = "gallery";
   float voice_match_threshold = 0.45f;  // 0.55 was too strict for lav + 1 speaker
   float min_speech_rms = 0.02f;         // skip quiet windows before embed

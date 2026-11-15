@@ -122,6 +122,97 @@ else()
   message(STATUS "CALYPSO_SHERPA_ROOT unset — offline voice ID compiled out")
 endif()
 
+# Google Coral USB Edge TPU (libedgetpu + TFLite). Same binary layout as Whisker:
+#   -DENABLE_CORAL=ON
+#   -DTENSORFLOW_SOURCE_DIR=.../third_party/tensorflow
+#   -DTFLITE_BINARY_DIR=.../third_party/tflite_build
+#   -DEDGETPU_INCLUDE=.../third_party/coral/include
+# Without ENABLE_CORAL the Coral *control plane* still builds (compat host
+# delegate); live Invoke needs the stick + HAS_EDGETPU.
+option(ENABLE_CORAL "Link libedgetpu + TFLite for live Edge TPU Invoke" OFF)
+if(ENABLE_CORAL)
+  if(NOT TENSORFLOW_SOURCE_DIR)
+    if(DEFINED ENV{TENSORFLOW_SOURCE_DIR})
+      set(TENSORFLOW_SOURCE_DIR "$ENV{TENSORFLOW_SOURCE_DIR}")
+    else()
+      message(FATAL_ERROR "ENABLE_CORAL=ON needs TENSORFLOW_SOURCE_DIR")
+    endif()
+  endif()
+  if(NOT EDGETPU_INCLUDE)
+    if(DEFINED ENV{EDGETPU_INCLUDE})
+      set(EDGETPU_INCLUDE "$ENV{EDGETPU_INCLUDE}")
+    else()
+      set(EDGETPU_INCLUDE "${CMAKE_SOURCE_DIR}/third_party/coral/include")
+    endif()
+  endif()
+  if(NOT EXISTS "${EDGETPU_INCLUDE}/edgetpu.h")
+    message(FATAL_ERROR "edgetpu.h not found at ${EDGETPU_INCLUDE}")
+  endif()
+  if(NOT TFLITE_BINARY_DIR)
+    if(DEFINED ENV{TFLITE_BINARY_DIR})
+      set(TFLITE_BINARY_DIR "$ENV{TFLITE_BINARY_DIR}")
+    else()
+      set(TFLITE_BINARY_DIR "${CMAKE_SOURCE_DIR}/third_party/tflite_build")
+    endif()
+  endif()
+
+  if(DEFINED ENV{EDGETPU_LIB} AND EXISTS "$ENV{EDGETPU_LIB}")
+    set(EDGETPU_LIB "$ENV{EDGETPU_LIB}")
+  else()
+    find_library(EDGETPU_LIB
+      NAMES edgetpu edgetpu.so.1 libedgetpu.so.1
+      PATHS /usr/lib /usr/lib/aarch64-linux-gnu /usr/lib/arm-linux-gnueabihf
+            /usr/local/lib
+      REQUIRED
+    )
+  endif()
+  find_library(LIBUSB_LIB NAMES usb-1.0)
+
+  set(_tflite_a "${TFLITE_BINARY_DIR}/libtensorflow-lite.a")
+  if(NOT EXISTS "${_tflite_a}")
+    message(FATAL_ERROR "Prebuilt TFLite not found: ${_tflite_a}")
+  endif()
+
+  file(GLOB_RECURSE _tflite_raw_libs "${TFLITE_BINARY_DIR}/*.a")
+  set(_tflite_static_libs "")
+  foreach(_lib ${_tflite_raw_libs})
+    get_filename_component(_name "${_lib}" NAME)
+    if(_name MATCHES "fft4f2d")
+      continue()
+    endif()
+    if(_name MATCHES "_test\\.a$" OR _name MATCHES "benchmark")
+      continue()
+    endif()
+    list(APPEND _tflite_static_libs "${_lib}")
+  endforeach()
+  list(REMOVE_DUPLICATES _tflite_static_libs)
+
+  target_compile_definitions(calypso_core PUBLIC CALYPSO_HAS_EDGETPU=1)
+  target_include_directories(calypso_core PUBLIC
+    "${TENSORFLOW_SOURCE_DIR}"
+    "${EDGETPU_INCLUDE}"
+  )
+  if(EXISTS "${TFLITE_BINARY_DIR}/flatbuffers/include")
+    target_include_directories(calypso_core PUBLIC
+      "${TFLITE_BINARY_DIR}/flatbuffers/include")
+  endif()
+  target_link_libraries(calypso_core PUBLIC
+    -Wl,--start-group
+    ${_tflite_static_libs}
+    -Wl,--end-group
+    "${EDGETPU_LIB}"
+    dl
+  )
+  if(LIBUSB_LIB)
+    target_link_libraries(calypso_core PUBLIC "${LIBUSB_LIB}")
+  endif()
+  message(STATUS "Coral Edge TPU enabled (live Invoke)")
+  message(STATUS "  edgetpu: ${EDGETPU_LIB}")
+  message(STATUS "  tflite:  ${_tflite_a}")
+else()
+  message(STATUS "ENABLE_CORAL=OFF — Coral compat path only (no libedgetpu link)")
+endif()
+
 if(CALYPSO_BUILD_TESTS)
   enable_testing()
   add_executable(test_segment_spool tests/test_segment_spool.cpp)

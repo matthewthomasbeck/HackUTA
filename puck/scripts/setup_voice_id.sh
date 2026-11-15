@@ -34,4 +34,5 @@ echo "  1. Install sherpa-onnx C libs and pass -DCALYPSO_SHERPA_ROOT=... to cmak
 echo "     (see https://k2-fsa.github.io/sherpa/onnx/install/index.html)"
 echo "  2. Add enrollment WAVs under gallery/<Name>/"
 echo "  3. Set MODE=offline and VOICE_MODEL_PATH=models/nemo_en_titanet_small.onnx in config/.env"
-echo "  4. Build and run; watch: journalctl -u calypso-puck -f"
+echo "  4. For Coral: ./scripts/stage_coral_model.sh and set TPU_MODE=coral"
+echo "  5. Build and run; watch: journalctl -u calypso-puck -f"
