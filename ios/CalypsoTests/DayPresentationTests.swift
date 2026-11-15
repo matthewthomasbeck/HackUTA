@@ -90,4 +90,19 @@ final class DayPresentationTests: XCTestCase {
         XCTAssertEqual(DayPresentation.accessibilityLabel(for: e, names: ["p_tom": "Tom"], timeZone: tz, locale: en),
                        "3:00 PM, A walk, place not certain: Somewhere with park sounds, with Tom, someone new")
     }
+
+    func testDayChangeClearsPreviousDaysMoments() throws {
+        var content = DayContent()
+        content.events = [try event(id: "yesterday_lunch", start: "2026-11-13T12:00:00Z")]
+        content.state = .loaded
+        content.dayChanged()
+        XCTAssertEqual(content.events, [])
+        XCTAssertEqual(content.state, .loading)
+    }
+
+    func testDayChangeAfterFailureGoesBackToLoading() {
+        var content = DayContent(events: [], state: .failed)
+        content.dayChanged()
+        XCTAssertEqual(content.state, .loading)
+    }
 }

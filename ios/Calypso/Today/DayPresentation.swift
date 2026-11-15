@@ -89,3 +89,18 @@ enum DayPresentation {
         return parts.joined(separator: ", ")
     }
 }
+
+/// What the Today screen shows for the selected day. When the day changes, the previous day's moments are cleared
+/// and the screen goes back to loading, so a new day's header never sits over the old day's moments. A
+/// pull-to-refresh on the same day doesn't call `dayChanged()`, so it keeps its content while reloading.
+struct DayContent: Equatable {
+    enum State: Equatable { case loading, loaded, failed }
+
+    var events: [DayEvent] = []
+    var state: State = .loading
+
+    mutating func dayChanged() {
+        events = []
+        state = .loading
+    }
+}

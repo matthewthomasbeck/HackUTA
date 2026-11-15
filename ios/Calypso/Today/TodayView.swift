@@ -3,13 +3,10 @@ import SwiftUI
 /// Today (Figma 20:489, quiet day 20:1025, couldn't load 20:1097): header, day switcher, hero photo, then the
 /// day's moments on a sea-path rail. `initialDay` exists for the DEBUG `-screen` routes.
 struct TodayView: View {
-    enum LoadState { case loading, loaded, failed }
-
     let client: APIClient?
     @State private var day: Date
-    @State private var events: [DayEvent] = []
+    @State private var content = DayContent()
     @State private var names: [String: String] = [:]
-    @State private var state: LoadState = .loading
     @State private var pickingDay = false
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -25,6 +22,8 @@ struct TodayView: View {
         _day = State(initialValue: initialDay)
     }
 
+    private var events: [DayEvent] { content.events }
+    private var state: DayContent.State { content.state }
     private var isToday: Bool { Calendar.current.isDateInToday(day) }
     /// Under accessibility sizes the rail is dropped and cards fill the width.
     private var showsRail: Bool { !dynamicTypeSize.isAccessibilitySize }
@@ -41,13 +40,14 @@ struct TodayView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     header
-                    content
+                    stateContent
                 }
                 .padding(.bottom, 24)
             }
             .background(Color.paper.ignoresSafeArea())
             .refreshable { await load() }
             .task(id: day) { await load() }
+            .onChange(of: day) { content.dayChanged() }
             .sheet(isPresented: $pickingDay) {
                 DayPickerSheet(day: $day)
             }
@@ -96,7 +96,7 @@ struct TodayView: View {
 
     // MARK: States
 
-    @ViewBuilder private var content: some View {
+    @ViewBuilder private var stateContent: some View {
         switch state {
         case .failed:
             VStack(spacing: 8) {
@@ -173,22 +173,22 @@ struct TodayView: View {
     // MARK: Loading
 
     private func load() async {
-        guard let client else { state = .failed; return }
+        guard let client else { content.state = .failed; return }
         do {
             let key = Self.dayFormatter.string(from: day)
             async let loaded = client.events(day: key)
             if let people = try? await client.people() {
                 names = Dictionary(uniqueKeysWithValues: people.compactMap { p in p.name.map { (p.id, $0) } })
             }
-            events = try await loaded.sorted { $0.start < $1.start }
-            state = .loaded
+            content.events = try await loaded.sorted { $0.start < $1.start }
+            content.state = .loaded
         } catch is CancellationError {
             return
         } catch let error as URLError where error.code == .cancelled {
             return
         } catch {
-            events = []
-            state = .failed
+            content.events = []
+            content.state = .failed
         }
     }
 
