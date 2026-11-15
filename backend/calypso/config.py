@@ -34,10 +34,15 @@ class Settings:
     dashboard_dir: str
     max_audio_bytes: int
     max_image_bytes: int
-    # Thresholds: starting values, tuned in Tasks 3, 4 and 8.
+    face: str  # opencv | fake
+    voice: str  # sherpa | fake
+    models_dir: str
+    # Thresholds: provisional starting values, tuned on real FaceTime/puck data.
     face_match: float
     face_margin: float
     voice_match: float
+    voice_margin: float
+    voice_learn_max: float
     voice_min_speech_s: float
     place_conf_min: float
     recall_min: float
@@ -62,9 +67,15 @@ class Settings:
             dashboard_dir=e("CALYPSO_DASHBOARD_DIR", str(REPO_ROOT / "dashboard")),
             max_audio_bytes=int(e("CALYPSO_MAX_AUDIO_BYTES", 5 * 1024 * 1024)),
             max_image_bytes=int(e("CALYPSO_MAX_IMAGE_BYTES", 15 * 1024 * 1024)),
-            face_match=_f("FACE_MATCH", 0.45),
+            face=e("CALYPSO_FACE", "opencv"),
+            voice=e("CALYPSO_VOICE", "sherpa"),
+            models_dir=e("CALYPSO_MODELS_DIR", str(Path(data_dir) / "models")),
+            # SFace reference same-person cosine is 0.363; TitaNet sample test: same >= 0.66, different <= 0.37.
+            face_match=_f("FACE_MATCH", 0.40),
             face_margin=_f("FACE_MARGIN", 0.08),
-            voice_match=_f("VOICE_MATCH", 0.60),
+            voice_match=_f("VOICE_MATCH", 0.50),
+            voice_margin=_f("VOICE_MARGIN", 0.08),
+            voice_learn_max=_f("VOICE_LEARN_MAX", 0.30),
             voice_min_speech_s=_f("VOICE_MIN_SPEECH_S", 2.0),
             place_conf_min=_f("PLACE_CONF_MIN", 0.6),
             recall_min=_f("RECALL_MIN", 0.35),
@@ -85,3 +96,10 @@ class Settings:
             _log.warning("unknown CALYPSO_JOBS=%r, using inline", self.jobs)
         if self.storage == "s3" and not self.enrollment_bucket:
             _log.warning("CALYPSO_STORAGE=s3 but ENROLLMENT_BUCKET is empty")
+        from .model_files import SFACE, TITANET_SMALL, YUNET, path_for
+
+        needed = ([TITANET_SMALL] if self.voice == "sherpa" else []) + ([YUNET, SFACE] if self.face == "opencv" else [])
+        missing = [m.filename for m in needed if not path_for(self.models_dir, m).is_file()]
+        if missing:
+            _log.warning("model files missing in %s: %s. Face/voice matching is off until you run "
+                         "`uv run python scripts/fetch_models.py`", self.models_dir, ", ".join(missing))

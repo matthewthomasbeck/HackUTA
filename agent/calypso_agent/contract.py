@@ -204,12 +204,30 @@ class RecognizeResponse(BaseModel):
 
 
 class IntroRequest(BaseModel):
-    """`POST /people/from_intro`, sent by the agent at the end of a 1:1 setup call."""
-    transcript: str
+    """`POST /people/from_intro`, sent at the end of a 1:1 setup call.
+
+    `name`/`relationship`/`facts` are the details the caller confirmed aloud.
+    `voice_wav_b64` is the caller's speech (16 kHz mono WAV preferred).
+    If the phone, face or voice matches someone already enrolled, that person is
+    updated instead of creating a duplicate.
+    """
+    transcript: str = ""
     face_jpegs_b64: list[str] = []
     voice_wav_b64: str | None = None
     phone: str | None = None
     call_id: str | None = None
+    name: str | None = None
+    relationship: str | None = None
+    facts: list[str] = []
+
+
+class IntroResult(Person):
+    """`from_intro` response: the Person plus what enrollment stored."""
+    matched_existing: bool = False
+    matched_by: Literal["phone", "face", "voice"] | None = None
+    face_prints_added: int = 0
+    voice_prints_added: int = 0
+    notes: list[str] = []
 
 
 class CallCreate(BaseModel):

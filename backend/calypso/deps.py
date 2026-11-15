@@ -31,6 +31,14 @@ def get_jobs(request: Request):
     return request.app.state.jobs
 
 
+def get_face_embedder(request: Request):
+    return request.app.state.face_embedder
+
+
+def get_voice_embedder(request: Request):
+    return request.app.state.voice_embedder
+
+
 def public_base(request: Request) -> str:
     """Base URL for links in responses: CALYPSO_PUBLIC_URL, else forwarded headers, else the request."""
     configured = request.app.state.settings.public_url

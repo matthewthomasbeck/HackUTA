@@ -15,10 +15,12 @@ dependencies = [
   "rq>=2,<3",
   "boto3>=1.35,<2",   # Vultr Object Storage (S3-compatible) for face crops and photos
   "tzdata",           # zoneinfo data on Windows (CALYPSO_TZ)
+  "sherpa-onnx>=2,<3",                  # voiceprints: NeMo TitaNet-small (open source, CPU, no PyTorch)
+  "opencv-python-headless>=4.10,<5",    # face prints: OpenCV YuNet + SFace (open source)
 ]
 
 [project.optional-dependencies]
-ml = ["speechbrain", "insightface", "onnxruntime", "sentence-transformers", "open_clip_torch", "faster-whisper", "pillow"]
+ml = ["sentence-transformers", "open_clip_torch", "faster-whisper", "pillow"]
 
 [dependency-groups]
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]

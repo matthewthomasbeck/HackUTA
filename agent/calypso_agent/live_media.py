@@ -75,6 +75,7 @@ class RoomSpeech:
         self.frames = asyncio.Queue(maxsize=100)
         self.rms_threshold = rms_threshold
         self.speaking = False
+        self.last_wav = None
 
     def feed(self, pcm):
         if self.speaking:
@@ -88,6 +89,7 @@ class RoomSpeech:
             self.frames.get_nowait()
 
     async def listen(self, timeout_s=20):
+        self.last_wav = None  # the caller's audio for the latest utterance (sent for the voiceprint)
         self.clear()
         deadline = time.monotonic() + timeout_s
         chunks, voiced_s, quiet_s, total_s = [], 0, 0, 0
@@ -112,7 +114,10 @@ class RoomSpeech:
                 break
         if voiced_s < 0.3:
             return None
-        return await self.provider.transcribe(wav_bytes(b"".join(chunks)))
+        audio = wav_bytes(b"".join(chunks))
+        text = await self.provider.transcribe(audio)
+        self.last_wav = audio if text else None
+        return text
 
     async def speak(self, text):
         self.caption(text)
