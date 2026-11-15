@@ -220,25 +220,34 @@ async def test_returning_relative_uses_real_result_and_stored_memory():
 
 
 @pytest.mark.asyncio
-async def test_recognition_voice_only_and_uncertainty_are_safe():
+async def test_opening_recognition_ignores_voice_and_spoken_identity():
     from calypso.claude_controller import ClaudeController, MediaEvent, Session, StartSession
-    controller = ClaudeController(FakeClaude([("show_identity", {}), None]))
+    controller = ClaudeController(FakeClaude([]))
     session = Session("sid", "cid", StartSession(mode="recognize", participant="phone"), {"name": "Mary"})
-    status = "identified"
+    requests = []
     async def api(method, path, body=None):
-        if path.endswith("/lines"): return {}
-        if path == "/recognize":
-            assert body["voice_wav_b64"] == "d2F2"
-            return {"faces": [], "voice_only": {"status": status, "person_id": "r"}}
-        return {"id": "r", "name": "Sarah", "is_patient": False}
-    event = MediaEvent(kind="utterance", text="Hello", voice_wav_b64="d2F2")
-    assert (await controller.respond(session, event, api)).cards[0].title == "Sarah"
-    status = "uncertain"
-    effects = await controller.respond(session, event, api)
-    assert effects.cards[0].kind == "learning" and not effects.speech
+        requests.append((path, body))
+        return {}
+    effects = await controller.respond(session, MediaEvent(kind="utterance",
+        text="I am Sarah", voice_wav_b64="d2F2", jpeg_b64="eA=="), api)
+    assert not effects.cards and not effects.speech
+    assert [path for path, _ in requests] == ["/calls/cid/lines"]
     assert session.recognized_id is None
     with pytest.raises(ValueError, match="remain silent"):
         await controller.execute("speak", {"text": "Who are you?"}, session, effects, api)
+
+
+@pytest.mark.asyncio
+async def test_frame_uses_face_only_and_never_accepts_voice_only_result():
+    from calypso.claude_controller import ClaudeController, MediaEvent, Session, StartSession
+    session = Session("sid", "cid", StartSession(mode="recognize", participant="phone"), {})
+    async def api(method, path, body=None):
+        assert path == "/recognize"
+        assert body["face_jpeg_b64"] == "eA==" and not body.get("voice_wav_b64")
+        return {"faces": [], "voice_only": {"status": "identified", "person_id": "voice-person"}}
+    effects = await ClaudeController(FakeClaude([])).respond(session,
+        MediaEvent(kind="frame", jpeg_b64="eA==", voice_wav_b64="d2F2"), api)
+    assert not effects.cards and session.recognized_id is None
 
 
 @pytest.mark.asyncio
