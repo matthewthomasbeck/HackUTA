@@ -246,6 +246,8 @@ async def test_setup_call_audio_becomes_voiceprint_and_second_call_dedupes(env):
 
             first = await call("Keanu", "+15555550142")
             assert first["done"] and first["enrolled_person_id"]
+            stages = [e for e in (await c.get("/events/recent?limit=1000")).json() if e["stage"] == "agent.session"]
+            assert stages and stages[-1]["payload"]["mode"] == "setup" and stages[-1]["payload"]["call_id"]
             conn = db.connect(Settings.from_env().db_path)
             pid = first["enrolled_person_id"]
             row = db.get_person(conn, pid)

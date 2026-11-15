@@ -14,6 +14,10 @@
   const CARD_MIN_S = 6, CARD_MAX_S = 10;
   const PUCK_OFFLINE_S = 60;
   const TARGET_CARD_S = 2.5;    // sentence end → card on screen
+  const FACE_HOLD_MS = 10000;   // a face identification outranks voice-only results for this long
+  const CALLER = "caller";      // participant row for the 1:1 setup-call caller
+  const MODE_LABEL = { setup: "Setup call", recognize: "Recognition call", group: "Group call" };
+  const callLabel = (c) => (c && (MODE_LABEL[c.mode] || MODE_LABEL[c.kind])) || "FaceTime call";
 
   // ---- token ------------------------------------------------------------------
   let token = null;
@@ -134,14 +138,30 @@
       }
       case "puck.failed": S.lastFailedAt = at; lit("worker"); break;
       case "day.built": lit("day"); loadDay(); break;
-      case "person.created": case "person.updated": case "person.enrolled": loadPeople(); break;
+      case "person.created": case "person.updated": loadPeople(); break;
+      case "person.enrolled": {
+        // A setup call just saved (or updated) the caller: show who they are now.
+        const row = S.participants.get(CALLER);
+        if (S.call && p.call_id === S.call.id && row) {
+          Object.assign(row, { status: "enrolled", personId: p.person_id, at, matched: !!p.matched_existing,
+            prints: { face: p.face_prints_added ?? 0, voice: p.voice_prints_added ?? 0 } });
+        }
+        loadPeople(); lit("ctrl"); break;
+      }
 
       case "call.started":
-        S.call = { id: p.call_id, kind: p.kind || "call", started: at };
+        S.call = { id: p.call_id, kind: p.kind || "call", mode: null, started: at };
         S.participants.clear(); S.lines = []; S.intent = null; S.recall = null;
         lit("agent"); break;
+      case "agent.session":
+        // The call log stores recognize calls as "group"; this carries the real mode.
+        if (S.call && p.call_id === S.call.id) {
+          S.call.mode = p.mode;
+          if (p.mode === "setup") S.participants.set(CALLER, { key: CALLER, status: "setup", personId: null, face: null, voice: null, th: {}, at });
+        }
+        lit("agent", "ctrl"); break;
       case "call.ended":
-        if (S.call) S.calls.push({ start: S.call.started, end: at, kind: S.call.kind });
+        if (S.call) S.calls.push({ start: S.call.started, end: at, kind: S.call.kind, mode: S.call.mode });
         S.lastCallEnded = at; S.call = null; lit("agent"); break;
       case "call.line":
         S.lines.push({ speaker: p.speaker, text: p.text, at, highlight: false });
@@ -153,15 +173,28 @@
         const th = p.thresholds || {};
         const voice = (p.voice_top3 || [])[0];
         const faces = p.faces || [];
-        const rows = faces.length ? faces.map((f, i) => ({
-          key: `${p.participant_key || "p"}:${i}`, status: f.status, personId: f.person_id,
-          face: (f.face_top3 || [])[0], voice,
-        })) : p.voice_only ? [{
-          key: `${p.participant_key || "p"}:v`, status: p.voice_only.status, personId: p.voice_only.person_id, face: null, voice,
-        }] : [];
-        for (const r of rows) {
-          if (r.personId && S.people[r.personId] && S.people[r.personId].is_patient) continue;
-          S.participants.set(r.key, { ...r, th, at });
+        const pk = p.participant_key || "p";
+        // One face = one row per caller (keyed by participant); a composite grid gets one row per face.
+        const keyFor = (i) => (faces.length > 1 ? `${pk}:${i}` : pk);
+        for (const [i, f] of faces.entries()) {
+          if (f.person_id && S.people[f.person_id] && S.people[f.person_id].is_patient) continue;
+          const prev = S.participants.get(keyFor(i)) || {};
+          const identifiedAt = f.status === "identified" ? at : prev.identifiedAt;
+          S.participants.set(keyFor(i), { ...prev, key: keyFor(i), status: f.status, personId: f.person_id,
+            face: (f.face_top3 || [])[0], voice: voice || prev.voice, th, at, identifiedAt });
+        }
+        if (!faces.length && p.voice_only) {
+          // Voice alone (no face in this clip) only adds a voice score to the caller's row. It may not
+          // undo a face identification from the last few seconds: face is the main signal.
+          const prev = S.participants.get(pk);
+          const faceRecent = prev && prev.identifiedAt && at - prev.identifiedAt < FACE_HOLD_MS;
+          const vo = p.voice_only;
+          if (faceRecent) S.participants.set(pk, { ...prev, voice, th, at });
+          else if (!(vo.person_id && S.people[vo.person_id] && S.people[vo.person_id].is_patient)) {
+            S.participants.set(pk, { ...(prev || {}), key: pk, status: vo.status, personId: vo.person_id,
+              face: prev ? prev.face : null, voice, th, at,
+              identifiedAt: vo.status === "identified" ? at : prev && prev.identifiedAt });
+          }
         }
         lit("recog", "ctrl"); break;
       }
@@ -243,7 +276,7 @@
       case "ingest": return S.lastSegmentAt ? `segment · ${ago(S.lastSegmentAt)}` : "no segments yet";
       case "worker": return S.lastFailedAt > S.lastProcessedAt ? `failed · ${ago(S.lastFailedAt)}` : lastLat("seg") != null ? `STT · ${secs(lastLat("seg"))}` : "waiting";
       case "day": return S.days ? `${S.days.length} moments today` : `${S.counts["day.built"] || 0} builds`;
-      case "agent": return S.call ? `${S.call.kind} · ${S.participants.size} seen` : S.lastCallEnded ? `last call ${clock(S.lastCallEnded)}` : "waiting for a call";
+      case "agent": return S.call ? `${callLabel(S.call)} · ${S.participants.size} seen` : S.lastCallEnded ? `last call ${clock(S.lastCallEnded)}` : "waiting for a call";
       case "ctrl": return lastLat("ctrl") != null ? `controller · ${Math.round(lastLat("ctrl"))} ms` : "waiting";
       case "recog": return S.recognizeCount ? `face + voice · ${S.recognizeCount}` : "waiting";
       case "recall": {
@@ -295,6 +328,14 @@
     $("card-latency").textContent = lat != null ? `sentence → card ${secs(lat)}  ·  target ≤ ${TARGET_CARD_S} s` : "";
   }
 
+  // Identity cards are separate facts ("Mary's brother", a memory); caption cards ("Let's talk",
+  // "Saved") arrive pre-wrapped into short lines for the phone, so rejoin them into one sentence.
+  function cardText(c) {
+    const lines = c.lines || [];
+    if (c.kind === "identity" || c.kind === "today") return lines.slice(0, 2).join(" · ");
+    return lines.join(" ").replace(/\s+/g, " ").trim();
+  }
+
   function buildCard(c) {
     const neutral = c.kind === "learning";
     const photo = h("div", { class: "screen-photo" });
@@ -305,7 +346,7 @@
       h("div", { class: "screen-body" }, photo,
         h("div", { style: "min-width:0" },
           h("div", { class: "screen-title" }, c.title || ""),
-          h("div", { class: "screen-lines" }, (c.lines || []).slice(0, 2).join(" · ")))),
+          h("div", { class: "screen-lines" }, cardText(c)))),
       h("div", { class: "timer" },
         h("div", { class: "timer-track" }, h("div", { class: "timer-fill", style: "width:0" })),
         h("span", { class: "mono-small timer-text" })));
@@ -316,7 +357,7 @@
     const pills = [];
     if (S.call) {
       const sec = Math.floor((nowMs() - S.call.started) / 1000);
-      pills.push(["live", `Live call · ${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`]);
+      pills.push(["live", `${callLabel(S.call)} · ${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`]);
     } else pills.push(["waiting", "Waiting for a call"]);
     pills.push(puckOffline() ? ["offline", S.healthAt ? `Puck offline · ${ago(S.healthAt)}` : "Puck not seen yet"] : ["ok", `Puck online · ${ago(S.healthAt)}`]);
     pills.push(DEMO ? ["ok", "Demo replay"] : S.stream === "open" ? ["ok", "Stream connected"] : ["offline", "Reconnecting…"]);
@@ -339,10 +380,17 @@
   }
 
   function participantCard(p) {
-    const known = p.status === "identified";
+    const known = p.status === "identified" || p.status === "enrolled";
     const pr = known ? S.people[p.personId] : null;
     let name, detail, tag, tagCls = "", dashed = !known;
-    if (known) {
+    if (p.status === "setup") {
+      name = "Caller"; detail = "Introducing themselves to Calypso⁻¹"; tag = "Setting up"; tagCls = "learning";
+    } else if (p.status === "enrolled") {
+      name = nameOf(p.personId) || "New relative";
+      const prints = p.prints ? `${p.prints.face} face · ${p.prints.voice} voice prints` : "";
+      detail = [pr && pr.relationship, prints].filter(Boolean).join(" · ") || "Saved";
+      tag = p.matched ? "Updated" : "Saved";
+    } else if (known) {
       name = nameOf(p.personId) || "Known person";
       detail = pr ? [pr.relationship, (pr.facts || [])[0]].filter(Boolean).join(" · ") || "Known" : "Open with ?token= to show names";
       tag = "Known";
@@ -354,22 +402,32 @@
     const avatar = h("div", { class: `avatar${known ? "" : " unknown"}` });
     if (pr && pr.face_photo_url) avatar.style.backgroundImage = `url("${encodeURI(pr.face_photo_url)}")`;
     else avatar.append(known ? person() : feather());
+    const scored = p.status !== "setup" && p.status !== "enrolled";  // setup calls enroll; they don't score
     return h("div", { class: `participant${dashed ? " dashed" : ""}` },
       h("div", { class: "participant-top" }, avatar,
         h("div", { class: "participant-text" }, h("div", { class: "participant-name" }, name), h("div", { class: "small soft" }, detail)),
         h("span", { class: `tag ${tagCls}` }, tag)),
-      scoreBar("Face", p.face && p.face.score, p.th.face_match),
-      scoreBar("Voice", p.voice && p.voice.score, p.th.voice_match));
+      scored && scoreBar("Face", p.face && p.face.score, p.th.face_match),
+      scored && scoreBar("Voice", p.voice && p.voice.score, p.th.voice_match));
+  }
+
+  // Chert names the caller "chert-bridge-<call id>"; show who they are instead.
+  function speakerLabel(raw) {
+    if (!raw || !raw.startsWith("chert-bridge-")) return raw || "Caller";
+    for (const p of S.participants.values()) {
+      if ((p.status === "identified" || p.status === "enrolled") && nameOf(p.personId)) return nameOf(p.personId);
+    }
+    return "Caller";
   }
 
   function renderCall() {
     const ps = [...S.participants.values()].slice(0, 2);  // in the order they were first seen
-    $("call-sub").textContent = S.call ? `${S.call.kind} · ${S.participants.size} seen` : "";
+    $("call-sub").textContent = S.call ? `${callLabel(S.call)} · ${S.participants.size} seen` : "";
     $("participants").replaceChildren(...(ps.length ? ps.map(participantCard) : [h("div", { class: "empty-note" },
       h("img", { src: "art/gull-wave.png", alt: "" }), h("span", { class: "small soft" }, "Waiting to see who joined…"))]));
 
     $("transcript").replaceChildren(...(S.lines.length ? S.lines.map((l) =>
-      h("div", { class: `line${l.highlight ? " highlight" : ""}` }, h("b", {}, l.speaker), h("span", {}, l.text)))
+      h("div", { class: `line${l.highlight ? " highlight" : ""}` }, h("b", {}, speakerLabel(l.speaker)), h("span", {}, l.text)))
       : [h("span", { class: "small soft" }, "Nobody has spoken yet.")]));
 
     const kids = [h("div", { class: "recall-head" }, h("span", { class: "label soft" }, "Recall"),
@@ -465,7 +523,7 @@
     }
     rows.push(lane("Sounds", sounds.map((x) => ["sound", x.label, x.start, x.end])));
     if (S.days) rows.push(lane("Photos", evs.filter((e) => e.photo_ids.length).map((e) => ["photo", `${e.photo_ids.length} photo${e.photo_ids.length > 1 ? "s" : ""}`, e.s, e.e])));
-    rows.push(lane("Calls", calls.map((c) => ["call", c.kind === "group" ? "Group call" : "FaceTime", c.start, c.end])));
+    rows.push(lane("Calls", calls.map((c) => ["call", callLabel(c), c.start, c.end])));
     $("lanes").replaceChildren(...rows);
   }
 
@@ -493,10 +551,13 @@
       case "recall.search": return bestRecall() ? `best ${fmt(bestRecall().score)}` : "no matches";
       case "card.queued": case "card.shown": return (p.card && p.card.title) || p.title || "card";
       case "call.started": return `${p.kind || "call"} started`;
+      case "agent.session": return `${MODE_LABEL[p.mode] || p.mode}${p.controlled ? " · test mode" : ""}`;
       case "call.ended": return "call ended";
-      case "call.line": return `${p.speaker}: ${p.text}`;
+      case "call.line": return `${speakerLabel(p.speaker)}: ${p.text}`;
       case "day.built": return `${p.events} moments`;
-      case "person.created": case "person.updated": case "person.enrolled": return p.name || "unnamed visitor";
+      case "person.enrolled":
+        return `${p.name || "unnamed visitor"} · ${p.matched_existing ? "updated" : "new"} · ${p.face_prints_added ?? 0} face, ${p.voice_prints_added ?? 0} voice prints`;
+      case "person.created": case "person.updated": return p.name || "unnamed visitor";
       case "app.visits": return `${p.count} visits`;
       case "app.photo": return "photo uploaded";
     }
@@ -542,7 +603,7 @@
   async function connect() {
     await Promise.all([loadPeople(), loadDay()]);
     try {
-      const recent = await (await fetch("/events/recent?limit=200")).json();
+      const recent = await (await fetch("/events/recent?limit=1000")).json();
       for (const ev of recent) apply(ev, false);
     } catch (e) { console.warn("backfill failed", e); }
     dirty = true; render();
