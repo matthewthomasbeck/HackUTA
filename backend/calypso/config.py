@@ -40,6 +40,7 @@ class Settings:
     stt: str  # grok | fake
     xai_api_key: str
     summarizer: str  # claude | fake
+    detector: str  # claude | fake
     home_label: str
     # Thresholds: provisional starting values, tuned on real FaceTime/puck data.
     face_match: float
@@ -77,6 +78,7 @@ class Settings:
             stt=e("CALYPSO_STT") or ("grok" if e("XAI_API_KEY") else "fake"),
             xai_api_key=e("XAI_API_KEY", ""),
             summarizer=e("CALYPSO_SUMMARIZER") or ("claude" if e("ANTHROPIC_API_KEY") else "fake"),
+            detector=e("CALYPSO_DETECTOR") or ("claude" if e("ANTHROPIC_API_KEY") else "fake"),
             home_label=e("CALYPSO_HOME_LABEL", "Home"),
             # SFace reference same-person cosine is 0.363; TitaNet sample test: same >= 0.66, different <= 0.37.
             face_match=_f("FACE_MATCH", 0.40),

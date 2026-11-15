@@ -31,7 +31,7 @@ class ClaudeSummarizer:
         import anthropic
 
         self.client = anthropic.Anthropic(timeout=10.0)
-        self.model = os.environ.get("CALYPSO_SUMMARY_MODEL", "claude-sonnet-4-5")
+        self.model = os.environ.get("CALYPSO_SUMMARY_MODEL", "claude-sonnet-4-6")
 
     def summarize(self, lines: list[str], people: list[str], place: str) -> str:
         prompt = (f"Place: {place}\nPeople: {', '.join(people) or 'unknown'}\nConversation:\n"
