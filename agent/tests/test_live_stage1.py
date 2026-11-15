@@ -410,3 +410,73 @@ async def test_metadata_and_api_race_returns_once_and_cleans_both_waiters():
     source = await wait_bridge_ready(room, timeout=1, confirmed_bridge=poll)
     assert source in {"room_metadata", "chert_call_api"}
     assert ended.is_set() and not room.handlers["room_metadata_changed"]
+
+
+def test_group_frame_preserves_entire_grid_instead_of_cropping_one_face():
+    from calypso_agent.live_media import group_frame_jpeg
+    image = Image.new("RGB", (1600, 800), "red")
+    image.paste("blue", (800, 0, 1600, 800))
+    decoded = Image.open(BytesIO(group_frame_jpeg(image)))
+    assert decoded.size == (1280, 640)
+    assert decoded.getpixel((100, 100))[0] > 200
+    assert decoded.getpixel((1100, 100))[2] > 200
+
+
+@pytest.mark.asyncio
+async def test_group_transport_subscribes_multiple_video_sources_without_transcribing(monkeypatch, tmp_path):
+    import calypso_agent.main as live
+    from livekit import rtc
+    closed, sources = [], []
+    started = asyncio.Event()
+    room = Events()
+    room.metadata = '{"chert_bridge_ready":true}'
+    def participant(identity, sid, kind=rtc.ParticipantKind.PARTICIPANT_KIND_STANDARD):
+        track = NS(sid=sid, kind=rtc.TrackKind.KIND_VIDEO)
+        pub = NS(track=track, source=rtc.TrackSource.SOURCE_CAMERA, width=1280, height=720)
+        return NS(identity=identity, kind=kind, track_publications={sid: pub})
+    relative = participant("chert-bridge-test", "relative-video")
+    mary = participant("mary-device", "mary-video")
+    other_agent = participant("other-agent", "agent-video", rtc.ParticipantKind.PARTICIPANT_KIND_AGENT)
+    room.remote_participants = {p.identity: p for p in [relative, mary, other_agent]}
+    class Gateway:
+        session_id = "sid"
+        def __init__(self, *args): pass
+        async def start(self, *args, **kwargs): pass
+        async def event(self, kind, **fields):
+            if kind == "start":
+                started.set()
+                return {"speech": ["Hi"], "mode": "group_intro"}
+            assert kind == "frame"
+            sources.append(fields["source_key"])
+            assert fields["jpeg_b64"]
+            if len(sources) == 2: room.emit("disconnected")
+            return {"mode": "group_intro"}
+        async def close(self): closed.append("gateway")
+    class Provider:
+        def __init__(self, *args): pass
+        async def close(self): closed.append("provider")
+    class Output:
+        def __init__(self, room, scheduler): self.audio, self.scheduler = None, scheduler
+        async def start(self): pass
+        async def run(self): await asyncio.Event().wait()
+        def caption(self, *args): pass
+        async def close(self): closed.append("output")
+    class Speech:
+        def __init__(self, *args, **kwargs): pass
+        async def speak(self, text): pass
+        async def listen(self): raise AssertionError("Group introduction must not transcribe mixed audio")
+    async def video(track, callback):
+        await started.wait()
+        await asyncio.sleep(0)
+        await callback(Image.new("RGB", (800, 400), "white"))
+    monkeypatch.setattr(live, "GatewayClient", Gateway)
+    monkeypatch.setattr(live, "GrokSpeech", Provider)
+    monkeypatch.setattr(live, "Publisher", Output)
+    monkeypatch.setattr(live, "RoomSpeech", Speech)
+    monkeypatch.setattr(live, "video_frames", video)
+    async def wait_for_participant(**kwargs): return relative
+    await asyncio.wait_for(live.run_call(NS(room=room, wait_for_participant=wait_for_participant),
+        Config("group_intro", "http://test", "token", "key", state_file=str(tmp_path / "state.json"))), 2)
+    assert set(sources) == {"relative-video", "mary-video"}
+    assert set(closed) == {"gateway", "provider", "output"}
+    assert all(not handlers for handlers in room.handlers.values())

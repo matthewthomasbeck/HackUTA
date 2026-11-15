@@ -49,11 +49,15 @@ async def start(body: StartSession, request: Request):
         patients = await api("GET", "/people?is_patient=true")
         if len(patients) != 1:
             raise HTTPException(409, "Exactly one patient is required")
+        if body.mode == "group_intro" and patients[0].get("name") != "Mary":
+            raise HTTPException(409, "Manual group introductions require the fixed demo patient Mary")
+        if body.mode == "group_intro" and body.controlled:
+            raise HTTPException(422, "Manual group introductions require real recognition")
         if body.enrolled_person_id:
             person = await api("GET", f"/people/{body.enrolled_person_id}")
             if person["is_patient"]:
                 raise HTTPException(422, "Patient cannot be a recognition fixture")
-        call = await api("POST", "/calls", {"kind": "group" if body.mode in {"recognize", "auto"} else body.mode, "participants": [body.participant]})
+        call = await api("POST", "/calls", {"kind": "group" if body.mode in {"recognize", "auto", "group_intro"} else body.mode, "participants": [body.participant]})
     sid = uuid4().hex
     session = Session(sid, call["id"], body, patients[0])
     request.app.state.agent_sessions[sid] = session

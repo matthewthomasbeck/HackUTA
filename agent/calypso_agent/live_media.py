@@ -31,6 +31,15 @@ def wav_bytes(pcm):
     return out.getvalue()
 
 
+def group_frame_jpeg(image):
+    """Preserve the whole group grid; do not select/crop one face locally."""
+    image = image.convert("RGB")
+    image.thumbnail((1280, 1280))
+    out = BytesIO()
+    image.save(out, "JPEG", quality=85)
+    return out.getvalue()
+
+
 class FaceCropper:
     def crop(self, image):
         image = image.copy()
