@@ -21,11 +21,28 @@ void OfflineBuffer::clear() {
 }
 
 std::optional<AudioChunk> OfflineBuffer::push(const AudioChunk& chunk) {
-  // Stub structure only: concat logic intentionally empty for pipeline review.
-  // TODO: append chunk.pcm; track start ts + buffered_ms_; when >= target_ms_,
-  //       return AudioChunk{concatenated pcm, start, buffered_ms_} and clear.
-  (void)chunk;
-  return std::nullopt;
+  if (chunk.pcm.empty() || chunk.duration_ms <= 0) {
+    return std::nullopt;
+  }
+
+  if (!has_start_) {
+    start_ = chunk.ts;
+    has_start_ = true;
+  }
+
+  pcm_.insert(pcm_.end(), chunk.pcm.begin(), chunk.pcm.end());
+  buffered_ms_ += chunk.duration_ms;
+
+  if (buffered_ms_ < target_ms_) {
+    return std::nullopt;
+  }
+
+  AudioChunk out;
+  out.pcm = std::move(pcm_);
+  out.ts = start_;
+  out.duration_ms = buffered_ms_;
+  clear();
+  return out;
 }
 
 }  // namespace calypso

@@ -27,7 +27,10 @@ struct Config {
   std::string coral_device;
   std::string ncs2_device;
   std::string stt_model_path;
-  std::string voice_model_path;
+  std::string voice_model_path =
+      "models/nemo_en_titanet_small.onnx";  // titanet-small
+  std::string gallery_dir = "gallery";
+  float voice_match_threshold = 0.55f;
 
   std::string bt_adapter;     // e.g. hci0
   std::string bt_peer_name;   // phone / app advertisement name

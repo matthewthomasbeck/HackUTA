@@ -105,7 +105,22 @@ void StateMachine::process_offline(const AudioChunk& chunk) {
     return;
   }
 
-  // Deliver "who is talking" to the phone over Bluetooth (stub).
+  // MVP: journalctl sees stderr from the systemd unit.
+  switch (out.who.status) {
+    case WhoIsTalking::Status::Identified:
+      std::cerr << "who is talking: " << out.who.display_name
+                << " (score=" << out.who.score << ")\n";
+      break;
+    case WhoIsTalking::Status::Uncertain:
+      std::cerr << "who is talking: uncertain (best_score=" << out.who.score
+                << ")\n";
+      break;
+    case WhoIsTalking::Status::Unknown:
+      std::cerr << "who is talking: unknown (no gallery / no embedding)\n";
+      break;
+  }
+
+  // Phone path still stubbed — print is enough for offline MVP.
   (void)phone_.send_who_is_talking(out.who);
 }
 

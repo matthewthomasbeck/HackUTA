@@ -37,15 +37,25 @@ voice-fingerprint → Bluetooth "who is talking" to the phone.
 13. On SIGINT/SIGTERM: stop listener + state machine, shut down
     models / phone / accelerators / link / capture
 
-## Stubs (empty bodies — fill later)
+## Offline voice ID (MVP — implemented)
+
+**Model:** `nemo_en_titanet_small.onnx` (192-d) via **sherpa-onnx** on CPU.  
+Details: [`docs/VOICE_ID.md`](docs/VOICE_ID.md).
+
+```bash
+./scripts/setup_voice_id.sh
+# add gallery/<Name>/*.wav  (16 kHz mono)
+cmake -S . -B build -DCALYPSO_SHERPA_ROOT=/path/to/sherpa-onnx
+cmake --build build && ./build/calypso_puck
+# journalctl -u calypso-puck -f   →  who is talking: Sarah (score=0.72)
+```
+
+## Still stubbed
 
 | Piece | Files | Role |
 |---|---|---|
-| `Accelerators` | `include/accelerators.hpp`, `src/accelerators.cpp` | `init_coral` / `init_ncs2` |
-| `PhoneLink` | `include/phone_link.hpp`, `src/phone_link.cpp` | BT to app; `send_who_is_talking` |
-| `OfflineBuffer` | `include/offline_buffer.hpp`, `src/offline_buffer.cpp` | Offline-only concat |
-| `Models` | `include/models.hpp`, `src/models.cpp` | CPU infer + `set_backend` |
-| `WhoIsTalking` | `include/types.hpp` | Identified / Uncertain / Unknown |
+| `Accelerators` | `accelerators.*` | Coral / NCS2 |
+| `PhoneLink` | `phone_link.*` | BT to app |
 
 ## Config (`config/.env`)
 

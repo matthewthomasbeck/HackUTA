@@ -28,6 +28,17 @@ int parse_int(const std::string& s, int fallback) {
   }
 }
 
+float parse_float(const std::string& s, float fallback) {
+  if (s.empty()) {
+    return fallback;
+  }
+  try {
+    return std::stof(s);
+  } catch (...) {
+    return fallback;
+  }
+}
+
 ModeSetting parse_mode_setting(const std::string& s) {
   if (s == "offline") {
     return ModeSetting::Offline;
@@ -92,7 +103,20 @@ bool load_config(const std::string& path, Config& out) {
   out.coral_device = get("CORAL_DEVICE");
   out.ncs2_device = get("NCS2_DEVICE");
   out.stt_model_path = get("STT_MODEL_PATH");
-  out.voice_model_path = get("VOICE_MODEL_PATH");
+  {
+    const std::string v = get("VOICE_MODEL_PATH");
+    if (!v.empty()) {
+      out.voice_model_path = v;
+    }
+  }
+  {
+    const std::string g = get("GALLERY_DIR");
+    if (!g.empty()) {
+      out.gallery_dir = g;
+    }
+  }
+  out.voice_match_threshold =
+      parse_float(get("VOICE_MATCH_THRESHOLD"), 0.55f);
   out.bt_adapter = get("BT_ADAPTER");
   out.bt_peer_name = get("BT_PEER_NAME");
 

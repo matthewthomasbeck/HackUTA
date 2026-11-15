@@ -75,9 +75,9 @@ int main() {
     std::cerr << "phone bluetooth connect skipped/stub\n";
   }
 
-  // Default InferBackend::Cpu; set INFER_BACKEND=coral|ncs2 later.
+  // Titanet-small on CPU; needs CALYPSO_SHERPA_ROOT at cmake time.
   if (!models.init(cfg.infer_backend, cfg.voice_model_path, cfg.stt_model_path,
-                   &accelerators)) {
+                   cfg.gallery_dir, cfg.voice_match_threshold, &accelerators)) {
     std::cerr << "models init skipped/stub — offline infer will no-op\n";
   }
 
