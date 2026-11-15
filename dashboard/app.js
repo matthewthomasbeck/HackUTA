@@ -16,7 +16,7 @@
   const TARGET_CARD_S = 2.5;    // sentence end → card on screen
   const FACE_HOLD_MS = 10000;   // a face identification outranks voice-only results for this long
   const CALLER = "caller";      // participant row for the 1:1 setup-call caller
-  const MODE_LABEL = { setup: "Setup call", recognize: "Recognition call", group: "Group call", auto: "1:1 call" };
+  const MODE_LABEL = { setup: "Setup call", recognize: "Recognition call", group: "Group call", auto: "1:1 call", group_intro: "Group introductions" };
   // A 1:1 (auto) call recognizes first, then either ends recognized or interviews a new caller.
   const PHASE_LABEL = { recognizing: "Recognizing", interviewing: "Interviewing", recognized: "Recognized", saved: "Saved" };
   const callLabel = (c) => {
