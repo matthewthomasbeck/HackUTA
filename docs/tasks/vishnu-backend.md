@@ -274,3 +274,23 @@ Check off steps here as you go (`- [x]`). Shared data shapes live in `backend/ca
   - `test_puck_health_rebroadcast`
 - [ ] **Step 2:** Run → FAIL. **Step 3:** Implement the endpoints and the page (vanilla JS `EventSource`, plus a CDN chart library for the sparklines if wanted). **Step 4:** Run → PASS.
 - [ ] **Step 5:** Open `https://<host>/dashboard`, talk near the puck, and run a call → all three panels update live. Commit `feat(dashboard): judge dashboard`.
+
+## Status and notes
+
+- **M1 done (branch `feat/backend-skeleton`):** the full API surface with its final shapes. The contract is in [`docs/api.md`](../api.md), and 57 tests pass.
+  - Real now: health, the SSE stream, people CRUD and memories, media, puck intake (dedupe, sound tags, inline/RQ job, temp audio deleted), puck health, calls, days by local day, iOS visits and photos.
+  - Stubs with their final shape: `/recognize` (always `learning`), `/recall` (always `none`), `/people/from_intro` (unnamed person and photo), `/days/{date}/rebuild`.
+- **Team decisions** (since the plan was written):
+  - Calls are face first, voice second (unchanged).
+  - Voice also links puck conversations to people: the puck has no camera.
+  - Audio is never stored. It's processed, then deleted. S3 is only for face crops and photos.
+  - Slow processing runs on Keanu's RQ worker (`CALYPSO_JOBS=rq`), using the same SQLite file in WAL mode.
+  - Grok does STT and diarization only. Voiceprints come from SpeechBrain ECAPA, and face prints from insightface.
+- **iOS contract** (agreed with Eric):
+  - `GET /people/{id}` is a flat Person plus `memories: [str]`.
+  - `DayEvent.people` holds ids.
+  - Images are public at `/media/...` with absolute https URLs.
+  - Days are the patient's local day (`CALYPSO_TZ`).
+  - The app's `API_BASE_URL` = `CALYPSO_PUBLIC_URL`, and `API_TOKEN` = `CALYPSO_API_TOKEN`.
+- **Times:** stored as fixed-width UTC (`2026-11-14T15:30:00.123Z`). A time with no zone is treated as UTC, never rejected, so the puck queue can't stall.
+- **Next:** M2 enrollment and fusion (Tasks 4–5 with fake embedders), M3 real models, M4 puck pipeline (Grok and ECAPA on the worker), M5 linking and memories, M6 day builder, recall, dashboard and deploy.
