@@ -357,3 +357,56 @@ def test_recognize_configuration_defaults_to_real_matching():
     assert not Config.from_env(env).controlled
     env["CALYPSO_CONTROLLED_RECOGNITION"] = "true"
     assert Config.from_env(env).controlled
+
+
+@pytest.mark.asyncio
+async def test_missing_bridge_metadata_waits_for_confirmed_call_api():
+    room = Events()
+    confirmed = asyncio.Event()
+    async def poll():
+        await confirmed.wait()
+        return "chert_call_api"
+    task = asyncio.create_task(wait_bridge_ready(room, timeout=1,
+        confirmed_bridge=poll))
+    await asyncio.sleep(0)
+    assert not task.done()  # prewarm/published tracks alone must not start greeting
+    confirmed.set()
+    assert await task == "chert_call_api"
+    assert not room.handlers["room_metadata_changed"]
+
+
+@pytest.mark.asyncio
+async def test_bridge_metadata_wins_without_waiting_for_video():
+    room = Events()
+    room.metadata = '{"chert_bridge_ready":true}'
+    assert await wait_bridge_ready(room, timeout=0.1,
+        confirmed_bridge=lambda: asyncio.Event().wait()) == "room_metadata"
+    assert not room.handlers["room_metadata_changed"]
+
+
+@pytest.mark.asyncio
+async def test_bridge_wait_cancellation_removes_listener_and_child_tasks():
+    room = Events()
+    task = asyncio.create_task(wait_bridge_ready(room,
+        confirmed_bridge=lambda: asyncio.Event().wait()))
+    await asyncio.sleep(0)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert not room.handlers["room_metadata_changed"]
+
+
+@pytest.mark.asyncio
+async def test_metadata_and_api_race_returns_once_and_cleans_both_waiters():
+    room = Events()
+    ended = asyncio.Event()
+    async def poll():
+        try:
+            room.metadata = '{"chert_bridge_ready":true}'
+            room.emit("room_metadata_changed")
+            return "chert_call_api"
+        finally:
+            ended.set()
+    source = await wait_bridge_ready(room, timeout=1, confirmed_bridge=poll)
+    assert source in {"room_metadata", "chert_call_api"}
+    assert ended.is_set() and not room.handlers["room_metadata_changed"]

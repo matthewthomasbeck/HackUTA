@@ -217,7 +217,7 @@ class Publisher:
         await self.source.aclose()
 
 
-async def wait_bridge_ready(room, timeout=60):
+async def wait_bridge_ready(room, timeout=60, *, confirmed_bridge=None):
     ready = asyncio.Event()
     def changed(*_):
         try:
@@ -227,10 +227,25 @@ async def wait_bridge_ready(room, timeout=60):
             pass
     room.on("room_metadata_changed", changed)
     changed()
+    async def metadata_ready():
+        await ready.wait()
+        return "room_metadata"
+
+    tasks = [asyncio.create_task(metadata_ready())]
+    if confirmed_bridge is not None:
+        tasks.append(asyncio.create_task(confirmed_bridge()))
     try:
-        await asyncio.wait_for(ready.wait(), timeout)
+        done, _ = await asyncio.wait(tasks, timeout=timeout, return_when=asyncio.FIRST_COMPLETED)
+        if not done:
+            raise TimeoutError("No confirmed Chert bridge readiness arrived")
+        source = next(iter(done)).result()
+        logging.getLogger("calypso.live").info("bridge_ready source=%s", source)
+        return source
     finally:
         room.off("room_metadata_changed", changed)
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
 
 
 async def video_frames(track, callback):
