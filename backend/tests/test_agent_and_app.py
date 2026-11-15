@@ -14,11 +14,12 @@ def b64(data: bytes) -> str:
 
 # --- recognize / recall stubs -------------------------------------------------
 
-def test_recognize_stub_face_is_learning(client):
+def test_recognize_unknown_face_is_learning(client):
     r = client.post("/recognize", headers=AUTH, json={"face_jpeg_b64": b64(JPEG), "participant_key": "p1"})
     assert r.status_code == 200
-    assert r.json() == {"faces": [{"bbox": None, "result": {"status": "learning", "person_id": None,
-                                                            "face_score": None, "voice_score": None}}],
+    assert r.json() == {"faces": [{"bbox": {"x": 0, "y": 0, "w": 100, "h": 100},
+                                   "result": {"status": "learning", "person_id": None,
+                                              "face_score": None, "voice_score": None}}],
                         "voice_only": None}
 
 
