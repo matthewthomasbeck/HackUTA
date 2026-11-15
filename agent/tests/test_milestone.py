@@ -235,3 +235,35 @@ async def test_http_enrollment_call_logging_and_events_match_contract():
         await api.event("card.queued", {})
         await api.end_call(call.id)
     assert seen == ["/calls", "/calls/c1/lines", "/people/from_intro", "/agent/events", "/calls/c1/end"]
+
+
+def test_identity_replaces_placeholders_in_observed_call_sequence():
+    now = [0.0]
+    scheduler = CardScheduler(clock=lambda: now[0])
+    waiting = Card(kind="learning", title="Looking for a familiar face…", lines=[])
+    uncertain = Card(kind="learning", title="Not sure who this is yet…", lines=[])
+    identity = Card(kind="identity", title="Keanu", lines=["Mary's brother", "School together"])
+    scheduler.push(waiting)
+    assert scheduler.current() == waiting
+    scheduler.push(uncertain)
+    assert not scheduler.push(uncertain)
+    now[0] = 4
+    scheduler.push(identity)
+    assert scheduler.current() == identity
+    now[0] = 15
+    assert scheduler.current() is None  # no stale uncertainty left in the queue
+
+
+def test_identity_does_not_preempt_another_real_card():
+    now = [0.0]
+    scheduler = CardScheduler(clock=lambda: now[0])
+    memory = Card(kind="memory", title="A shared memory", lines=["A day at the lake"])
+    identity = Card(kind="identity", title="Keanu", lines=["Mary's brother"])
+    scheduler.push(memory)
+    assert scheduler.current() == memory
+    now[0] = 2
+    scheduler.push(Card(kind="learning", title="Not sure", lines=[]))
+    scheduler.push(identity)
+    assert scheduler.current() == memory
+    now[0] = 6
+    assert scheduler.current() == identity
