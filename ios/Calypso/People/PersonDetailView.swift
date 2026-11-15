@@ -12,6 +12,8 @@ struct PersonDetailView: View {
     let client: APIClient?
     @State var person: Person
     var onUpdate: (Person) -> Void = { _ in }
+    /// The back button's label: the screen this was pushed from.
+    var backLabel = "People"
     @State private var memories: [String] = []
     @State private var editing = false
     @State private var draftName = ""
@@ -25,8 +27,9 @@ struct PersonDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     init(client: APIClient?, person: Person, onUpdate: @escaping (Person) -> Void = { _ in },
-         startEditing: Bool = false, startCalling: Bool = false) {
+         startEditing: Bool = false, startCalling: Bool = false, backLabel: String = "People") {
         self.client = client
+        self.backLabel = backLabel
         _person = State(initialValue: person)
         self.onUpdate = onUpdate
         _editing = State(initialValue: startEditing)
@@ -39,7 +42,7 @@ struct PersonDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                BackButton("People") { dismiss() }
+                BackButton(backLabel) { dismiss() }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if let name = person.displayName {
                     namedIdentity(name)

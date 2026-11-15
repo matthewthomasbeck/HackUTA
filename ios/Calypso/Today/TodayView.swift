@@ -1,13 +1,19 @@
 import SwiftUI
 
-/// Today (Figma 20:489, quiet day 20:1025, couldn't load 20:1097): header, day switcher, hero photo, then the
-/// day's moments on a sea-path rail. `initialDay` exists for the DEBUG `-screen` routes.
+/// Today (Figma 20:489, live card 81:427, quiet day 20:1025, couldn't load 20:1097): header, day switcher, the
+/// live "talking with" card (today only), then the day's moments on a sea-path rail. The card opens the speaker's
+/// person screen, or the "Someone new" sheet. `initialDay` exists for the DEBUG `-screen` routes.
 struct TodayView: View {
     let client: APIClient?
     @State private var day: Date
     @State private var content = DayContent()
+    @State private var people: [Person] = []
     @State private var names: [String: String] = [:]
     @State private var pickingDay = false
+    @State private var openedPerson: Person?
+    @State private var showingSomeoneNew = false
+
+    @EnvironmentObject private var puck: PuckConnection
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -35,11 +41,37 @@ struct TodayView: View {
         state == .loaded && !events.isEmpty && !showsWalkingGull && !dynamicTypeSize.isAccessibilitySize
     }
 
+    private var talkingTo: TalkingToPresentation {
+        .make(state: puck.state, speaker: puck.speaker, people: people)
+    }
+
     var body: some View {
+        NavigationStack {
+            scroll
+                // Hidden here and on the person screen, which draws its own back button.
+                .navigationTitle("Today")
+                .toolbar(.hidden, for: .navigationBar)
+                .navigationDestination(isPresented: Binding(get: { openedPerson != nil },
+                                                            set: { if !$0 { openedPerson = nil } })) {
+                    if let person = openedPerson {
+                        PersonDetailView(client: client, person: person, backLabel: "Today")
+                    }
+                }
+                .sheet(isPresented: $showingSomeoneNew) { SomeoneNewSheet() }
+        }
+        .tint(Color.periwinkleDeep)
+    }
+
+    private var scroll: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     header
+                    if isToday {
+                        TalkingToCard(presentation: talkingTo, action: openTalkingTo)
+                            .padding(.horizontal, 24)
+                            .padding(.top, 8)
+                    }
                     stateContent
                 }
                 .padding(.bottom, 24)
@@ -65,6 +97,15 @@ struct TodayView: View {
     }
 
     private static let endNoteID = "today.endNote"
+
+    private func openTalkingTo() {
+        switch talkingTo {
+        case .person(let person): openedPerson = person
+        case .someoneNew: showingSomeoneNew = true
+        case .notConnected: puck.reconnectRemembered()
+        case .quiet: break
+        }
+    }
 
     // MARK: Header
 
@@ -133,7 +174,6 @@ struct TodayView: View {
 
     private var moments: some View {
         VStack(alignment: .leading, spacing: 16) {
-            FamilyPhotoPlaceholder()
             Text("Your day")
                 .calypsoFont(.headline)
                 .foregroundStyle(Color.ink)
@@ -182,6 +222,7 @@ struct TodayView: View {
         do {
             async let loaded = client.events(day: key)
             if let people = try? await client.people(), isCurrent(key) {
+                self.people = people
                 names = Dictionary(uniqueKeysWithValues: people.compactMap { p in p.displayName.map { (p.id, $0) } })
             }
             let sorted = try await loaded.sorted { $0.start < $1.start }
@@ -264,4 +305,5 @@ private struct DayPickerSheet: View {
 
 #Preview("Today (no client)") {
     TodayView(client: nil)
+        .environmentObject(PuckConnection(link: FakePuckLink(pinnedSpeaker: .sarah)))
 }
