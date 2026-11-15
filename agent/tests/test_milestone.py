@@ -86,6 +86,15 @@ def test_identified_emits_identity_card_once():
     assert state.on_result("phone", result) == []
 
 
+def test_identity_without_relationship_keeps_memory_out_of_the_relationship_slot():
+    state = CallState({"r": PersonDetail(id="r", name="Sarah", memories=["Loves gardening"])})
+    [card] = state.on_result("phone", RecognitionResult(status="identified", person_id="r"))
+    assert card.lines == ["", "Loves gardening"]
+    state = CallState({"r": PersonDetail(id="r", name="Sarah", relationship="daughter", memories=["Bakes"])})
+    [card] = state.on_result("phone", RecognitionResult(status="identified", person_id="r"))
+    assert card.lines == ["daughter", "Bakes"]
+
+
 def test_learning_debounced_three_frames_and_uncertainty_resets():
     state = CallState({})
     learning = RecognitionResult(status="learning")
