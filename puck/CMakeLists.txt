@@ -22,6 +22,9 @@ add_library(calypso_core STATIC
   src/wav.cpp
   src/util.cpp
   src/segment_spool.cpp
+  src/clock_sync.cpp
+  src/segmenter.cpp
+  src/uploader.cpp
 )
 target_include_directories(calypso_core PUBLIC include)
 
@@ -78,4 +81,7 @@ if(CALYPSO_BUILD_TESTS)
   add_executable(test_segment_spool tests/test_segment_spool.cpp)
   target_link_libraries(test_segment_spool PRIVATE calypso_core)
   add_test(NAME segment_spool COMMAND test_segment_spool)
+  add_executable(test_uploader tests/test_uploader.cpp)
+  target_link_libraries(test_uploader PRIVATE calypso_core)
+  add_test(NAME uploader COMMAND test_uploader)
 endif()

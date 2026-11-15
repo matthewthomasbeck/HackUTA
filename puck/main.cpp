@@ -4,12 +4,15 @@
 #include "accelerators.hpp"
 #include "backend_link.hpp"
 #include "capture.hpp"
+#include "clock_sync.hpp"
 #include "config.hpp"
 #include "connection_listener.hpp"
 #include "models.hpp"
 #include "phone_link.hpp"
+#include "segment_spool.hpp"
 #include "state_machine.hpp"
 #include "types.hpp"
+#include "uploader.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -55,8 +58,7 @@ int main() {
     std::cerr << "mic init failed — set MIC_DEVICE to an ALSA name or 'sine'\n";
     return 1;
   }
-  if (!link.init(cfg.backend_ip, cfg.backend_port, cfg.api_token,
-                 cfg.segment_ms)) {
+  if (!link.init(cfg.backend_ip, cfg.backend_port, cfg.api_token)) {
     std::cerr << "backend link init failed\n";
     return 1;
   }
@@ -94,8 +96,34 @@ int main() {
             << (initial == calypso::RunMode::Online ? "ONLINE" : "OFFLINE")
             << " mode\n";
 
+  calypso::SegmentSpool spool(
+      cfg.spool_dir,
+      static_cast<std::uint64_t>(cfg.spool_max_mb > 0 ? cfg.spool_max_mb : 512) *
+          1024ull * 1024ull);
+  calypso::SystemClock clock;
+  std::atomic<bool> upload_stop{false};
+  std::atomic<bool> last_upload_ok{true};
+  calypso::Uploader uploader(
+      spool,
+      [&](const std::string& wav, const std::string& meta) {
+        const int st = link.post_segment(wav, meta);
+        last_upload_ok.store(st >= 200 && st < 300);
+        return st;
+      },
+      clock);
+  std::thread upload_thread([&] { uploader.run(upload_stop); });
+  std::thread health_thread([&] {
+    while (!upload_stop.load()) {
+      link.post_health(spool.depth(), clock.now().synced, last_upload_ok.load());
+      for (int i = 0; i < 100 && !upload_stop.load(); ++i) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      }
+    }
+  });
+
   calypso::StateMachine sm(capture, link, models, phone,
-                           cfg.offline_segment_ms);
+                           cfg.offline_segment_ms, spool, clock,
+                           cfg.segment_ms);
   calypso::ConnectionListener listener(link, sm, cfg.connect_retry_sec,
                                        cfg.connection_check_sec,
                                        force_offline);
@@ -110,6 +138,9 @@ int main() {
   std::cerr << "shutting down\n";
   listener.stop();
   sm.stop();
+  upload_stop.store(true);  // uploader finishes its in-flight POST, then exits
+  upload_thread.join();
+  health_thread.join();
   models.shutdown();
   phone.shutdown();
   accelerators.shutdown();

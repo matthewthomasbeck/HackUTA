@@ -32,6 +32,9 @@ struct Config {
   std::string gallery_dir = "gallery";
   float voice_match_threshold = 0.55f;
 
+  std::string spool_dir = "/var/lib/calypso-puck/spool";
+  int spool_max_mb = 512;
+
   std::string bt_adapter;     // e.g. hci0
   std::string bt_peer_name;   // phone / app advertisement name
 };

@@ -15,17 +15,28 @@ voice-fingerprint → Bluetooth "who is talking" to the phone.
 6. **Always:** listen thread: mic/sine → `CHUNK_MS` chunks → in-memory queue
 7. Worker pops chunks and branches on mode
 
-### Online
-8. Buffer chunks until `SEGMENT_MS` (`BackendLink`)
-9. `POST /puck/segments` (wav + meta + Bearer token)
-10. On success: clear buffer; on fail: keep audio, mark disconnected → Offline
+### Spool + uploader (both modes)
+8. Every `CHUNK_MS` chunk goes to the `Segmenter`; after `SEGMENT_MS` of audio
+   it emits a segment with a fresh uuid, ts, and clock metadata (`time_synced`,
+   `boot_id`, boot ms), written atomically to the on-disk `SegmentSpool`
+   (`PUCK_SPOOL_DIR`, capped at `PUCK_SPOOL_MAX_MB`, oldest evicted first).
+   The uuid is fixed at enqueue, so retries and restarts are idempotent.
+9. The `Uploader` thread runs for the life of the process: it drains the spool
+   oldest-first via `POST /puck/segments`. 2xx (incl. `duplicate:true`) and 409
+   remove the item; other 4xx move it to `<spool>/rejected/`; 5xx or a
+   transport error stops the pass and backs off 1s doubling to 60s.
+10. Clock: if the Pi booted without NTP, segments are saved `time_synced=false`
+    with boot-relative times. Once synced, pending items from the same boot are
+    corrected (`ts = realtime_now - (boot_ms_now - boot_ms_capture)`); items
+    from an earlier boot upload as `time_synced=false`. `/puck/health` reports
+    the real `time_synced` and `queue_depth`.
 
 ### Offline (emergency voice ID)
-8. Feed the same `CHUNK_MS` frames into `OfflineBuffer` (concat to
+11. Feed the same `CHUNK_MS` frames into `OfflineBuffer` (concat to
    `OFFLINE_SEGMENT_MS` — **does not** touch the online upload buffer)
-9. `Models::infer` on the concatenated clip (CPU now; `INFER_BACKEND` /
+12. `Models::infer` on the concatenated clip (CPU now; `INFER_BACKEND` /
    `Models::set_backend` for Coral/NCS2 later)
-10. `PhoneLink::send_who_is_talking(out.who)` → phone app
+13. `PhoneLink::send_who_is_talking(out.who)` → phone app
 
 ### Mode switching
 11. Connection listener: if connected → Online; if not → wait, retry connect,
