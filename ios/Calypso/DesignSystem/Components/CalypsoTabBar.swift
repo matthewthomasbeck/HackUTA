@@ -20,8 +20,8 @@ enum HomeTab: Int, CaseIterable {
     }
 }
 
-/// Figma `Tab Bar` (17:147): Card background, Periwinkle Mist top hairline, Mist pill behind the selected icon
-/// only. The selected label is Periwinkle Deep on Card; unselected items are Ink. The system tab bar is
+/// Figma `Tab Bar` (17:147): Card background, 2pt Periwinkle Mist top line, Mist pill behind the selected icon
+/// only. The selected icon and label are Periwinkle Deep on Card; unselected items are Ink Soft. The system tab bar is
 /// replaced because the iOS 26 one is glass (plan ruling); VoiceOver semantics are kept by hand.
 struct CalypsoTabBar: View {
     @Binding var selection: HomeTab
@@ -37,9 +37,10 @@ struct CalypsoTabBar: View {
             }
         }
         .padding(.horizontal, 8)
+        .padding(.top, 2) // the top line sits above the tabs, as a Figma border does
         .background(alignment: .top) {
             Color.card
-                .overlay(alignment: .top) { Color.periwinkleMist.frame(height: 1) }
+                .overlay(alignment: .top) { Color.periwinkleMist.frame(height: 2) }
                 .ignoresSafeArea(edges: .bottom)
         }
         // Tab labels are capped like the system bar; the Large Content Viewer covers bigger sizes.
@@ -53,12 +54,12 @@ struct CalypsoTabBar: View {
         } label: {
             VStack(spacing: 2) {
                 CalypsoIcon(tab.systemImage, size: 28, relativeTo: .footnote)
-                    .foregroundStyle(selected ? Color.periwinkleDeep : Color.ink)
+                    .foregroundStyle(selected ? Color.periwinkleDeep : Color.inkSoft)
                     .frame(width: 64, height: 32)
                     .background(selected ? Color.periwinkleMist : Color.clear, in: Capsule())
                 Text(tab.title)
                     .calypsoFont(.caption)
-                    .foregroundStyle(selected ? Color.periwinkleDeep : Color.ink)
+                    .foregroundStyle(selected ? Color.periwinkleDeep : Color.inkSoft)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }

@@ -12,6 +12,7 @@
 		064661FD9AFB1256F1112965 /* MomentCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA7E994FE48D2107E9B5BC3 /* MomentCard.swift */; };
 		0B92D28E1121C6A3B27DB62E /* ComponentsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221385F83789EE45B9C7A7F3 /* ComponentsTests.swift */; };
 		0B9E793E6CC3519125895CE1 /* PhotoTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A48544A88801A6AC7BE05C /* PhotoTile.swift */; };
+		0D836EFCB133EA0320A2BC09 /* ResetConfirmDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F022AE38FF2E14D588D599CD /* ResetConfirmDialog.swift */; };
 		14CEEED30611C0920CB3F904 /* DayPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A202F17A972A83C548345B9 /* DayPresentation.swift */; };
 		172F266470305939F3DBF943 /* ScreenRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19BA6629159A25F7BB20A7F0 /* ScreenRoute.swift */; };
 		18CEFE84A165DAE4C8B55037 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = C000207E3BE110C95A3CC700 /* Typography.swift */; };
@@ -142,6 +143,7 @@
 		EBBB739A589A7F912F54233D /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
 		ECE05A37936A65DEB8235E2F /* CalypsoButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalypsoButton.swift; sourceTree = "<group>"; };
 		ED6FAFEF92E8AA73E9348CEC /* SwipeBack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeBack.swift; sourceTree = "<group>"; };
+		F022AE38FF2E14D588D599CD /* ResetConfirmDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetConfirmDialog.swift; sourceTree = "<group>"; };
 		F26F48A3EF1D19ADF7191BD1 /* StepDots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepDots.swift; sourceTree = "<group>"; };
 		F88CAB202EF683EA5FCD9937 /* CalypsoTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalypsoTabBar.swift; sourceTree = "<group>"; };
 		FFFD5920901B83B310B84DF0 /* ModelsDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsDecodingTests.swift; sourceTree = "<group>"; };
@@ -193,6 +195,7 @@
 			isa = PBXGroup;
 			children = (
 				E9DE861182F214754D6B51F7 /* AccountView.swift */,
+				F022AE38FF2E14D588D599CD /* ResetConfirmDialog.swift */,
 			);
 			path = Account;
 			sourceTree = "<group>";
@@ -507,6 +510,7 @@
 				54A317F607A71DF3EFCD4B0C /* PhotoSync.swift in Sources */,
 				0B9E793E6CC3519125895CE1 /* PhotoTile.swift in Sources */,
 				A295855598C9783B2885D720 /* PlaceRow.swift in Sources */,
+				0D836EFCB133EA0320A2BC09 /* ResetConfirmDialog.swift in Sources */,
 				172F266470305939F3DBF943 /* ScreenRoute.swift in Sources */,
 				854097E7BA9CE31AF2EF996D /* SeaPathRail.swift in Sources */,
 				1BE05D2879186A107C092786 /* StepDots.swift in Sources */,

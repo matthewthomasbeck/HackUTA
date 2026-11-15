@@ -51,6 +51,17 @@ enum ScreenRoute {
             return AnyView(DebugPersonStack(seed: Person(id: "p_unknown")))
         case "edit-name-p_unknown":
             return AnyView(DebugPersonStack(seed: Person(id: "p_unknown"), startEditing: true))
+        case "home":
+            return AnyView(HomeView())
+        case "account":
+            return AnyView(HomeView(initialTab: .account))
+        case "account-bottom":
+            return AnyView(AccountView().defaultScrollAnchor(.bottom)
+                .safeAreaInset(edge: .bottom, spacing: 0) { CalypsoTabBar(selection: .constant(.account)) })
+        case "reset":
+            // Account with the dialog open, over the same tab bar the app shows.
+            return AnyView(AccountView(confirmingReset: true)
+                .safeAreaInset(edge: .bottom, spacing: 0) { CalypsoTabBar(selection: .constant(.account)) })
         #endif
         default:
             return AnyView(Text("Unknown route").calypsoFont(.body).padding())

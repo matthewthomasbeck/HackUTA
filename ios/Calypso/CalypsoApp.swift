@@ -43,15 +43,31 @@ struct CalypsoApp: App {
     }
 }
 
+/// The system tab bar is hidden (the iOS 26 one is glass) and `CalypsoTabBar` sits in the bottom safe area
+/// instead, so every tab's content scrolls clear of it.
 struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @State private var tab: HomeTab
     private let client = APIClient.configured
 
+    init(initialTab: HomeTab = .today) {
+        _tab = State(initialValue: initialTab)
+    }
+
     var body: some View {
-        TabView {
-            TodayView(client: client).tabItem { Label("Today", systemImage: "clock") }
-            PeopleListView(client: client).tabItem { Label("People", systemImage: "person.2") }
-            AccountView().tabItem { Label("Account", systemImage: "person.crop.circle") }
+        TabView(selection: $tab) {
+            TodayView(client: client)
+                .tag(HomeTab.today)
+                .toolbar(.hidden, for: .tabBar)
+            PeopleListView(client: client)
+                .tag(HomeTab.people)
+                .toolbar(.hidden, for: .tabBar)
+            AccountView()
+                .tag(HomeTab.account)
+                .toolbar(.hidden, for: .tabBar)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            CalypsoTabBar(selection: $tab)
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             if phase == .active, let client { Task { await PhotoSync.syncNew(using: client) } }
