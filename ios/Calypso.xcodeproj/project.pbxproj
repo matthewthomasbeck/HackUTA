@@ -40,6 +40,7 @@
 		362428DF86F440D3E3E4FADE /* TabBarClearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = A283CAB04985202DD609D612 /* TabBarClearance.swift */; };
 		367C353412EB4741F36914DD /* CalypsoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BA8A7316EEF065BD5C1F278 /* CalypsoApp.swift */; };
 		3AD7B682CCE8CAFB4FFE65BB /* DaySwitcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 998AFCC2F781DF2228746AC0 /* DaySwitcher.swift */; };
+		3FFFBC69D5A0280FC7DA6526 /* ConnectPuckView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C5154BDC6CC8F04145DD61B /* ConnectPuckView.swift */; };
 		44E94392D6C8D143DC26C5B0 /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B6BB8C1DAF0F0A34D244938 /* Palette.swift */; };
 		4511E419BEE3C82F6AE6E1CF /* Logo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D0D637A2CA5E624A76ED57E /* Logo.swift */; };
 		45256228BE67DF436B2BD60A /* Fraunces-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8C02AFFEE4EA0C4746132B7F /* Fraunces-SemiBold.ttf */; };
@@ -94,6 +95,7 @@
 		EA59C67737D4B673E42E12C0 /* card.json in Resources */ = {isa = PBXBuildFile; fileRef = DD27CA6990D892953719D4B1 /* card.json */; };
 		ECCD5911526611BE8E7CC2E5 /* DayPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E330351A31673814846B7D47 /* DayPresentationTests.swift */; };
 		EDC9AC698844006B2323993D /* PuckMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14F65908C7B78824738663F2 /* PuckMessages.swift */; };
+		EE05727C9CBA04627893213D /* ConnectPuckPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63C9246EC883E5AD416051C7 /* ConnectPuckPresentationTests.swift */; };
 		EEEA420146FFEFCCBC8E3CE1 /* BLEPuckLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 916073FA042EFCBB4272AD53 /* BLEPuckLink.swift */; };
 		F3FA10055E7A8ADA7C07BE90 /* OFL-Nunito.txt in Resources */ = {isa = PBXBuildFile; fileRef = 05BDE8C999D8C72BB74C5FF0 /* OFL-Nunito.txt */; };
 		F67E312763B60B576CB146DE /* ContactPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A4ADF1D3D9EF0A14A8B3C2C /* ContactPicker.swift */; };
@@ -131,6 +133,7 @@
 		3A202F17A972A83C548345B9 /* DayPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayPresentation.swift; sourceTree = "<group>"; };
 		3A4ADF1D3D9EF0A14A8B3C2C /* ContactPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactPicker.swift; sourceTree = "<group>"; };
 		3A9EBD092A4C4DA4B07AEB04 /* OFL-Fraunces.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-Fraunces.txt"; sourceTree = "<group>"; };
+		3C5154BDC6CC8F04145DD61B /* ConnectPuckView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectPuckView.swift; sourceTree = "<group>"; };
 		3E5625713F764A28E883288E /* MessageComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageComposeView.swift; sourceTree = "<group>"; };
 		3F5A886F2AD7621F08FA030F /* HeroPhoto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroPhoto.swift; sourceTree = "<group>"; };
 		4B6BB8C1DAF0F0A34D244938 /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
@@ -144,6 +147,7 @@
 		5D0D637A2CA5E624A76ED57E /* Logo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logo.swift; sourceTree = "<group>"; };
 		60A48544A88801A6AC7BE05C /* PhotoTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoTile.swift; sourceTree = "<group>"; };
 		619D8BAB1B9994414C0F8BFF /* PhotoSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoSyncTests.swift; sourceTree = "<group>"; };
+		63C9246EC883E5AD416051C7 /* ConnectPuckPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectPuckPresentationTests.swift; sourceTree = "<group>"; };
 		66A1EEECD7F59818BDAFFA3A /* PhotoSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoSync.swift; sourceTree = "<group>"; };
 		66C4426D34E7133D06233BDD /* PeopleListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleListView.swift; sourceTree = "<group>"; };
 		67362F56F646B0C8A4C00B65 /* VisitSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisitSyncTests.swift; sourceTree = "<group>"; };
@@ -215,6 +219,7 @@
 			children = (
 				1F63932741AF35C8CEF7253B /* AddContactView.swift */,
 				348F8FE257BB4FB58D2A7A54 /* AllSetView.swift */,
+				3C5154BDC6CC8F04145DD61B /* ConnectPuckView.swift */,
 				3A4ADF1D3D9EF0A14A8B3C2C /* ContactPicker.swift */,
 				8751105924CDD3FC29E760CE /* FamilyInvite.swift */,
 				CCC8E90F0AA08BAC56087EB2 /* GroupCallHowToView.swift */,
@@ -235,6 +240,7 @@
 				C797C3D6ECB309A57E97CF5D /* BLEPuckLinkTests.swift */,
 				E5404021D99ED1C31032DF14 /* CallRequestTests.swift */,
 				221385F83789EE45B9C7A7F3 /* ComponentsTests.swift */,
+				63C9246EC883E5AD416051C7 /* ConnectPuckPresentationTests.swift */,
 				AFA318F059492AB2C1179647 /* ContactBuilderTests.swift */,
 				E330351A31673814846B7D47 /* DayPresentationTests.swift */,
 				73B2520CB080608B20FAAD51 /* DesignSystemTests.swift */,
@@ -561,6 +567,7 @@
 				06EB51948CE21FD738F4E73B /* BLEPuckLinkTests.swift in Sources */,
 				23EE01EDD97EBB76BB7BC6E8 /* CallRequestTests.swift in Sources */,
 				0B92D28E1121C6A3B27DB62E /* ComponentsTests.swift in Sources */,
+				EE05727C9CBA04627893213D /* ConnectPuckPresentationTests.swift in Sources */,
 				03523954E6FF5DA23FF86B05 /* ContactBuilderTests.swift in Sources */,
 				ECCD5911526611BE8E7CC2E5 /* DayPresentationTests.swift in Sources */,
 				AB64BA5BA34F86A82DCC7527 /* DesignSystemTests.swift in Sources */,
@@ -597,6 +604,7 @@
 				82C733EE685C86EA5C5C2791 /* CalypsoTabBar.swift in Sources */,
 				7293061DC2F18B0188E77157 /* ComponentsSpecimen.swift in Sources */,
 				7F46DBB0D390E1258E5D7BB5 /* Config.swift in Sources */,
+				3FFFBC69D5A0280FC7DA6526 /* ConnectPuckView.swift in Sources */,
 				1ADFCE652FF794F86CCB9FC7 /* ContactBuilder.swift in Sources */,
 				F67E312763B60B576CB146DE /* ContactPicker.swift in Sources */,
 				14CEEED30611C0920CB3F904 /* DayPresentation.swift in Sources */,
