@@ -47,6 +47,7 @@ int http_request(const std::string& url, const std::string& token,
   struct curl_slist* headers = curl_slist_append(nullptr, auth.c_str());
   curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
   curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+  curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 5L);
   curl_easy_setopt(curl, CURLOPT_TIMEOUT, 60L);
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, append_write);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body);
@@ -134,30 +135,62 @@ int main(int argc, char** argv) {
     return 2;
   }
 
-  calypso::Capture capture;
-  if (!capture.init(cfg.mic_device, cfg.chunk_ms)) {
-    std::cerr << "could not open mic " << cfg.mic_device
-              << " \xe2\x80\x94 stop the puck first: sudo systemctl stop calypso-puck\n";
-    curl_global_cleanup();
-    return 3;
+  // Probe the mic once so a busy device fails before any prompt.
+  {
+    calypso::Capture probe;
+    if (!probe.init(cfg.mic_device, cfg.chunk_ms)) {
+      std::cerr << "could not open mic " << cfg.mic_device
+                << " \xe2\x80\x94 stop the puck first: sudo systemctl stop calypso-puck\n";
+      curl_global_cleanup();
+      return 3;
+    }
+    probe.shutdown();
   }
-  capture.set_gain(cfg.mic_gain);
+
+  char* esc = curl_easy_escape(nullptr, id->c_str(), static_cast<int>(id->size()));
+  const std::string voice_url =
+      base + "/people/" + (esc ? esc : *id) + "/voice";
+  if (esc) {
+    curl_free(esc);
+  }
 
   int uploaded = 0;
   for (int n = 1; n <= samples; ++n) {
     std::cout << "Sample " << n << "/" << samples << ": read aloud for "
-              << seconds << " seconds\xe2\x80\xa6 3 2 1 go" << std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+              << seconds << " seconds\xe2\x80\xa6" << std::flush;
+    for (const char* c : {" 3", " 2", " 1"}) {
+      std::cout << c << std::flush;
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+    std::cout << " go" << std::endl;
 
+    // Fresh capture per sample: the ALSA buffer overruns while we upload.
+    calypso::Capture capture;
+    if (!capture.init(cfg.mic_device, cfg.chunk_ms)) {
+      std::cout << "no audio captured from " << cfg.mic_device
+                << ", check the mic and that the puck service is stopped"
+                << std::endl;
+      continue;
+    }
+    capture.set_gain(cfg.mic_gain);
     std::vector<std::int16_t> pcm;
     const auto deadline =
         std::chrono::steady_clock::now() + std::chrono::seconds(seconds);
     while (std::chrono::steady_clock::now() < deadline) {
       calypso::AudioChunk chunk;
       if (!capture.read_chunk(chunk)) {
-        break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        continue;
       }
       pcm.insert(pcm.end(), chunk.pcm.begin(), chunk.pcm.end());
+    }
+    capture.shutdown();
+
+    if (pcm.empty()) {
+      std::cout << "no audio captured from " << cfg.mic_device
+                << ", check the mic and that the puck service is stopped"
+                << std::endl;
+      continue;
     }
     const float rms = calypso::pcm_rms(pcm);
     std::cout << "rms=" << rms << std::endl;
@@ -169,14 +202,12 @@ int main(int argc, char** argv) {
     }
     const std::string wav = calypso::pcm16_to_wav(pcm, calypso::kSampleRate);
     std::string resp;
-    const int code =
-        http_request(base + "/people/" + *id + "/voice", cfg.api_token, &wav, resp);
+    const int code = http_request(voice_url, cfg.api_token, &wav, resp);
     std::cout << "HTTP " << code << " " << resp << std::endl;
     if (code >= 200 && code < 300) {
       ++uploaded;
     }
   }
-  capture.shutdown();
 
   std::cout << "uploaded " << uploaded << "/" << samples << " samples for "
             << name << "\nRestart the puck: sudo systemctl start calypso-puck"
