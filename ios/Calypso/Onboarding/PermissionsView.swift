@@ -43,7 +43,7 @@ struct PermissionsView: View {
     var body: some View {
         OnboardingScaffold(step: .permissions, onBack: onBack) {
             VStack(alignment: .leading, spacing: 8) {
-                OnboardingHeading(title: "Last step",
+                OnboardingHeading(title: "Photos and places",
                                   message: "Photos and places help Calypso⁻¹ tell you about your day.")
                     .overlay(alignment: .topTrailing) {
                         // Beside the back button, its feet level with the short title, as in Figma
