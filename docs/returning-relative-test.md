@@ -11,6 +11,7 @@ Set `CALYPSO_CALL_MODE=recognize` for an explicitly selected, single-relative re
 - Opening recognition is face-only. Caller utterances cannot identify anyone; voice samples are not sent for matching and voice-only results are ignored. Without a usable face, keep neutral wording.
 - Claude can display only the backend-identified person, with stored name, relationship to the patient, and memories/facts. Patient profiles are rejected.
 - Uncertainty produces neutral wording; unknown faces debounce into the learning card. After the opening greeting, recognition mode cannot speak newcomer questions or enroll anyone.
+- Caller lines go to grounded recall (`POST /recall`, text only, no voice): asking "what did you do today?" can show a Today/memory card built from saved data. Recall never identifies the caller.
 
 This mode performs face-only identification throughout the opening-recognition workflow; it does not switch to voice after a timer. Voiceprint enrollment in setup and the general backend face/voice API remain unchanged. Do not use this mode for group calls. Multi-person tracking and group speaker attribution remain separate work. Existing model thresholds and ambiguity/conflict rules are unchanged.
 

@@ -233,6 +233,48 @@ async def test_group_utterance_calls_recall_not_sonnet():
 
 
 @pytest.mark.asyncio
+async def test_recognize_utterance_calls_recall_not_sonnet():
+    from calypso.claude_controller import ClaudeController, MediaEvent, Session, StartSession
+    model = FakeClaude([])
+    api = _recording_api()
+    session = Session("sid", "cid", StartSession(mode="recognize", participant="phone"), {"name": "Mary"})
+    effects = await ClaudeController(model).respond(session, MediaEvent(kind="utterance", text="Mom, what did you do today?"), api)
+    assert [c.kind for c in effects.cards] == ["today"] and not effects.speech
+    assert model.requests == [] and session.recognized_id is None
+
+
+@pytest.mark.asyncio
+async def test_auto_recognition_window_utterance_gets_recall_card():
+    from calypso.claude_controller import ClaudeController, MediaEvent, Session, StartSession
+    controller = ClaudeController(FakeClaude([]))
+    session = Session("sid", "cid", StartSession(mode="auto", participant="phone"), {"name": "Mary"})
+    api = _recording_api()
+    await controller.respond(session, MediaEvent(kind="start"), api)
+    effects = await controller.respond(session, MediaEvent(kind="utterance", text="What did you do today?"), api)
+    assert effects.mode == "recognize" and [c.kind for c in effects.cards] == ["today"]
+    assert not effects.speech and not effects.done
+
+
+@pytest.mark.asyncio
+async def test_setup_after_auto_timeout_does_not_use_recall(monkeypatch):
+    from calypso.claude_controller import ClaudeController, MediaEvent, Session, StartSession
+    import calypso.claude_controller as module
+    now = [100.0]
+    monkeypatch.setattr(module.time, "monotonic", lambda: now[0])
+    model = FakeClaude([("speak", {"text": "Introduce yourself"}), None, None])
+    controller = ClaudeController(model)
+    session = Session("sid", "cid", StartSession(mode="auto", participant="phone"), {"name": "Mary"})
+    api = _recording_api()
+    await controller.respond(session, MediaEvent(kind="start"), api)
+    now[0] = 105.1
+    await controller.respond(session, MediaEvent(kind="recognition_timeout"), api)
+    before = len(model.requests)
+    await controller.respond(session, MediaEvent(kind="utterance", text="I'm Sarah, her daughter"), api)
+    assert not [c for c in api.calls if c[1] == "/recall"]
+    assert len(model.requests) == before + 1  # the enrollment reply goes to Sonnet, not recall
+
+
+@pytest.mark.asyncio
 async def test_group_recall_none_no_sonnet():
     from calypso.claude_controller import ClaudeController, MediaEvent
     model = FakeClaude([])
@@ -337,7 +379,9 @@ async def test_opening_recognition_ignores_voice_and_spoken_identity():
     effects = await controller.respond(session, MediaEvent(kind="utterance",
         text="I am Sarah", voice_wav_b64="d2F2", jpeg_b64="eA=="), api)
     assert not effects.cards and not effects.speech
-    assert [path for path, _ in requests] == ["/calls/cid/lines"]
+    # Speech only reaches grounded recall (text lines, no voice); it never identifies anyone.
+    assert [path for path, _ in requests] == ["/calls/cid/lines", "/recall"]
+    assert requests[1][1] == {"lines": [{"speaker": "phone", "text": "I am Sarah"}]}
     assert session.recognized_id is None
     with pytest.raises(ValueError, match="remain silent"):
         await controller.execute("speak", {"text": "Who are you?"}, session, effects, api)

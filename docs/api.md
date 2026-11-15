@@ -201,6 +201,7 @@ Response: `{"intent": {"intent": "today", ...}, "card": {"kind": "today", "title
 - Day-event summaries name only the people and place that passed the evidence gates; any other capitalized name in a summary replaces it with "Talked with someone".
 - Photos flagged `sensitive` are never included. Emits the `recall.detect` bus stage.
 - The agent drops recall cards older than 4 s and logs `recall_latency_ms`.
+- Callers: in `group`, `recognize` and `auto` (while it is still recognizing) calls, every caller line goes straight to `/recall` (no Sonnet), at most one recall card per 10 s. Setup and enrollment conversations never use recall.
 
 ### `POST /agent/events`
 Dashboard events from the agent, e.g. `card.shown`. Body `{"stage": "card.shown", "payload": {...}}`.
