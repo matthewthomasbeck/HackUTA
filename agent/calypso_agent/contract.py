@@ -160,6 +160,7 @@ class SegmentMeta(BaseModel):
     ts_end: ZonedDatetime
     sound_tags: list[SoundTag] = []
     local_text: str | None = None
+    time_synced: bool = True
 
 
 class SegmentAck(BaseModel):
