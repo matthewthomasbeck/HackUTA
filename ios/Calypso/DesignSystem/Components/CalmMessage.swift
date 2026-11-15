@@ -1,35 +1,44 @@
 import SwiftUI
 
 /// Figma `Calm Message` (18:226): illustration panel (Mascot on calm waves over a sand shore, radius 24, clipped),
-/// Title, Body (Ink Soft), optional Secondary button. Used for quiet days and errors; never red.
+/// Title, Body (Ink Soft, hidden when empty), optional Secondary button. Used for quiet days and errors; never red.
+/// `scene: false` drops the shore panel and shows the mascot alone at size S with its shadow (Figma 20:1097).
 struct CalmMessage: View {
     let pose: MascotPose
     let title: String
     let message: String
     let buttonTitle: String?
+    let scene: Bool
     let action: (() -> Void)?
 
-    init(pose: MascotPose, title: String, message: String, buttonTitle: String? = nil,
+    init(pose: MascotPose, title: String, message: String, buttonTitle: String? = nil, scene: Bool = true,
          action: (() -> Void)? = nil) {
         self.pose = pose
         self.title = title
         self.message = message
         self.buttonTitle = buttonTitle
+        self.scene = scene
         self.action = action
     }
 
     var body: some View {
         VStack(spacing: 16) {
-            illustration
+            if scene {
+                illustration
+            } else {
+                Mascot(pose: pose, size: .s, shadow: true)
+            }
             Text(title)
                 .calypsoFont(.title)
                 .foregroundStyle(Color.ink)
                 .multilineTextAlignment(.center)
                 .accessibilityAddTraits(.isHeader)
-            Text(message)
-                .calypsoFont(.body)
-                .foregroundStyle(Color.inkSoft)
-                .multilineTextAlignment(.center)
+            if !message.isEmpty {
+                Text(message)
+                    .calypsoFont(.body)
+                    .foregroundStyle(Color.inkSoft)
+                    .multilineTextAlignment(.center)
+            }
             if let buttonTitle, let action {
                 CalypsoButton(buttonTitle, kind: .secondary, action: action)
             }

@@ -28,6 +28,19 @@ enum ScreenRoute {
             return AnyView(ComponentsSpecimen(page: 4))
         case "components-ax":
             return AnyView(ComponentsSpecimen(page: 5).dynamicTypeSize(.accessibility5))
+        case "today":
+            return AnyView(TodayView(client: APIClient.configured))
+        case "today-bottom":
+            return AnyView(TodayView(client: APIClient.configured).debugScrolledToEnd())
+        case "today-ax":
+            return AnyView(TodayView(client: APIClient.configured).dynamicTypeSize(.accessibility5))
+        case "today-quiet":
+            let fiveDaysAgo = Calendar.current.date(byAdding: .day, value: -5, to: Date()) ?? Date()
+            return AnyView(TodayView(client: APIClient.configured, initialDay: fiveDaysAgo))
+        case "today-error":
+            // Nothing listens on port 9, so every request fails fast.
+            let unreachable = APIClient(baseURL: URL(string: "http://127.0.0.1:9")!, token: "dev-token")
+            return AnyView(TodayView(client: unreachable))
         #endif
         default:
             return AnyView(Text("Unknown route").calypsoFont(.body).padding())
