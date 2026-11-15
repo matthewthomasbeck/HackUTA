@@ -17,7 +17,11 @@
 #include <atomic>
 #include <chrono>
 #include <csignal>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <memory>
+#include <stdexcept>
 #include <thread>
 
 namespace {
@@ -47,6 +51,30 @@ int main() {
                  "(need BACKEND_IP, BACKEND_PORT, API_TOKEN, MIC_DEVICE)\n";
     return 1;
   }
+
+  // The spool is where every segment lands, so fail fast and clearly if it
+  // can't be created (systemd's StateDirectory= makes /var/lib/calypso-puck).
+  std::unique_ptr<calypso::SegmentSpool> spool_ptr;
+  try {
+    spool_ptr = std::make_unique<calypso::SegmentSpool>(
+        cfg.spool_dir,
+        static_cast<std::uint64_t>(cfg.spool_max_mb > 0 ? cfg.spool_max_mb : 512) *
+            1024ull * 1024ull);
+    const std::filesystem::path probe =
+        std::filesystem::path(cfg.spool_dir) / ".write_test";
+    std::ofstream(probe) << "ok";
+    if (!std::filesystem::exists(probe)) {
+      throw std::runtime_error("directory is not writable");
+    }
+    std::filesystem::remove(probe);
+  } catch (const std::exception& e) {
+    std::cerr << "cannot use spool dir PUCK_SPOOL_DIR=" << cfg.spool_dir << ": "
+              << e.what()
+              << "\n  create it and make it writable by this user, or set "
+                 "PUCK_SPOOL_DIR (systemd unit uses StateDirectory=calypso-puck)\n";
+    return 1;
+  }
+  calypso::SegmentSpool& spool = *spool_ptr;
 
   calypso::Capture capture;
   calypso::BackendLink link;
@@ -96,10 +124,6 @@ int main() {
             << (initial == calypso::RunMode::Online ? "ONLINE" : "OFFLINE")
             << " mode\n";
 
-  calypso::SegmentSpool spool(
-      cfg.spool_dir,
-      static_cast<std::uint64_t>(cfg.spool_max_mb > 0 ? cfg.spool_max_mb : 512) *
-          1024ull * 1024ull);
   calypso::SystemClock clock;
   std::atomic<bool> upload_stop{false};
   std::atomic<bool> last_upload_ok{true};
@@ -113,8 +137,15 @@ int main() {
       clock);
   std::thread upload_thread([&] { uploader.run(upload_stop); });
   std::thread health_thread([&] {
+    std::size_t last_rejected = 0;
     while (!upload_stop.load()) {
       link.post_health(spool.depth(), clock.now().synced, last_upload_ok.load());
+      const std::size_t rejected = uploader.rejected_count();
+      if (rejected != last_rejected) {  // not in /puck/health (shared contract)
+        std::cerr << "health: rejected/ holds " << rejected << " segments (cap "
+                  << calypso::Uploader::kMaxRejected << ")\n";
+        last_rejected = rejected;
+      }
       for (int i = 0; i < 100 && !upload_stop.load(); ++i) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
       }

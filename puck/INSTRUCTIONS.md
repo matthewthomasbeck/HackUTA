@@ -9,7 +9,10 @@ voice-fingerprint → Bluetooth "who is talking" to the phone.
 2. Load `config/.env`
 3. Init mic (`Capture`), backend link, **Coral/NCS2 stubs** (`Accelerators`),
    **phone Bluetooth stub** (`PhoneLink`), offline models (`Models`, CPU default)
-4. `MODE=offline` → start Offline and pin it (listener will not promote).
+4. `MODE=offline` → start Offline and pin it (listener will not promote), so
+   the worker runs the offline voice-ID path. **Uploads still continue:** the
+   spool uploader below runs in every mode, so set a wrong `BACKEND_IP` (or stop
+   the backend) if you need a truly offline test.
    `MODE=online` (default) → try `GET /health`; Online if up, else Offline
 5. Start listen + worker threads, plus the connection watcher
 6. **Always:** listen thread: mic/sine → `CHUNK_MS` chunks → in-memory queue
@@ -21,14 +24,24 @@ voice-fingerprint → Bluetooth "who is talking" to the phone.
    `boot_id`, boot ms), written atomically to the on-disk `SegmentSpool`
    (`PUCK_SPOOL_DIR`, capped at `PUCK_SPOOL_MAX_MB`, oldest evicted first).
    The uuid is fixed at enqueue, so retries and restarts are idempotent.
+   The spool dir must exist or be creatable and writable by the puck's user.
+   The default `/var/lib/calypso-puck/spool` is created by the systemd unit's
+   `StateDirectory=calypso-puck`; for a manual run (or macOS dev) set e.g.
+   `PUCK_SPOOL_DIR=./spool`. If it can't be used, the puck exits at start with
+   `cannot use spool dir …` rather than crash-looping.
 9. The `Uploader` thread runs for the life of the process: it drains the spool
    oldest-first via `POST /puck/segments`. 2xx (incl. `duplicate:true`) and 409
-   remove the item; other 4xx move it to `<spool>/rejected/`; 5xx or a
-   transport error stops the pass and backs off 1s doubling to 60s.
+   remove the item. 5xx, 401, 403, 408, 429 or a transport error stop the pass
+   and back off 1s doubling to 60s, keeping every item (a wrong `API_TOKEN`
+   pauses uploads; it doesn't discard audio). Any other 4xx (400, 413, 422…)
+   moves that one item to `<spool>/rejected/`, which keeps at most 200 items
+   (oldest pruned); its size is logged by the health thread when it changes.
 10. Clock: if the Pi booted without NTP, segments are saved `time_synced=false`
-    with boot-relative times. Once synced, pending items from the same boot are
-    corrected (`ts = realtime_now - (boot_ms_now - boot_ms_capture)`); items
-    from an earlier boot upload as `time_synced=false`. `/puck/health` reports
+    with boot-relative times. Unsynced items from the current boot are **held**
+    in the spool until the clock syncs, then corrected
+    (`ts = realtime_now - (boot_ms_now - boot_ms_capture)`) and uploaded as
+    synced. Only items from an earlier boot upload as `time_synced=false`. With
+    no NTP at all, audio waits in the spool (up to `PUCK_SPOOL_MAX_MB`). `/puck/health` reports
     the real `time_synced` and `queue_depth`.
 
 ### Offline (emergency voice ID)
@@ -73,7 +86,8 @@ cmake --build build && ./build/calypso_puck
 ```bash
 cp config/.env.example config/.env
 # set BACKEND_IP, BACKEND_PORT, API_TOKEN (= CALYPSO_API_TOKEN), MIC_DEVICE
-# MODE=offline to force-test emergency path; MODE=online for normal ops
+# MODE=offline to force-test emergency path (spool uploads still run); MODE=online for normal ops
+# PUCK_SPOOL_DIR (default /var/lib/calypso-puck/spool; use ./spool for manual runs), PUCK_SPOOL_MAX_MB
 # optional: OFFLINE_SEGMENT_MS, INFER_BACKEND=cpu, BT_ADAPTER, BT_PEER_NAME
 ```
 
@@ -93,3 +107,6 @@ Dashboard should show `puck.segment` / `puck.health` on `/stream` when online.
 ## systemd
 
 See `systemd/calypso-puck.service` — set `MIC_DEVICE` to the real ALSA name on the Pi.
+The unit's `StateDirectory=calypso-puck` creates `/var/lib/calypso-puck` (owned
+by `User=`) for the default spool dir. After editing the unit:
+`sudo systemctl daemon-reload && sudo systemctl restart calypso-puck`.

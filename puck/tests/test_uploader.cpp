@@ -257,4 +257,70 @@ TEST(test_remove_and_rewrite_tolerate_evicted) {
   CHECK(!fs::exists(it.json_path));
 }
 
+TEST(test_auth_and_rate_limit_keep_item_and_stop_pass) {
+  for (int code : {401, 403, 408, 429}) {
+    auto d = fresh_dir();
+    SegmentSpool s(d, 1 << 20);
+    s.enqueue(pcm(), item("10:00:00"));
+    s.enqueue(pcm(), item("10:00:01"));
+    FakeClock c;
+    c.snap = synced_snap();
+    int calls = 0;
+    Uploader u(s, [&](const std::string&, const std::string&) { ++calls; return code; }, c);
+    CHECK_EQ(u.drain_once(), 0);
+    CHECK_EQ(calls, 1);
+    CHECK_EQ(s.depth(), 2u);
+    CHECK(!fs::exists(d / "rejected"));
+    CHECK_EQ(u.rejected_count(), 0u);
+  }
+}
+
+TEST(test_rejected_dir_is_capped) {
+  auto d = fresh_dir();
+  SegmentSpool s(d, 1 << 26);
+  const int n = static_cast<int>(Uploader::kMaxRejected) + 5;
+  for (int i = 0; i < n; ++i) {
+    char buf[16];
+    std::snprintf(buf, sizeof(buf), "10:%02d:%02d", i / 60, i % 60);
+    s.enqueue(pcm(), item(buf));
+  }
+  FakeClock c;
+  c.snap = synced_snap();
+  Uploader u(s, [](const std::string&, const std::string&) { return 422; }, c);
+  CHECK_EQ(u.drain_once(), 0);
+  CHECK_EQ(s.depth(), 0u);
+  CHECK_EQ(u.rejected_count(), Uploader::kMaxRejected);
+  std::size_t jsons = 0, wavs = 0;
+  for (const auto& e : fs::directory_iterator(d / "rejected")) {
+    jsons += e.path().extension() == ".json";
+    wavs += e.path().extension() == ".wav";
+  }
+  CHECK_EQ(jsons, Uploader::kMaxRejected);
+  CHECK_EQ(wavs, Uploader::kMaxRejected);
+  CHECK_EQ(prune_rejected(d / "rejected", 10), 10u);  // oldest pruned first
+}
+
+TEST(test_unsynced_same_boot_held_until_sync) {
+  SegmentSpool s(fresh_dir(), 1 << 20);
+  s.enqueue(pcm(), item("10:00:00", false, "b1", 10000));
+  s.enqueue(pcm(), item("10:00:01", true));
+  FakeClock c;
+  c.snap = synced_snap();
+  c.snap.synced = false;
+  std::vector<std::string> metas;
+  Uploader u(s, [&](const std::string&, const std::string& m) { metas.push_back(m); return 200; }, c);
+  CHECK_EQ(u.drain_once(), 1);  // only the synced item goes up
+  CHECK_EQ(metas.size(), 1u);
+  CHECK(metas[0].find("10:00:01") != std::string::npos);
+  CHECK_EQ(s.depth(), 1u);
+  CHECK_EQ(u.drain_once(), 0);  // still unsynced: still held
+  CHECK_EQ(metas.size(), 1u);
+  c.snap.synced = true;
+  CHECK_EQ(u.drain_once(), 1);
+  CHECK_EQ(metas.size(), 2u);
+  CHECK(metas[1].find("\"ts_start\":\"2026-11-15T15:59:00.000Z\"") != std::string::npos);
+  CHECK(metas[1].find("\"time_synced\":true") != std::string::npos);
+  CHECK_EQ(s.depth(), 0u);
+}
+
 int main() { return testing::run_all(); }

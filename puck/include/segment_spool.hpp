@@ -36,6 +36,7 @@ class SegmentSpool {
   std::string meta_json(const SpoolItem& item) const;  // multipart "meta" body
   std::uint64_t evicted_count() const;
   std::size_t depth() const;
+  const std::filesystem::path& dir() const { return dir_; }
 
  private:
   std::filesystem::path dir_;
