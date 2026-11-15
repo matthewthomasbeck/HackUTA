@@ -11,6 +11,7 @@ option(CALYPSO_BUILD_TESTS "Build puck unit tests" OFF)
 add_library(calypso_core STATIC
   src/config.cpp
   src/capture.cpp
+  src/audio_gain.cpp
   src/backend_link.cpp
   src/models.cpp
   src/state_machine.cpp
@@ -124,4 +125,7 @@ if(CALYPSO_BUILD_TESTS)
   add_executable(test_uploader tests/test_uploader.cpp)
   target_link_libraries(test_uploader PRIVATE calypso_core)
   add_test(NAME uploader COMMAND test_uploader)
+  add_executable(test_audio_gain tests/test_audio_gain.cpp)
+  target_link_libraries(test_audio_gain PRIVATE calypso_core)
+  add_test(NAME audio_gain COMMAND test_audio_gain)
 endif()

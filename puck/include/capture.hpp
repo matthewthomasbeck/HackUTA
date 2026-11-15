@@ -22,12 +22,15 @@ class Capture {
 
   bool init(const std::string& mic_device, int chunk_ms);
   bool read_chunk(AudioChunk& out);
+  // Software gain applied to every chunk (<= 1 = off). Set from MIC_GAIN.
+  void set_gain(float gain) { gain_ = gain; }
   void shutdown();
 
  private:
   bool open_ = false;
   bool sine_ = false;
   int chunk_ms_ = 30;
+  float gain_ = 1.0f;
   std::uint64_t sine_phase_ = 0;
 #if defined(CALYPSO_HAS_ALSA)
   void* pcm_ = nullptr;  // snd_pcm_t*

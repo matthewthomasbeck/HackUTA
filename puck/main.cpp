@@ -86,6 +86,8 @@ int main() {
     std::cerr << "mic init failed — set MIC_DEVICE to an ALSA name or 'sine'\n";
     return 1;
   }
+  capture.set_gain(cfg.mic_gain);
+  std::cerr << "capture: MIC_GAIN=" << cfg.mic_gain << "\n";
   if (!link.init(cfg.backend_ip, cfg.backend_port, cfg.api_token)) {
     std::cerr << "backend link init failed\n";
     return 1;

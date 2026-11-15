@@ -93,6 +93,12 @@ bool load_config(const std::string& path, Config& out) {
       static_cast<std::uint16_t>(parse_int(get("BACKEND_PORT"), 0));
   out.api_token = get("API_TOKEN");
   out.mic_device = get("MIC_DEVICE");
+  out.mic_gain = parse_float(get("MIC_GAIN"), 1.0f);
+  if (!(out.mic_gain >= 1.0f)) {  // also catches NaN
+    out.mic_gain = 1.0f;
+  } else if (out.mic_gain > 32.0f) {
+    out.mic_gain = 32.0f;
+  }
   out.mode = parse_mode_setting(get("MODE"));
   out.chunk_ms = parse_int(get("CHUNK_MS"), 30);
   out.segment_ms = parse_int(get("SEGMENT_MS"), 3000);

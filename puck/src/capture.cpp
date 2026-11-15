@@ -1,5 +1,7 @@
 #include "capture.hpp"
 
+#include "audio_gain.hpp"
+
 #include <chrono>
 #include <cmath>
 #include <cstring>
@@ -89,6 +91,7 @@ bool Capture::read_chunk(AudioChunk& out) {
       out.pcm[static_cast<std::size_t>(i)] =
           static_cast<std::int16_t>(s * 0.2 * 32767.0);
     }
+    apply_gain(out.pcm, gain_);
     // Pace like a real mic so we don't flood the backend.
     std::this_thread::sleep_for(std::chrono::milliseconds(chunk_ms_));
     return true;
@@ -111,6 +114,7 @@ bool Capture::read_chunk(AudioChunk& out) {
     out.pcm.resize(static_cast<std::size_t>(got));
     out.duration_ms = static_cast<int>(got * 1000 / kSampleRate);
   }
+  apply_gain(out.pcm, gain_);
   return true;
 #else
   return false;

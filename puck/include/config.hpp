@@ -13,6 +13,7 @@ struct Config {
   std::string api_token;
 
   std::string mic_device;  // ALSA name, or "sine" for test tone
+  float mic_gain = 1.0f;   // MIC_GAIN software gain, clamped to [1, 32]
 
   // MODE=online|offline — offline force-tests the emergency path
   ModeSetting mode = ModeSetting::Online;

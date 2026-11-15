@@ -118,7 +118,7 @@ Dashboard should show `puck.segment` / `puck.health` on `/stream` when online.
 One unit runs `scripts/start_puck.sh`, which starts `ble_who_peripheral.py` then `build/calypso_puck`.
 It also starts a Bluetooth pairing agent that accepts pairing automatically (no PIN): iOS needs a completed pairing or it keeps prompting and dropping the link. Disable with `PUCK_BT_AUTOPAIR=0`. The Pi also needs a proper power supply: under-voltage (`vcgencmd get_throttled` ≠ `0x0`) makes Bluetooth drop.
 The unit's `StateDirectory=calypso-puck` creates `/var/lib/calypso-puck` (owned
-by `User=`) for the default spool dir. Set `MIC_DEVICE` in `config/.env`.
+by `User=`) for the default spool dir. Set `MIC_DEVICE` in `config/.env`. `MIC_GAIN` (1-32, default 1.0) applies software gain to quiet mics.
 
 ```bash
 # on the Pi

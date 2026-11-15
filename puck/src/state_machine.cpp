@@ -1,26 +1,13 @@
 #include "state_machine.hpp"
 
+#include "audio_gain.hpp"
+
 #include <chrono>
 #include <cmath>
 #include <iostream>
 #include <thread>
 
 namespace calypso {
-namespace {
-
-// Mean absolute amplitude in [0, 1]. Cheap speech/silence gate.
-float clip_rms(const AudioChunk& clip) {
-  if (clip.pcm.empty()) {
-    return 0.f;
-  }
-  double sum = 0.0;
-  for (std::int16_t s : clip.pcm) {
-    sum += std::fabs(static_cast<double>(s) / 32768.0);
-  }
-  return static_cast<float>(sum / static_cast<double>(clip.pcm.size()));
-}
-
-}  // namespace
 
 StateMachine::StateMachine(Capture& capture, BackendLink& link, Models& models,
                            PhoneLink& phone, int offline_segment_ms,
@@ -126,7 +113,7 @@ void StateMachine::process_who(const AudioChunk& chunk) {
   }
 
   // Skip silence / noise — those embeddings look like "uncertain strangers".
-  const float rms = clip_rms(*clip);
+  const float rms = pcm_rms(clip->pcm);
   if (rms < min_speech_rms_) {
     std::cerr << "who is talking: (skip quiet clip rms=" << rms << ")\n";
     return;
