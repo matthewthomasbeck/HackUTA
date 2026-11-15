@@ -6,8 +6,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_executable(calypso_puck
-  main.cpp
+option(CALYPSO_BUILD_TESTS "Build puck unit tests" OFF)
+
+add_library(calypso_core STATIC
   src/config.cpp
   src/capture.cpp
   src/backend_link.cpp
@@ -16,23 +17,30 @@ add_executable(calypso_puck
   src/connection_listener.cpp
   src/accelerators.cpp
   src/phone_link.cpp
+  src/who_json.cpp
   src/offline_buffer.cpp
   src/voice_gallery.cpp
   src/wav.cpp
   src/util.cpp
+  src/segment_spool.cpp
+  src/clock_sync.cpp
+  src/segmenter.cpp
+  src/uploader.cpp
 )
+target_include_directories(calypso_core PUBLIC include)
 
-target_include_directories(calypso_puck PRIVATE include)
+add_executable(calypso_puck main.cpp)
+target_link_libraries(calypso_puck PRIVATE calypso_core)
 
 find_package(Threads REQUIRED)
 find_package(CURL REQUIRED)
-target_link_libraries(calypso_puck PRIVATE Threads::Threads CURL::libcurl)
+target_link_libraries(calypso_core PUBLIC Threads::Threads CURL::libcurl)
 
 # ALSA on the Pi / Linux. macOS can still build with MIC_DEVICE=sine.
 find_package(ALSA)
 if(ALSA_FOUND)
-  target_compile_definitions(calypso_puck PRIVATE CALYPSO_HAS_ALSA=1)
-  target_link_libraries(calypso_puck PRIVATE ALSA::ALSA)
+  target_compile_definitions(calypso_core PUBLIC CALYPSO_HAS_ALSA=1)
+  target_link_libraries(calypso_core PUBLIC ALSA::ALSA)
   message(STATUS "ALSA found — real mic capture enabled")
 else()
   message(STATUS "ALSA not found — use MIC_DEVICE=sine for online smoke tests")
@@ -77,11 +85,11 @@ if(CALYPSO_SHERPA_ROOT)
   )
 
   if(SHERPA_ONNX_INCLUDE_DIR AND SHERPA_ONNX_LIBRARY)
-    target_compile_definitions(calypso_puck PRIVATE CALYPSO_HAS_SHERPA=1)
-    target_include_directories(calypso_puck PRIVATE "${SHERPA_ONNX_INCLUDE_DIR}")
-    target_link_libraries(calypso_puck PRIVATE "${SHERPA_ONNX_LIBRARY}")
+    target_compile_definitions(calypso_core PUBLIC CALYPSO_HAS_SHERPA=1)
+    target_include_directories(calypso_core PUBLIC "${SHERPA_ONNX_INCLUDE_DIR}")
+    target_link_libraries(calypso_core PUBLIC "${SHERPA_ONNX_LIBRARY}")
     if(ONNXRUNTIME_LIBRARY)
-      target_link_libraries(calypso_puck PRIVATE "${ONNXRUNTIME_LIBRARY}")
+      target_link_libraries(calypso_core PUBLIC "${ONNXRUNTIME_LIBRARY}")
     endif()
     # So ./build/calypso_puck finds libsherpa-*.so at runtime without LD_LIBRARY_PATH.
     get_filename_component(_sherpa_libdir "${SHERPA_ONNX_LIBRARY}" DIRECTORY)
@@ -105,4 +113,14 @@ if(CALYPSO_SHERPA_ROOT)
   endif()
 else()
   message(STATUS "CALYPSO_SHERPA_ROOT unset — offline voice ID compiled out")
+endif()
+
+if(CALYPSO_BUILD_TESTS)
+  enable_testing()
+  add_executable(test_segment_spool tests/test_segment_spool.cpp)
+  target_link_libraries(test_segment_spool PRIVATE calypso_core)
+  add_test(NAME segment_spool COMMAND test_segment_spool)
+  add_executable(test_uploader tests/test_uploader.cpp)
+  target_link_libraries(test_uploader PRIVATE calypso_core)
+  add_test(NAME uploader COMMAND test_uploader)
 endif()

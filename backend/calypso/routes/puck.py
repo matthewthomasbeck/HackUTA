@@ -40,9 +40,9 @@ def upload_segment(
     wav_path = settings.tmp_dir / f"{m.segment_uuid}.wav"
 
     cur = conn.execute(
-        "INSERT OR IGNORE INTO segments (segment_uuid, ts_start, ts_end, local_text, status, received_at)"
-        " VALUES (?, ?, ?, ?, 'queued', ?)",
-        (m.segment_uuid, iso_utc(m.ts_start), iso_utc(m.ts_end), m.local_text, now_iso()),
+        "INSERT OR IGNORE INTO segments (segment_uuid, ts_start, ts_end, local_text, status, received_at, time_synced)"
+        " VALUES (?, ?, ?, ?, 'queued', ?, ?)",
+        (m.segment_uuid, iso_utc(m.ts_start), iso_utc(m.ts_end), m.local_text, now_iso(), int(m.time_synced)),
     )
     if cur.rowcount == 0:  # already received: a retry from the puck's queue
         conn.rollback()

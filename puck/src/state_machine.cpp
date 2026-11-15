@@ -24,11 +24,14 @@ float clip_rms(const AudioChunk& clip) {
 
 StateMachine::StateMachine(Capture& capture, BackendLink& link, Models& models,
                            PhoneLink& phone, int offline_segment_ms,
-                           float min_speech_rms)
+                           SegmentSpool& spool, const ClockSource& clock,
+                           int segment_ms, float min_speech_rms)
     : capture_(capture),
       link_(link),
       models_(models),
       phone_(phone),
+      spool_(spool),
+      segmenter_(segment_ms, clock),
       offline_buf_(offline_segment_ms),
       min_speech_rms_(min_speech_rms > 0.f ? min_speech_rms : 0.02f),
       queue_(/*max_chunks=*/200) {}
@@ -97,17 +100,23 @@ void StateMachine::worker_loop() {
       }
       continue;
     }
-    if (mode_.load() == RunMode::Online) {
-      process_online(*chunk);
-    } else {
+    // Every chunk is spooled in both modes; the Uploader drains the spool.
+    spool_chunk(*chunk);
+    if (mode_.load() == RunMode::Offline) {
       process_offline(*chunk);
     }
   }
 }
 
-void StateMachine::process_online(const AudioChunk& chunk) {
-  if (!link_.send_audio_chunk(chunk)) {
-    // Listener flips to Offline / reconnects; capture keeps filling the queue.
+void StateMachine::spool_chunk(const AudioChunk& chunk) {
+  auto seg = segmenter_.push(chunk);
+  if (!seg) {
+    return;
+  }
+  try {
+    spool_.enqueue(seg->first, seg->second);
+  } catch (const std::exception& e) {
+    std::cerr << "state_machine: spool enqueue failed: " << e.what() << "\n";
   }
 }
 

@@ -57,6 +57,9 @@ async def start(body: StartSession, request: Request):
     sid = uuid4().hex
     session = Session(sid, call["id"], body, patients[0])
     request.app.state.agent_sessions[sid] = session
+    # The call log stores recognize calls as kind "group"; tell the dashboard the real mode.
+    emit("agent.session", {"session_id": sid, "call_id": call["id"], "mode": body.mode,
+                           "controlled": body.controlled})
     return {"session_id": sid, "call_id": call["id"]}
 
 

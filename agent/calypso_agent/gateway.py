@@ -41,9 +41,11 @@ class GatewayClient:
             os.replace(temporary, self.state_file)
         return effects
 
-    async def shown(self, card):
-        response = await self.http.post("/agent/events", json={"stage": "card.shown",
-            "payload": {"session_id": self.session_id, "controlled": self.controlled, "card": card}})
+    async def shown(self, card, latency_ms=None):
+        payload = {"session_id": self.session_id, "controlled": self.controlled, "card": card}
+        if latency_ms is not None:
+            payload["latency_ms"] = latency_ms
+        response = await self.http.post("/agent/events", json={"stage": "card.shown", "payload": payload})
         response.raise_for_status()
 
     async def close(self):

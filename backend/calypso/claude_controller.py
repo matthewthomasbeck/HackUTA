@@ -75,6 +75,8 @@ class Session:
     recognition_started: float | None = None
     emitted: set = field(default_factory=set)
     group_question_used: bool = False
+    last_recall_card_at: float = 0.0
+    awaiting_newcomer_reply: bool = False
     done: bool = False
     started: bool = False
     touched: float = field(default_factory=time.monotonic)
@@ -124,8 +126,8 @@ show_identity only on backend-identified results, and never enroll or ask newcom
 questions. Do not infer identity from the caller's name, phone, or conversation.
 In group calls: stay silent except one confirmation question for a newcomer.
 On identified events use show_identity. On learning events use show_learning.
-On uncertainty show nothing. Use recall when the conversation actually asks for
-memory help, not merely when someone mentions today. Do not claim a call was
+On uncertainty show nothing. In group calls, recall is handled automatically by
+the backend; do not call recall there. (The recall tool is for setup mode.) Do not claim a call was
 placed: dialing is not an available tool yet. Use tools for all user-visible
 speech/cards; free text outside tools is not sent to callers. A finish action ends
 the flow. Do not retry successful write tools. Never call save_intro in parallel
@@ -139,6 +141,7 @@ class ClaudeController:
     async def respond(self, session, event, api):
         effects = Effects(session_id=session.id, done=session.done,
                           enrolled_person_id=session.enrolled_id)
+        clear_newcomer_reply = False
         if session.done:
             return effects
         session.touched = time.monotonic()
@@ -185,6 +188,12 @@ class ClaudeController:
             session.transcript.append((time.monotonic(), session.last_text))
             self.keep_voice(session, event.voice_wav_b64)
             await api("POST", f"/calls/{session.call_id}/lines", {"speaker": session.config.participant, "text": session.last_text})
+            if session.config.mode == "group":
+                if session.awaiting_newcomer_reply:
+                    clear_newcomer_reply = True  # the reply to our question goes through Sonnet
+                else:
+                    await self.direct_recall(session, effects, api)
+                    return effects
         if event.kind in {"utterance", "silence"}:
             # Never reuse earlier camera samples after a capture failure.
             session.crops = event.face_jpegs_b64
@@ -280,6 +289,8 @@ class ClaudeController:
                 raise RuntimeError("ANTHROPIC_API_KEY is not configured on the backend")
             async with anthropic.AsyncAnthropic(timeout=12, max_retries=0) as client:
                 await self._loop(client, session, effects, api)
+        if clear_newcomer_reply:
+            session.awaiting_newcomer_reply = False
         effects.done = session.done
         effects.enrolled_person_id = session.enrolled_id
         effects.needs_face_crops = session.awaiting_crops
@@ -316,6 +327,25 @@ class ClaudeController:
             if session.done:
                 return
         raise RuntimeError("Claude exceeded the per-event tool limit")
+
+    @staticmethod
+    async def fetch_recall_card(session, api):
+        recent = [{"speaker": session.config.participant, "text": text}
+                  for ts, text in session.transcript if time.monotonic() - ts <= 60]
+        response = await asyncio.wait_for(api("POST", "/recall", {"lines": recent}), timeout=4)
+        return Card.model_validate(response["card"]) if response.get("card") else None
+
+    async def direct_recall(self, session, effects, api):
+        """Group-call fast path: Haiku-backed /recall without the Sonnet loop. Never raises."""
+        try:
+            card = await self.fetch_recall_card(session, api)
+        except Exception as error:  # timeout, HTTP or validation error must not end the call
+            log.warning("session=%s direct recall failed: %r", session.id, error)
+            return
+        now = time.monotonic()
+        if card and now - session.last_recall_card_at >= 10:
+            effects.cards.append(card)
+            session.last_recall_card_at = now
 
     @staticmethod
     def keep_voice(session, voice_wav_b64, max_seconds=60.0):
@@ -359,6 +389,7 @@ class ClaudeController:
                 if session.group_question_used or session.learning_count < 3:
                     raise ValueError("Group calls permit only one newcomer question")
                 session.group_question_used = True
+                session.awaiting_newcomer_reply = True
             effects.speech.append(text)
         elif name == "confirm_intro":
             if effects.speech:
@@ -430,11 +461,9 @@ class ClaudeController:
                 raise ValueError("Wait for three learning frames")
             effects.cards.append(Card(kind="learning", title="Getting to know someone new…", lines=[]))
         elif name == "recall":
-            recent = [{"speaker": session.config.participant, "text": text}
-                      for ts, text in session.transcript if time.monotonic() - ts <= 60]
-            response = await asyncio.wait_for(api("POST", "/recall", {"lines": recent}), timeout=4)
-            if response.get("card"):
-                effects.cards.append(Card.model_validate(response["card"]))
+            card = await self.fetch_recall_card(session, api)
+            if card:
+                effects.cards.append(card)
         elif name == "finish":
             if session.config.mode == "setup":
                 self.finish_setup(session, effects)

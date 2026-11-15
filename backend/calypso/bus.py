@@ -24,7 +24,7 @@ def _put(queue: asyncio.Queue, event: dict) -> None:
 
 
 class Bus:
-    def __init__(self, recent: int = 200) -> None:
+    def __init__(self, recent: int = 1000) -> None:  # room for a call's history even with puck uploads
         self._subs: set[tuple[asyncio.AbstractEventLoop, asyncio.Queue]] = set()
         self._lock = threading.Lock()
         self.recent: deque[dict] = deque(maxlen=recent)

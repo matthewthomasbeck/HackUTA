@@ -35,7 +35,9 @@ def _memories(conn: sqlite3.Connection, person_id: str, tz: str) -> list[str]:
         out.append(f"{local:%b} {local.day} · {ev['place']} · {ev['summary']}")
     if len(out) < MEMORY_LIMIT:
         for u in conn.execute(
-            "SELECT ts_start, text FROM utterances WHERE person_id = ? ORDER BY ts_start DESC LIMIT ?",
+            "SELECT u.ts_start, u.text FROM utterances u LEFT JOIN segments s ON s.segment_uuid = u.segment_uuid"
+            " WHERE u.person_id = ? AND COALESCE(s.time_synced, 1) = 1"  # unsynced puck clocks: date unknown
+            " ORDER BY u.ts_start DESC LIMIT ?",
             (person_id, MEMORY_LIMIT - len(out)),
         ):
             local = parse_iso(u["ts_start"]).astimezone(zone)

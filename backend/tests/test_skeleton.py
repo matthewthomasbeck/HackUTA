@@ -88,6 +88,17 @@ def test_events_rebroadcast_and_recent(client):
     assert any(e["stage"] == "worker.test" and e["payload"] == {"n": 1} for e in recent)
 
 
+def test_recent_events_keeps_call_history_under_puck_load(client):
+    from calypso.bus import bus
+
+    bus.emit("call.started", {"call_id": "c-keep"})
+    for i in range(600):  # a busy puck: 3 s segments for 30 min
+        bus.emit("puck.segment", {"segment_uuid": f"s{i}"})
+    recent = client.get("/events/recent?limit=1000").json()
+    assert any(e["stage"] == "call.started" and e["payload"].get("call_id") == "c-keep" for e in recent)
+    assert client.get("/events/recent?limit=1001").status_code == 422
+
+
 def test_agent_event_rebroadcast(client):
     r = client.post("/agent/events", headers=AUTH, json={"stage": "card.shown", "payload": {"kind": "identity"}})
     assert r.status_code == 200

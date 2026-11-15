@@ -3,7 +3,10 @@
 Task 6 later adds reverse geocoding, resizing, CLIP embeddings and the
 Haiku "sensitive" check. M1 stores what the app sends.
 """
+import logging
 import sqlite3
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import ValidationError
@@ -11,15 +14,32 @@ from pydantic import ValidationError
 from ..auth import require_token
 from ..bus import emit
 from ..config import Settings
-from ..deps import get_conn, get_settings, get_storage
+from ..day_builder import schedule_rebuild
+from ..deps import get_conn, get_jobs, get_settings, get_storage
 from ..models import PhotoMeta, Visit, iso_utc
 from ..timeutil import now_iso
 
 router = APIRouter(prefix="/app", dependencies=[Depends(require_token)])
+_log = logging.getLogger("calypso.app_ingest")
+
+
+def _rebuild_days(conn, settings: Settings, jobs, times: list[datetime]) -> None:
+    """Late iOS uploads change days already built: queue a rate-limited rebuild for each."""
+    zone = ZoneInfo(settings.tz)
+    for day in sorted({t.astimezone(zone).date() for t in times}):
+        try:
+            schedule_rebuild(conn, day, settings, jobs)
+        except Exception:
+            _log.exception("could not schedule a rebuild of %s", day)
 
 
 @router.post("/visits")
-def upload_visits(visits: list[Visit], conn: sqlite3.Connection = Depends(get_conn)) -> dict:
+def upload_visits(
+    visits: list[Visit],
+    conn: sqlite3.Connection = Depends(get_conn),
+    settings: Settings = Depends(get_settings),
+    jobs=Depends(get_jobs),
+) -> dict:
     conn.executemany(
         "INSERT INTO visits (id, arrived, departed, lat, lon, place_name) VALUES (?, ?, ?, ?, ?, ?)"
         " ON CONFLICT(id) DO UPDATE SET arrived = excluded.arrived, departed = excluded.departed,"
@@ -29,6 +49,7 @@ def upload_visits(visits: list[Visit], conn: sqlite3.Connection = Depends(get_co
          for v in visits],
     )
     conn.commit()
+    _rebuild_days(conn, settings, jobs, [t for v in visits for t in (v.arrived, v.departed) if t is not None])
     emit("app.visits", {"count": len(visits), "ids": [v.id for v in visits][:20]})
     return {"ok": True, "count": len(visits)}
 
@@ -40,6 +61,7 @@ def upload_photo(
     conn: sqlite3.Connection = Depends(get_conn),
     storage=Depends(get_storage),
     settings: Settings = Depends(get_settings),
+    jobs=Depends(get_jobs),
 ) -> dict:
     try:
         m = PhotoMeta.model_validate_json(meta)
@@ -58,5 +80,6 @@ def upload_photo(
         (m.id, iso_utc(m.taken_at), m.lat, m.lon, key, now_iso()),
     )
     conn.commit()
+    _rebuild_days(conn, settings, jobs, [m.taken_at])
     emit("app.photo", {"id": m.id, "taken_at": iso_utc(m.taken_at)})
     return {"ok": True, "id": m.id, "duplicate": False}

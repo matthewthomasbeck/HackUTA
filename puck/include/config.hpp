@@ -33,8 +33,13 @@ struct Config {
   float voice_match_threshold = 0.45f;  // 0.55 was too strict for lav + 1 speaker
   float min_speech_rms = 0.02f;         // skip quiet windows before embed
 
+  std::string spool_dir = "/var/lib/calypso-puck/spool";
+  int spool_max_mb = 512;
+
   std::string bt_adapter;     // e.g. hci0
   std::string bt_peer_name;   // phone / app advertisement name
+  // Drop file for BLE sidecar (scripts/ble_who_peripheral.py)
+  std::string who_drop_path = "/tmp/calypso_who.json";
 };
 
 bool load_config(const std::string& path, Config& out);

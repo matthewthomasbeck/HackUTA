@@ -38,11 +38,24 @@ def test_recognize_requires_token(client):
     assert client.post("/recognize", json={}).status_code == 401
 
 
-def test_recall_stub_shape(client):
-    r = client.post("/recall", headers=AUTH, json={"lines": [{"speaker": "Sarah", "text": "Mom, what did you do today?"}]})
-    assert r.status_code == 200
-    assert r.json() == {"intent": {"intent": "none", "query": None, "date_hint": None, "place_hint": None},
-                        "card": None}
+def test_recall_shape(client):
+    from calypso.models import Intent
+    from calypso.recall import Detection, FakeDetector
+
+    FakeDetector.script = {"Mom, what did you do today?": Detection(Intent(intent="today"), 0.9)}
+    client.app.state.recall_detector = FakeDetector()
+    try:
+        r = client.post("/recall", headers=AUTH,
+                        json={"lines": [{"speaker": "Sarah", "text": "Mom, what did you do today?"}]})
+        assert r.status_code == 200
+        assert r.json()["intent"]["intent"] == "today"
+        assert r.json()["card"] == {"kind": "today", "title": "Today", "lines": ["Nothing saved yet today"],
+                                    "image_urls": []}
+        r = client.post("/recall", headers=AUTH, json={"lines": [{"speaker": "Sarah", "text": "hello"}]})
+        assert r.json() == {"intent": {"intent": "none", "query": None, "date_hint": None, "place_hint": None},
+                            "card": None}
+    finally:
+        FakeDetector.script = {}
 
 
 # --- calls --------------------------------------------------------------------
