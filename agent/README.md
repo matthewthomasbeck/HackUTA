@@ -11,6 +11,9 @@ See [the real-call guide](../docs/stage1-test.md) for credentials and acceptance
 
 - `main.py`: explicit setup/group routing and media lifecycle.
 - `gateway.py`: authenticated events/effects interface to the backend.
+- `caller_identity.py`: verified caller number from Chert's call record, using
+  the existing local Chert login. Missing/email/masked identities remain unset;
+  no phone number is inferred from a participant label or conversation.
 - `live_media.py`, `face_crop.py`: media capture, single-face crops, speech
   segmentation/playout and outgoing video. Face detection is isolated from
   LiveKit's native libraries. It is preprocessing, not identity matching.

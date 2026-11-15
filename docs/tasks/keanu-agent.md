@@ -14,6 +14,12 @@ is deployed and a real Claude greeting probe passed; full FaceTime acceptance is
 still pending. See [`stage1-test.md`](../stage1-test.md). The local scripted
 prototype remains only as an offline regression fixture, not the live agent.
 
+User-directed display override: the live call publishes 720×1280 portrait cards
+with larger text, superseding the original landscape output target for the phone
+experience. Setup greetings address an unknown relative, and successful setup
+ends with a persistent saved card and an explicit instruction to hang up. Native
+automatic hangup remains unavailable under the current Chert CLI credential.
+
 - Puck conversations are passive collection; no live Chert assistance is required
   for an in-person visit.
 - Patient-requested calling is a separate follow-up workflow: identify the requested

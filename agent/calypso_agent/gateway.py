@@ -15,13 +15,13 @@ class GatewayClient:
         self.state_file = Path(state_file)
         self.session_id = None
 
-    async def start(self, mode, participant, outcome):
+    async def start(self, mode, participant, outcome, *, caller_phone=None):
         enrolled = None
         if mode == "group" and self.state_file.exists():
             enrolled = json.loads(self.state_file.read_text()).get("person_id")
         response = await self.http.post("/agent/sessions", json={"mode": mode,
             "participant": participant, "controlled": True, "outcome": outcome,
-            "enrolled_person_id": enrolled})
+            "enrolled_person_id": enrolled, "caller_phone": caller_phone})
         response.raise_for_status()
         self.session_id = response.json()["session_id"]
 

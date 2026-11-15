@@ -14,7 +14,7 @@ from livekit import rtc
 import numpy as np
 from PIL import Image, ImageDraw
 
-from .cards import font, idle_frame, render
+from .cards import CALL_SIZE, caption_cards, font, render
 from .contract import Card
 
 log = logging.getLogger("calypso.camera")
@@ -136,19 +136,30 @@ class Publisher:
     def __init__(self, room, scheduler=None, *, on_shown=lambda card: None):
         self.room, self.scheduler = room, scheduler
         self.status = Card(kind="memory", title="Connecting…", lines=[])
-        self.source = rtc.VideoSource(1280, 720)
+        self.source = rtc.VideoSource(*CALL_SIZE)
         self.audio = rtc.AudioSource(16000, 1)
         self.publications = []
         self.on_shown = on_shown
         self.camera_status = ""
+        self.pinned_card = None
+        self.caption_pages = []
+        self.caption_started = 0
 
     def caption(self, text):
-        self.status = Card(kind="memory", title="Calypso⁻¹", lines=[text])
+        self.caption_pages = caption_cards(text)
+        self.caption_started = time.monotonic()
+        self.status = self.caption_pages[0]
 
     async def start(self):
         for track, kind in [(rtc.LocalVideoTrack.create_video_track("calypso-cards", self.source), rtc.TrackSource.SOURCE_CAMERA),
                             (rtc.LocalAudioTrack.create_audio_track("calypso-voice", self.audio), rtc.TrackSource.SOURCE_MICROPHONE)]:
             options = rtc.TrackPublishOptions(source=kind)
+            if kind == rtc.TrackSource.SOURCE_CAMERA:
+                options.video_codec = rtc.VideoCodec.H264
+                options.video_encoding.max_bitrate = 2_500_000
+                options.video_encoding.max_framerate = 5
+                options.simulcast = False
+                options.degradation_preference = 2  # MAINTAIN_RESOLUTION
             pub = await self.room.local_participant.publish_track(track, options)
             self.publications.append(pub.sid)
 
@@ -156,15 +167,21 @@ class Publisher:
         previous, previous_card, frame = None, None, None
         while True:
             card = self.scheduler.current() if self.scheduler else None
-            card = card or self.status
+            if self.caption_pages:
+                page = min(int((time.monotonic() - self.caption_started) / 5), len(self.caption_pages) - 1)
+                caption = self.caption_pages[page]
+            else:
+                caption = self.status
+            card = self.pinned_card or card or caption
             key = (card.model_dump_json() if card else "idle", self.camera_status)
             if key != previous:
-                picture = render(card, {}) if card else idle_frame()
+                picture = render(card, {}, size=CALL_SIZE)
                 draw = ImageDraw.Draw(picture)
                 if self.camera_status:
-                    draw.text((64, 590), self.camera_status, font=font(28), fill=(112, 224, 199), anchor="lt")
-                draw.text((64, 640), "STAGE 1 TEST · controlled recognition", font=font(30), fill=(255, 206, 105), anchor="lt")
-                frame = rtc.VideoFrame(1280, 720, rtc.VideoBufferType.RGB24, picture.tobytes())
+                    status = self.camera_status.replace("Camera: ", "").replace(" clear face samples", " face samples")
+                    draw.text((48, 1138), status, font=font(26), fill=(112, 224, 199), anchor="lt")
+                draw.text((48, 1200), "TEST MODE", font=font(26), fill=(255, 206, 105), anchor="lt")
+                frame = rtc.VideoFrame(*CALL_SIZE, rtc.VideoBufferType.RGB24, picture.tobytes())
                 previous = key
                 if key[0] != previous_card:
                     self.on_shown(card)
