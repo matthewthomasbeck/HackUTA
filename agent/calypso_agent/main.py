@@ -11,6 +11,7 @@ from livekit.agents import AgentServer, AutoSubscribe, JobContext, cli
 
 from .backend_client import b64
 from .gateway import GatewayClient
+from .caller_identity import resolve_caller_phone
 from .contract import Card
 from .grok import GrokSpeech
 from .live_media import CameraSamples, Publisher, RoomSpeech, audio_frames, video_frames, wait_bridge_ready
@@ -64,6 +65,7 @@ async def run_call(ctx, config):
     needs_crops = False
     dialogue_done = False
     last_progress = None
+    caller_phone = None
 
     def spawn(coro):
         task = asyncio.create_task(coro)
@@ -95,6 +97,9 @@ async def run_call(ctx, config):
         async with effect_lock:
             for card in effects.get("cards", []):
                 publisher.scheduler.push(Card.model_validate(card))
+            if dialogue_done and effects.get("cards"):
+                publisher.pinned_card = Card.model_validate(effects["cards"][-1])
+                publisher.camera_status = ""
             for text in effects.get("speech", []):
                 await speech.speak(text)
         return effects.get("done", False)
@@ -104,8 +109,9 @@ async def run_call(ctx, config):
         crop = await samples.add(image)
         if config.mode == "setup":
             progress = samples.progress
-            publisher.camera_status = (f"Camera: {progress}/3 clear face samples" if progress else
-                                       "Camera: waiting for one clear face")
+            if not dialogue_done:
+                publisher.camera_status = (f"Camera: {progress}/3 clear face samples" if progress else
+                                           "Camera: waiting for one clear face")
             if progress != last_progress:
                 log.info("camera_samples=%d/3", progress)
                 last_progress = progress
@@ -138,7 +144,7 @@ async def run_call(ctx, config):
 
     async def workflow():
         await wait_bridge_ready(ctx.room)
-        await gateway.start(config.mode, selected_identity, config.outcome)
+        await gateway.start(config.mode, selected_identity, config.outcome, caller_phone=caller_phone)
         if await apply(await gateway.event("start")):
             return
         ready.set()
@@ -171,6 +177,9 @@ async def run_call(ctx, config):
         spawn(publisher.run())
         participant = await ctx.wait_for_participant(identity=selected_identity)
         selected_identity = participant.identity
+        if config.mode == "setup":
+            caller_phone = await resolve_caller_phone(selected_identity)
+            log.info("verified_caller_phone_available=%s", bool(caller_phone))
         log.info("Claude media transport: mode=%s, participant=%s", config.mode, selected_identity)
         for publication in participant.track_publications.values():
             if publication.track:

@@ -54,19 +54,23 @@ async def test_claude_drives_setup_and_real_backend_enrollment(gateway_app):
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=gateway_app),
             base_url="http://test", headers={"Authorization": "Bearer gateway-token"}) as client:
             await client.post("/people", json={"name": "Mary", "is_patient": True})
-            session = (await client.post("/agent/sessions", json={"mode": "setup", "participant": "phone"})).json()["session_id"]
+            session = (await client.post("/agent/sessions", json={"mode": "setup", "participant": "phone", "caller_phone": "+15555550123"})).json()["session_id"]
             async def event(kind, **fields):
                 response = await client.post(f"/agent/sessions/{session}/events", json={"kind": kind, **fields})
                 assert response.status_code == 200, response.text
                 return response.json()
-            assert "Who are you" in (await event("start"))["speech"][0]
+            greeting = (await event("start"))["speech"][0]
+            assert "What's your name" in greeting and "Hi Mary" not in greeting
             await event("utterance", text="Sarah, her daughter")
-            assert "Sarah" in (await event("utterance", text="Baking on Sundays"))["speech"][0]
+            assert "You are Sarah, Mary's daughter." in (await event("utterance", text="Baking on Sundays"))["speech"][0]
             finished = await event("utterance", text="Yes", face_jpegs_b64=["eA=="] * 3)
             assert finished["done"] and finished["enrolled_person_id"]
+            assert "Please hang up now" in finished["speech"][0]
+            assert finished["cards"][0]["title"] == "Saved"
             person = (await client.get("/people/" + finished["enrolled_person_id"])).json()
             assert person["name"] == "Sarah" and person["relationship"] == "daughter"
             assert person["facts"] == ["Baking on Sundays"]
+            assert person["phone"] == "+15555550123"
             assert (await client.post(f"/agent/sessions/{session}/end")).status_code == 200
             assert not gateway_app.state.agent_sessions
     assert model.requests[0]["tool_choice"]["disable_parallel_tool_use"] is True
@@ -172,3 +176,23 @@ async def test_camera_permission_alone_never_confirms_an_intro():
     async def api(*args): return {"ok": True}
     await ClaudeController(model).respond(session, MediaEvent(kind="utterance", text="You can capture my face."), api)
     assert not session.intro_confirmed and session.pending_intro is None
+
+
+@pytest.mark.asyncio
+async def test_setup_greeting_does_not_address_unknown_caller_as_patient():
+    from calypso.claude_controller import ClaudeController, Effects, Session, StartSession
+    session = Session("sid", "cid", StartSession(mode="setup", participant="phone"), {"name": "Mary"})
+    effects = Effects(session_id="sid")
+    async def api(*args): return {}
+    await ClaudeController().execute("speak", {"text": "Hi Mary!"}, session, effects, api)
+    assert effects.speech == ["Hi, I'm Calypso⁻¹. I help Mary remember loved ones. What's your name, and how do you know Mary?"]
+
+
+def test_unsaved_closing_never_claims_success():
+    from calypso.claude_controller import ClaudeController, Effects, Session, StartSession
+    session = Session("sid", "cid", StartSession(mode="setup", participant="phone"), {})
+    effects = Effects(session_id="sid")
+    ClaudeController.finish_setup(session, effects)
+    assert effects.done and effects.cards[0].title != "Saved"
+    assert "No introduction was saved" in effects.speech[0]
+    assert "Please hang up now" in effects.speech[0]

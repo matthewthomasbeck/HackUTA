@@ -203,7 +203,7 @@ async def test_live_call_wiring_cleans_up_after_hangup_or_speech_failure(monkeyp
     class Gateway:
         session_id = None
         def __init__(self, *a): pass
-        async def start(self, mode, participant, outcome): self.session_id = "session"
+        async def start(self, mode, participant, outcome, **kwargs): self.session_id = "session"
         async def event(self, kind, **fields):
             events.append(kind)
             if events.count("utterance") == 3:
@@ -267,8 +267,11 @@ async def test_video_publisher_uses_same_participant_for_one_audio_and_video_tra
     monkeypatch.setattr(media.rtc.LocalVideoTrack, "create_video_track", lambda *a: "video")
     monkeypatch.setattr(media.rtc.LocalAudioTrack, "create_audio_track", lambda *a: "audio")
     published = []
+    encoding = []
     async def publish(track, options):
         published.append((track, options.source))
+        if track == "video":
+            encoding.append(options)
         return NS(sid=track)
     async def unpublish(sid): unpublished.append(sid)
     room = NS(local_participant=NS(publish_track=publish, unpublish_track=unpublish))
@@ -280,7 +283,9 @@ async def test_video_publisher_uses_same_participant_for_one_audio_and_video_tra
     await asyncio.gather(task, return_exceptions=True)
     await publisher.close()
     assert [track for track, _ in published] == ["video", "audio"]
-    assert len(frames) >= 1 and (frames[0].width, frames[0].height) == (1280, 720)
+    assert len(frames) >= 1 and (frames[0].width, frames[0].height) == (720, 1280)
+    assert encoding[0].video_encoding.max_bitrate == 2_500_000
+    assert encoding[0].simulcast is False
     assert len(shown) == 1
     assert unpublished == ["video", "audio"]
 
@@ -310,3 +315,18 @@ async def test_gateway_transport_preserves_enrollment_and_closes_remote_session(
         await gateway.close()
         assert not client.is_closed
     assert seen[-1] == "/agent/sessions/sid/end"
+
+
+def test_portrait_captions_page_without_dropping_words():
+    from calypso_agent.cards import CALL_SIZE, BACKGROUND, caption_cards, render
+    from PIL import ImageChops
+    text = " ".join(f"word{i}" for i in range(100))
+    pages = caption_cards(text)
+    assert len(pages) > 1
+    assert " ".join(line for page in pages for line in page.lines).split() == text.split()
+    for page in pages:
+        image = render(page, {}, size=CALL_SIZE)
+        assert image.size == (720, 1280)
+        diff = ImageChops.difference(image, Image.new("RGB", CALL_SIZE, BACKGROUND))
+        left, top, right, bottom = diff.getbbox()
+        assert left >= 40 and right <= 680 and bottom <= 1100
