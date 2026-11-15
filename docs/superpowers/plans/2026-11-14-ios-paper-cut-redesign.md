@@ -118,7 +118,7 @@
   - `enum DayPresentation`:
     - `static func chipName(for personId: String, names: [String: String]) -> String?` returns nil when the person is unknown or unnamed, so `PersonChip` shows "Someone new".
     - `static func heroPhotoCandidates(_ events: [DayEvent]) -> [String]` returns all `photoIds` in event-start order, deduped, keeping first occurrence.
-    - `static func accessibilityLabel(for event: DayEvent, names: [String: String], timeZone: TimeZone = .current) -> String` returns `"<h:mm a>, <summary>, at <place>, with <names joined ", ">"`. When uncertain, the place clause is `"place not certain: <place>"`. The "with …" clause is omitted when there are no people, and unknown people read "someone new".
+    - `static func accessibilityLabel(for event: DayEvent, names: [String: String], timeZone: TimeZone = .current, locale: Locale = .current) -> String` returns `"<h:mm a>, <summary>, at <place>, with <names joined ", ">"`. When uncertain, the place clause is `"place not certain: <place>"`. The "with …" clause is omitted when there are no people, and unknown people read "someone new".
 - [ ] **Step 1: Write failing tests** (calendar: `Calendar(identifier: .gregorian)` with `locale = Locale(identifier: "en_US")`, `timeZone = TimeZone(identifier: "America/Chicago")!`; build `DayEvent`s by decoding JSON with `JSONDecoder.calypso`):
   - `testPlaceThresholdBoundary`: `isUncertain(0.42) == true`, `isUncertain(0.5999) == true`, `isUncertain(0.6) == false`, `isUncertain(0.87) == false`.
   - `testHeaderToday`: day = now = 2026-11-14 10:00 → `DayHeader(title: "Today", caption: "Saturday, November 14")`.
@@ -131,7 +131,7 @@
   - `testAccessibilityLabelKnownPlace`: 9:30 AM, summary "Grocery shopping with Mom", place "Kroger", conf 0.87, people `["p_mom"]`, names `["p_mom":"Mom"]` → `"9:30 AM, Grocery shopping with Mom, at Kroger, with Mom"`.
   - `testAccessibilityLabelUncertainPlace`: place "Somewhere with park sounds", conf 0.42, people `["p_tom","p_x"]`, names `["p_tom":"Tom"]` → `"3:00 PM, A walk, place not certain: Somewhere with park sounds, with Tom, someone new"`.
 - [ ] **Step 2: Run and confirm failure.**
-- [ ] **Step 3: Implement** `DayPresentation.swift` per Interfaces. Note that the time formatter must use a fixed `en_US` locale only in tests via parameters; the app uses current.
+- [ ] **Step 3: Implement** `DayPresentation.swift` per Interfaces. Tests pass `locale: Locale(identifier: "en_US")` and the Chicago time zone; the app uses the defaults.
 - [ ] **Step 4: Edit `fake_backend.py`** as listed; run `uv run ios/scripts/fake_backend.py --port 8765 &` then `curl -s -H 'Authorization: Bearer dev-token' localhost:8765/days/<today−5 in yyyy-MM-dd>/events` prints `[]`; then kill it.
 - [ ] **Step 5: `xcodegen`, run tests, and confirm they pass.**
 - [ ] **Step 6: Commit** `feat(ios): add day presentation logic and quiet-day fake backend`.
