@@ -160,7 +160,9 @@ struct TodayView: View {
                     .background(alignment: .topLeading) {
                         if showsRail {
                             SeaPathRail(isFirst: i == 0, isLast: isLast,
-                                        showsGull: isLast && showsWalkingGull, index: i)
+                                        showsGull: isLast && showsWalkingGull, index: i,
+                                        isHome: event.place == "Home"
+                                            && !PlaceCertainty.isUncertain(event.placeConfidence))
                         }
                     }
                     .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 24)))

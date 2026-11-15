@@ -10,6 +10,8 @@ struct SeaPathRail: View {
     let showsGull: Bool
     /// Row index; alternates which side the wave marks sit on.
     let index: Int
+    /// A certain "Home" moment gets a tiny island-home glyph under its dot.
+    var isHome: Bool = false
 
     static let width: CGFloat = 48
 
@@ -45,6 +47,12 @@ struct SeaPathRail: View {
                 } else {
                     MomentDot()
                         .offset(x: lineX - 11, y: dotTop)
+                    if isHome {
+                        DecorationImage(.islandHome)
+                            .frame(width: 32, height: 32)
+                            .background(Color.paper, in: Circle())
+                            .offset(x: lineX - 16, y: dotTop + 28)
+                    }
                 }
             }
         }
