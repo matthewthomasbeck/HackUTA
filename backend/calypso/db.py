@@ -56,7 +56,8 @@ CREATE TABLE IF NOT EXISTS segments (
   status TEXT NOT NULL DEFAULT 'queued',
   error TEXT,
   received_at TEXT NOT NULL,
-  processed_at TEXT
+  processed_at TEXT,
+  time_synced INTEGER NOT NULL DEFAULT 1
 );
 CREATE TABLE IF NOT EXISTS utterances (
   id TEXT PRIMARY KEY,
@@ -137,7 +138,16 @@ def connect(path: str, init: bool = True) -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys=ON")
     if init:
         conn.executescript(SCHEMA)
+        _migrate(conn)
     return conn
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Add columns that deployed databases predate."""
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(segments)")}
+    if "time_synced" not in cols:
+        conn.execute("ALTER TABLE segments ADD COLUMN time_synced INTEGER NOT NULL DEFAULT 1")
+        conn.commit()
 
 
 def dumps(value: Iterable[Any]) -> str:

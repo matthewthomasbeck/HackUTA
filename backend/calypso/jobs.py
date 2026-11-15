@@ -9,15 +9,22 @@ A worker can't reach the API's in-memory bus, so it reports progress by
 POSTing to the API's `/events` endpoint.
 """
 import logging
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Callable
+from zoneinfo import ZoneInfo
 
 import httpx
 
 from . import db
 from .bus import emit
 from .config import Settings
-from .timeutil import now_iso
+from .identity import ModelUnavailable
+from .identity.audio import AudioError
+from .identity.vectors import best_scores, ranked
+from .identity.voice import embed_wav, get_voice_embedder
+from .stt import SttPiece, get_stt
+from .timeutil import iso_utc, now_iso, parse_iso
 
 _log = logging.getLogger("calypso.jobs")
 
@@ -75,12 +82,33 @@ def notify(settings: Settings, stage: str, payload: dict) -> None:
         _log.warning("could not post %s event to the API: %s", stage, exc)
 
 
+def mark_day_dirty(conn, day: date) -> None:
+    """Task 4 replaces this: flag the day's timeline for rebuilding."""
+
+
+def attribute_speaker(conn, wav: bytes, settings: Settings) -> str | None:
+    """The person whose voiceprint clearly matches this clip, else None. The patient may match."""
+    try:
+        vec, _ = embed_wav(get_voice_embedder(settings), wav, settings.voice_min_speech_s)
+    except (AudioError, ModelUnavailable) as exc:
+        _log.warning("voice attribution skipped: %s", exc)
+        return None
+    if vec is None:
+        return None
+    top = ranked(best_scores(conn, "voice_prints", vec, exclude_patient=False))[:2]
+    if not top or top[0][1] < settings.voice_match:
+        return None
+    if len(top) > 1 and top[0][1] - top[1][1] < settings.voice_margin:
+        return None
+    return top[0][0]
+
+
 def process_segment(segment_uuid: str, wav_path: str) -> list[str]:
     """Turn one puck segment into utterances, then delete its audio.
 
-    M1: the text is the puck's `local_text` (no server STT yet). Later milestones
-    add Grok STT + diarization (Task 2) and ECAPA voice clustering (Task 3) here.
-    On failure the WAV is kept so an RQ retry can try again.
+    Text is the puck's `local_text` if it has any, else server STT. Each STT piece
+    becomes one utterance at its capture time; the speaker is attributed once per
+    segment, only when confident. On failure the WAV is kept so an RQ retry can try again.
     """
     settings = Settings.from_env()
     conn = db.connect(settings.db_path)
@@ -90,13 +118,24 @@ def process_segment(segment_uuid: str, wav_path: str) -> list[str]:
             raise LookupError(f"unknown segment {segment_uuid}")
         utterance_ids: list[str] = []
         try:
+            wav = Path(wav_path).read_bytes()
             text = (seg["local_text"] or "").strip()
             if text:
+                pieces = [SttPiece(text, 0.0, 0.0)]
+                bounds = [(seg["ts_start"], seg["ts_end"])]
+            else:
+                pieces = get_stt(settings).transcribe(wav)
+                base = parse_iso(seg["ts_start"])
+                bounds = [(iso_utc(base + timedelta(seconds=p.t0)), iso_utc(base + timedelta(seconds=p.t1)))
+                          for p in pieces]
+            pieces = [(p, b) for p, b in zip(pieces, bounds) if p.text.strip()]
+            person_id = attribute_speaker(conn, wav, settings) if pieces else None
+            for p, (t0, t1) in pieces:
                 uid = db.new_id()
                 conn.execute(
-                    "INSERT INTO utterances (id, segment_uuid, ts_start, ts_end, text, source)"
-                    " VALUES (?, ?, ?, ?, ?, 'puck')",
-                    (uid, segment_uuid, seg["ts_start"], seg["ts_end"], text),
+                    "INSERT INTO utterances (id, segment_uuid, ts_start, ts_end, text, source, person_id)"
+                    " VALUES (?, ?, ?, ?, ?, 'puck', ?)",
+                    (uid, segment_uuid, t0, t1, p.text.strip(), person_id),
                 )
                 utterance_ids.append(uid)
             conn.execute(
@@ -113,6 +152,11 @@ def process_segment(segment_uuid: str, wav_path: str) -> list[str]:
             conn.commit()
             notify(settings, "puck.failed", {"segment_uuid": segment_uuid, "error": str(exc)[:200]})
             raise
+        try:
+            local_day = parse_iso(seg["ts_start"]).astimezone(ZoneInfo(settings.tz)).date()
+            mark_day_dirty(conn, local_day)
+        except Exception:
+            _log.exception("mark_day_dirty failed for %s", segment_uuid)
         Path(wav_path).unlink(missing_ok=True)  # audio is never kept
         notify(settings, "puck.processed", {"segment_uuid": segment_uuid, "utterance_ids": utterance_ids})
         return utterance_ids

@@ -37,6 +37,8 @@ class Settings:
     face: str  # opencv | fake
     voice: str  # sherpa | fake
     models_dir: str
+    stt: str  # grok | fake
+    xai_api_key: str
     # Thresholds: provisional starting values, tuned on real FaceTime/puck data.
     face_match: float
     face_margin: float
@@ -70,6 +72,8 @@ class Settings:
             face=e("CALYPSO_FACE", "opencv"),
             voice=e("CALYPSO_VOICE", "sherpa"),
             models_dir=e("CALYPSO_MODELS_DIR", str(Path(data_dir) / "models")),
+            stt=e("CALYPSO_STT") or ("grok" if e("XAI_API_KEY") else "fake"),
+            xai_api_key=e("XAI_API_KEY", ""),
             # SFace reference same-person cosine is 0.363; TitaNet sample test: same >= 0.66, different <= 0.37.
             face_match=_f("FACE_MATCH", 0.40),
             face_margin=_f("FACE_MARGIN", 0.08),
