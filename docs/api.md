@@ -143,6 +143,7 @@ End of a 1:1 setup call. Enrolls the caller's face prints and voiceprint.
   "notes": ["only 1.4 s of speech; need 2.0 s for a voiceprint"] }
 ```
 - Unusable media (no face, too little speech, missing models) never blocks enrollment; `notes` says what was skipped.
+- When `call_id` is a **setup** call, its transcript lines (from `/calls/{id}/lines`) are attributed to the enrolled person, so they show up in `GET /people/{id}` memories. Only unattributed lines change; group-call lines are never auto-linked. Memories skip lines shorter than 3 words ("Yes.").
 
 ### `POST /people/{id}/faces`, `POST /people/{id}/voice`
 Extra enrollment, e.g. an iMessage photo, or learning someone during a call.

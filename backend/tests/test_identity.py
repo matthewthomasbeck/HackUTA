@@ -253,12 +253,45 @@ async def test_setup_call_audio_becomes_voiceprint_and_second_call_dedupes(env):
             # 2 s + 1 s of caller speech were joined into one 3 s clip -> one voiceprint.
             assert conn.execute("SELECT COUNT(*), MAX(speech_s) FROM voice_prints WHERE person_id=?", (pid,)).fetchone()[:] == (1, 3.0)
             assert conn.execute("SELECT COUNT(*) FROM face_embeddings WHERE person_id=?", (pid,)).fetchone()[0] == 3
+            # The setup call's transcript lines now belong to the person it enrolled...
+            linked = conn.execute("SELECT text FROM utterances WHERE person_id=? ORDER BY ts_start", (pid,)).fetchall()
+            assert [r[0] for r in linked] == ["I'm Keanu, Mary's brother", "Yes"]
+            # ...and show up as memories (one-word replies like "Yes" are skipped).
+            memories = (await c.get(f"/people/{pid}")).json()["memories"]
+            assert len(memories) == 1 and memories[0].endswith("“I'm Keanu, Mary's brother”")
 
             second = await call("Keanu", "+15555550142")  # same relative calls again
             assert second["enrolled_person_id"] == pid
             assert conn.execute("SELECT COUNT(*) FROM people WHERE is_patient=0").fetchone()[0] == 1
             assert db.loads(db.get_person(conn, pid)["facts"]) == ["Same school"]  # merged, not duplicated or wiped
+            # The second call's lines join the same person.
+            assert conn.execute("SELECT COUNT(*) FROM utterances WHERE person_id=?", (pid,)).fetchone()[0] == 4
             conn.close()
+
+
+def test_group_call_lines_are_not_auto_linked(client, conn):
+    call = client.post("/calls", headers=AUTH, json={"kind": "group"}).json()
+    client.post(f"/calls/{call['id']}/lines", headers=AUTH, json={"speaker": "x", "text": "Hi Mom, it's Sarah here"})
+    intro(client, [face("sarah")] * 3, name="Sarah", call_id=call["id"])
+    assert conn.execute("SELECT person_id FROM utterances WHERE call_id=?", (call["id"],)).fetchone()[0] is None
+
+
+def test_setup_linking_never_overwrites_existing_attribution(client, conn):
+    tom = client.post("/people", headers=AUTH, json={"name": "Tom"}).json()
+    call = client.post("/calls", headers=AUTH, json={"kind": "setup"}).json()
+    client.post(f"/calls/{call['id']}/lines", headers=AUTH,
+                json={"speaker": "x", "text": "Tom said this already", "person_id": tom["id"]})
+    client.post(f"/calls/{call['id']}/lines", headers=AUTH, json={"speaker": "x", "text": "I am Sarah, her daughter"})
+    sarah = intro(client, [face("sarah")] * 3, name="Sarah", call_id=call["id"]).json()
+    rows = dict(conn.execute("SELECT text, person_id FROM utterances WHERE call_id=?", (call["id"],)).fetchall())
+    assert rows == {"Tom said this already": tom["id"], "I am Sarah, her daughter": sarah["id"]}
+    ev = [e for e in client.get("/events/recent").json() if e["stage"] == "person.enrolled"][-1]["payload"]
+    assert ev["lines_linked"] == 1
+
+
+def test_unknown_or_missing_call_id_links_nothing(client, conn):
+    p = intro(client, [face("sarah")] * 3, name="Sarah", call_id="no-such-call").json()
+    assert p["id"] and conn.execute("SELECT COUNT(*) FROM utterances").fetchone()[0] == 0
 
 
 def test_missing_models_degrade_to_learning(monkeypatch, env):

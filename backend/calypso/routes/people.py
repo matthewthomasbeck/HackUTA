@@ -1,4 +1,5 @@
 """People: list, detail with memories, create, rename, and enrollment entry points."""
+import logging
 import sqlite3
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -16,8 +17,10 @@ from ..models import IntroRequest, IntroResult, Person, PersonCreate, PersonDeta
 from ..timeutil import parse_iso
 
 router = APIRouter(prefix="/people", dependencies=[Depends(require_token)])
+_log = logging.getLogger("calypso.people")
 
 MEMORY_LIMIT = 5
+MEMORY_MIN_WORDS = 3  # shorter call lines ("Yes.", "Friend.") aren't useful memories
 
 
 def _memories(conn: sqlite3.Connection, person_id: str, tz: str) -> list[str]:
@@ -35,12 +38,34 @@ def _memories(conn: sqlite3.Connection, person_id: str, tz: str) -> list[str]:
         out.append(f"{local:%b} {local.day} · {ev['place']} · {ev['summary']}")
     if len(out) < MEMORY_LIMIT:
         for u in conn.execute(
-            "SELECT ts_start, text FROM utterances WHERE person_id = ? ORDER BY ts_start DESC LIMIT ?",
-            (person_id, MEMORY_LIMIT - len(out)),
+            "SELECT ts_start, text FROM utterances WHERE person_id = ? ORDER BY ts_start DESC LIMIT 50",
+            (person_id,),
         ):
+            if len(u["text"].split()) < MEMORY_MIN_WORDS:  # skip "Yes.", "Friend.", etc.
+                continue
             local = parse_iso(u["ts_start"]).astimezone(zone)
             out.append(f"{local:%b} {local.day} · “{u['text']}”")
+            if len(out) >= MEMORY_LIMIT:
+                break
     return out
+
+
+def link_setup_call_lines(conn: sqlite3.Connection, call_id: str | None, person_id: str) -> int:
+    """Attribute a 1:1 setup call's transcript lines to the person it just enrolled.
+
+    Safe only for setup calls: the caller is the only person talking to the agent.
+    Group-call lines are left alone (several people talk; recognition must decide).
+    Lines already attributed to someone are never changed.
+    """
+    if not call_id:
+        return 0
+    call = conn.execute("SELECT kind FROM calls WHERE id = ?", (call_id,)).fetchone()
+    if call is None or call["kind"] != "setup":
+        return 0
+    n = conn.execute("UPDATE utterances SET person_id = ? WHERE call_id = ? AND person_id IS NULL",
+                     (person_id, call_id)).rowcount
+    conn.commit()
+    return n
 
 
 @router.get("", response_model=list[Person])
@@ -133,11 +158,14 @@ def from_intro(
     if faces and not row["face_photo_key"]:
         _save_face_photo(storage, conn, row["id"], faces[0])
         row = db.get_person(conn, row["id"])
+    lines_linked = link_setup_call_lines(conn, body.call_id, row["id"])
 
     emit("person.enrolled", {"person_id": row["id"], "name": row["name"], "matched_existing": bool(person_id),
                              "matched_by": matched_by, "face_prints_added": added_faces,
                              "voice_prints_added": added_voice, "speech_s": round(speech_s, 1),
-                             "notes": notes, "call_id": body.call_id})
+                             "lines_linked": lines_linked, "notes": notes, "call_id": body.call_id})
+    _log.info("enrolled person=%s matched_existing=%s lines_linked=%d call=%s",
+              row["id"], bool(person_id), lines_linked, body.call_id)
     return IntroResult(**person_out(row, public_base(request)).model_dump(), matched_existing=bool(person_id),
                        matched_by=matched_by, face_prints_added=added_faces,
                        voice_prints_added=added_voice, notes=notes)
