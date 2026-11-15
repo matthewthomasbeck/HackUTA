@@ -29,8 +29,8 @@ class CallState:
             if identity in self._identities:
                 return []
             self._identities.add(identity)
-            lines = ([person.relationship] if person.relationship else [])
-            lines += (person.memories or person.facts)[:3]
+            # Slot 0 is always the relationship (blank when unknown) so a memory never reads as one.
+            lines = [person.relationship or ""] + (person.memories or person.facts)[:3]
             return [Card(kind="identity", title=person.name, lines=lines,
                          image_urls=[person.face_photo_url] if person.face_photo_url else [])]
         if result.status == "learning":

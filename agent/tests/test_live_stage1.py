@@ -321,7 +321,7 @@ async def test_gateway_transport_preserves_enrollment_and_closes_remote_session(
 
 
 def test_portrait_captions_page_without_dropping_words():
-    from calypso_agent.cards import CALL_SIZE, BACKGROUND, caption_cards, render
+    from calypso_agent.cards import CALL_SIZE, PAPER, caption_cards, render
     from PIL import ImageChops
     text = " ".join(f"word{i}" for i in range(100))
     pages = caption_cards(text)
@@ -330,9 +330,10 @@ def test_portrait_captions_page_without_dropping_words():
     for page in pages:
         image = render(page, {}, size=CALL_SIZE)
         assert image.size == (720, 1280)
-        diff = ImageChops.difference(image, Image.new("RGB", CALL_SIZE, BACKGROUND))
+        content = image.crop((0, 120, 720, 1216))  # between header art and wave strip
+        diff = ImageChops.difference(content, Image.new("RGB", content.size, PAPER))
         left, top, right, bottom = diff.getbbox()
-        assert left >= 40 and right <= 680 and bottom <= 1100
+        assert left >= 40 and right <= 680 and bottom <= 1216 - 120 - 32
 
 
 @pytest.mark.asyncio
@@ -423,17 +424,19 @@ def test_group_frame_preserves_entire_grid_instead_of_cropping_one_face():
 
 
 @pytest.mark.asyncio
-async def test_group_transport_subscribes_multiple_video_sources_without_transcribing(monkeypatch, tmp_path):
+async def test_group_transport_subscribes_video_sources_and_sends_bridge_speech_to_recall(monkeypatch, tmp_path):
     import calypso_agent.main as live
     from livekit import rtc
-    closed, sources = [], []
-    started = asyncio.Event()
+    closed, sources, utterances, audio_tracks = [], [], [], []
+    heard = ["", "Mom, what did you do today?"]  # a silence, then one sentence
+    started, said = asyncio.Event(), asyncio.Event()
     room = Events()
     room.metadata = '{"chert_bridge_ready":true}'
     def participant(identity, sid, kind=rtc.ParticipantKind.PARTICIPANT_KIND_STANDARD):
         track = NS(sid=sid, kind=rtc.TrackKind.KIND_VIDEO)
         pub = NS(track=track, source=rtc.TrackSource.SOURCE_CAMERA, width=1280, height=720)
-        return NS(identity=identity, kind=kind, track_publications={sid: pub})
+        audio = NS(track=NS(sid=sid + "-audio", kind=rtc.TrackKind.KIND_AUDIO), source=rtc.TrackSource.SOURCE_MICROPHONE)
+        return NS(identity=identity, kind=kind, track_publications={sid: pub, sid + "-audio": audio})
     relative = participant("chert-bridge-test", "relative-video")
     mary = participant("mary-device", "mary-video")
     other_agent = participant("other-agent", "agent-video", rtc.ParticipantKind.PARTICIPANT_KIND_AGENT)
@@ -446,6 +449,10 @@ async def test_group_transport_subscribes_multiple_video_sources_without_transcr
             if kind == "start":
                 started.set()
                 return {"speech": ["Hi"], "mode": "group_intro"}
+            if kind == "utterance":
+                utterances.append(fields)
+                said.set()
+                return {"mode": "group_intro"}
             assert kind == "frame"
             sources.append(fields["source_key"])
             assert fields["jpeg_b64"]
@@ -464,9 +471,14 @@ async def test_group_transport_subscribes_multiple_video_sources_without_transcr
     class Speech:
         def __init__(self, *args, **kwargs): pass
         async def speak(self, text): pass
-        async def listen(self): raise AssertionError("Group introduction must not transcribe mixed audio")
+        async def listen(self):
+            if heard:
+                return heard.pop(0)
+            await asyncio.Event().wait()
+    async def audio(track, speech):
+        audio_tracks.append(track.sid)
     async def video(track, callback):
-        await started.wait()
+        await said.wait()
         await asyncio.sleep(0)
         await callback(Image.new("RGB", (800, 400), "white"))
     monkeypatch.setattr(live, "GatewayClient", Gateway)
@@ -474,9 +486,13 @@ async def test_group_transport_subscribes_multiple_video_sources_without_transcr
     monkeypatch.setattr(live, "Publisher", Output)
     monkeypatch.setattr(live, "RoomSpeech", Speech)
     monkeypatch.setattr(live, "video_frames", video)
+    monkeypatch.setattr(live, "audio_frames", audio)
     async def wait_for_participant(**kwargs): return relative
     await asyncio.wait_for(live.run_call(NS(room=room, wait_for_participant=wait_for_participant),
         Config("group_intro", "http://test", "token", "key", state_file=str(tmp_path / "state.json"))), 2)
     assert set(sources) == {"relative-video", "mary-video"}
+    # Only the bridge's mixed track is heard; silence is skipped; text only, no voice or crops.
+    assert audio_tracks == ["relative-video-audio"]
+    assert utterances == [{"text": "Mom, what did you do today?", "face_jpegs_b64": [], "voice_wav_b64": None}]
     assert set(closed) == {"gateway", "provider", "output"}
     assert all(not handlers for handlers in room.handlers.values())

@@ -55,7 +55,7 @@ async def test_composite_grid_announces_each_relative_once_and_excludes_mary():
 
 @pytest.mark.asyncio
 async def test_unknown_or_patient_only_never_announces_or_enrolls():
-    state, api, controller = session(), Backend(), ClaudeController()
+    state, api, controller = session(), RecallBackend(card=None), ClaudeController()
     await controller.respond(state, MediaEvent(kind="start"), api)
     for faces in [[face("mary")], [face(None, "learning")], [face(None, "uncertain")], []]:
         api.faces = faces
@@ -63,7 +63,9 @@ async def test_unknown_or_patient_only_never_announces_or_enrolls():
             effects = await controller.respond(state, MediaEvent(kind="frame", jpeg_b64="eA=="), api)
             assert not effects.speech and not effects.cards and not effects.done
     assert not (await controller.respond(state, MediaEvent(kind="utterance", text="I am Keanu", voice_wav_b64="d2F2"), api)).speech
-    assert all(path == "/recognize" for _, path, _ in api.requests)
+    # Speech may only reach the call log and grounded recall: never identity lookups or enrollment.
+    assert all(path in {"/recognize", "/calls/cid/lines", "/recall"} for _, path, _ in api.requests)
+    assert not state.group_announced
 
 
 @pytest.mark.asyncio
@@ -97,3 +99,79 @@ async def test_long_gap_does_not_count_as_consecutive_evidence(monkeypatch):
     assert not (await controller.respond(state, event, api)).speech
     now[0] = 111
     assert len((await controller.respond(state, event, api)).speech) == 1
+
+
+class RecallBackend(Backend):
+    def __init__(self, card=None, delay=0):
+        super().__init__()
+        self.card, self.delay = card, delay
+    async def __call__(self, method, path, body=None):
+        if path == "/recall" or path.startswith("/calls/"):
+            self.requests.append((method, path, body))
+            if path == "/recall":
+                if self.delay:
+                    import asyncio
+                    await asyncio.sleep(self.delay)
+                return {"intent": "today" if self.card else "none", "card": self.card}
+            return {"ok": True}
+        return await super().__call__(method, path, body)
+
+
+TODAY = {"kind": "today", "title": "Today", "lines": ["4:07 AM · somewhere · Had coffee with someone"]}
+
+
+@pytest.fixture
+def no_recall_delay(monkeypatch):
+    import calypso.claude_controller as module
+    monkeypatch.setattr(module, "GROUP_INTRO_RECALL_DELAY_S", 0)
+
+
+@pytest.mark.asyncio
+async def test_group_intro_utterance_shows_recall_card_silently(no_recall_delay):
+    state, api, controller = session(), RecallBackend(card=TODAY), ClaudeController()
+    await controller.respond(state, MediaEvent(kind="start"), api)
+    effects = await controller.respond(state, MediaEvent(kind="utterance", text="Mom, what did you do today?"), api)
+    assert [c.kind for c in effects.cards] == ["today"] and not effects.speech
+    recall = [b for _, p, b in api.requests if p == "/recall"]
+    assert recall == [{"lines": [{"speaker": "bridge", "text": "Mom, what did you do today?"}]}]
+    assert not [p for _, p, _ in api.requests if p == "/recognize" or p.startswith("/people")]
+
+
+@pytest.mark.asyncio
+async def test_group_intro_unrelated_speech_no_card_and_no_identity_change(no_recall_delay):
+    state, api, controller = session(), RecallBackend(card=None), ClaudeController()
+    await controller.respond(state, MediaEvent(kind="start"), api)
+    effects = await controller.respond(state, MediaEvent(kind="utterance", text="I'm Sarah"), api)
+    assert not effects.cards and not effects.speech and not state.group_announced
+
+
+@pytest.mark.asyncio
+async def test_group_intro_recall_failure_never_raises(no_recall_delay):
+    state, api, controller = session(), RecallBackend(card=TODAY, delay=5), ClaudeController()
+    await controller.respond(state, MediaEvent(kind="start"), api)
+    effects = await controller.respond(state, MediaEvent(kind="utterance", text="what did you do today"), api)
+    assert not effects.cards and not effects.done
+
+
+@pytest.mark.asyncio
+async def test_group_intro_ignores_utterance_before_start_and_empty_text(no_recall_delay):
+    state, api, controller = session(), RecallBackend(card=TODAY), ClaudeController()
+    assert not (await controller.respond(state, MediaEvent(kind="utterance", text="what did you do today"), api)).cards
+    await controller.respond(state, MediaEvent(kind="start"), api)
+    assert not (await controller.respond(state, MediaEvent(kind="utterance", text="  "), api)).cards
+    assert not [p for _, p, _ in api.requests if p == "/recall"]
+
+
+@pytest.mark.asyncio
+async def test_group_intro_recall_waits_for_first_five_seconds(monkeypatch):
+    import calypso.claude_controller as module
+    now = [100.0]
+    monkeypatch.setattr(module.time, "monotonic", lambda: now[0])
+    state, api, controller = session(), RecallBackend(card=TODAY), ClaudeController()
+    await controller.respond(state, MediaEvent(kind="start"), api)
+    now[0] = 104.9  # faces get the opening window to themselves
+    assert not (await controller.respond(state, MediaEvent(kind="utterance", text="what did you do today"), api)).cards
+    assert not [p for _, p, _ in api.requests if p == "/recall"]
+    now[0] = 105.0
+    effects = await controller.respond(state, MediaEvent(kind="utterance", text="what did you do today"), api)
+    assert [c.kind for c in effects.cards] == ["today"]

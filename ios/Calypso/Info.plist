@@ -26,6 +26,11 @@
 	<string>1</string>
 	<key>CHERT_PHONE</key>
 	<string>$(CHERT_PHONE)</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Calypso⁻¹ connects to your puck to show who you're talking with.</string>
 	<key>NSContactsUsageDescription</key>

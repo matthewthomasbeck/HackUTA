@@ -20,6 +20,7 @@ from .identity.audio import concat_wavs, wav_seconds
 from .models import Card
 
 log = logging.getLogger("calypso.controller")
+GROUP_INTRO_RECALL_DELAY_S = 5  # faces get the opening of a group_intro call to themselves
 YES = {"yes", "yeah", "yep", "correct", "that's right", "that is right"}
 CAMERA_PERMISSION = {"you may capture my face", "you can capture my face", "please capture my face", "capture my face", "go ahead"}
 
@@ -78,6 +79,7 @@ class Session:
     group_question_used: bool = False
     group_matches: dict = field(default_factory=dict)
     group_announced: set = field(default_factory=set)
+    group_started_at: float | None = None
     last_recall_card_at: float = 0.0
     awaiting_newcomer_reply: bool = False
     done: bool = False
@@ -148,9 +150,20 @@ class ClaudeController:
         if event.kind == "start":
             if not session.started:
                 session.started = True
+                session.group_started_at = time.monotonic()
                 # Chert requires initial audio even before a face is identified.
                 effects.speech = ["Hi, it's Calypso. I'm here to help with introductions."]
                 effects.cards = [Card(kind="learning", title="Looking for familiar faces…", lines=[])]
+            return effects
+        if event.kind == "utterance":
+            # Mixed call audio only feeds grounded recall: a silent card, never speech,
+            # and never identity (that stays face-only below).
+            text = (event.text or "").strip()
+            if session.started and text:
+                session.transcript.append((time.monotonic(), text))
+                await api("POST", f"/calls/{session.call_id}/lines", {"speaker": session.config.participant, "text": text})
+                if time.monotonic() - session.group_started_at >= GROUP_INTRO_RECALL_DELAY_S:
+                    await self.direct_recall(session, effects, api)
             return effects
         if event.kind != "frame" or not session.started:
             return effects
@@ -193,7 +206,7 @@ class ClaudeController:
                 text += f", your {relationship}"
             effects.speech.append(text + ".")
             effects.cards.append(Card(kind="identity", title=name,
-                lines=([f"{patient}'s {relationship}"] if relationship else [])
+                lines=[f"{patient}'s {relationship}" if relationship else ""]  # slot 0 = relationship
                       + (person.get("memories") or person.get("facts", []))[:3]))
             session.group_announced.add(person_id)
         return effects
@@ -519,7 +532,7 @@ class ClaudeController:
             if relationship and patient_name and not relationship.casefold().startswith((patient_name + "'s ").casefold()):
                 relationship = f"{patient_name}'s {relationship}"
             effects.cards.append(Card(kind="identity", title=title,
-                lines=([relationship] if relationship else []) + (person.get("memories") or person.get("facts", []))[:3]))
+                lines=[relationship or ""] + (person.get("memories") or person.get("facts", []))[:3]))
         elif name == "show_learning":
             if session.learning_count < 3:
                 raise ValueError("Wait for three learning frames")

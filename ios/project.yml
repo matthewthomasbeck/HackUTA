@@ -36,6 +36,8 @@ targets:
         NSBluetoothAlwaysUsageDescription: "Calypso⁻¹ connects to your puck to show who you're talking with."
         NSContactsUsageDescription: "Calypso⁻¹ adds itself to your contacts so you can FaceTime it."
         NSLocalNetworkUsageDescription: "Calypso⁻¹ connects to your Calypso server on the local network during development."
+        # The demo backend is plain http on a raw IP (no TLS yet); ATS would block every request.
+        NSAppTransportSecurity: {NSAllowsArbitraryLoads: true}
         NSPhotoLibraryUsageDescription: "Calypso⁻¹ places your photos on your day's timeline."
         NSLocationAlwaysAndWhenInUseUsageDescription: "Calypso⁻¹ remembers places you visited so it can tell you about your day."
         NSLocationWhenInUseUsageDescription: "Calypso⁻¹ remembers places you visited so it can tell you about your day."

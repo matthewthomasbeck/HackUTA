@@ -1,31 +1,20 @@
 #include "state_machine.hpp"
 
+#include "audio_gain.hpp"
+#include "who_filter.hpp"
+
 #include <chrono>
 #include <cmath>
 #include <iostream>
 #include <thread>
 
 namespace calypso {
-namespace {
-
-// Mean absolute amplitude in [0, 1]. Cheap speech/silence gate.
-float clip_rms(const AudioChunk& clip) {
-  if (clip.pcm.empty()) {
-    return 0.f;
-  }
-  double sum = 0.0;
-  for (std::int16_t s : clip.pcm) {
-    sum += std::fabs(static_cast<double>(s) / 32768.0);
-  }
-  return static_cast<float>(sum / static_cast<double>(clip.pcm.size()));
-}
-
-}  // namespace
 
 StateMachine::StateMachine(Capture& capture, BackendLink& link, Models& models,
                            PhoneLink& phone, int offline_segment_ms,
                            SegmentSpool& spool, const ClockSource& clock,
-                           int segment_ms, float min_speech_rms)
+                           int segment_ms, float min_speech_rms,
+                           float voice_min_score)
     : capture_(capture),
       link_(link),
       models_(models),
@@ -34,6 +23,7 @@ StateMachine::StateMachine(Capture& capture, BackendLink& link, Models& models,
       segmenter_(segment_ms, clock),
       offline_buf_(offline_segment_ms),
       min_speech_rms_(min_speech_rms > 0.f ? min_speech_rms : 0.02f),
+      voice_min_score_(voice_min_score),
       queue_(/*max_chunks=*/200) {}
 
 StateMachine::~StateMachine() {
@@ -67,10 +57,8 @@ void StateMachine::stop() {
 void StateMachine::set_mode(RunMode mode) {
   const auto prev = mode_.exchange(mode);
   if (prev != mode) {
-    // Drop partial offline concat so reconnect doesn't leak into the next clip.
-    if (mode == RunMode::Online) {
-      offline_buf_.clear();
-    }
+    // Voice ID runs in both modes, so the worker-owned OfflineBuffer is not
+    // touched here (clearing it from this thread would race the worker).
     std::cerr << "state_machine: mode → "
               << (mode == RunMode::Online ? "ONLINE" : "OFFLINE") << "\n";
   }
@@ -100,11 +88,11 @@ void StateMachine::worker_loop() {
       }
       continue;
     }
-    // Every chunk is spooled in both modes; the Uploader drains the spool.
+    // Every chunk is spooled and run through voice ID in both modes: the
+    // Uploader drains the spool, and the phone's "talking with" card needs
+    // who-is-talking whether or not the backend is reachable.
     spool_chunk(*chunk);
-    if (mode_.load() == RunMode::Offline) {
-      process_offline(*chunk);
-    }
+    process_who(*chunk);
   }
 }
 
@@ -120,7 +108,7 @@ void StateMachine::spool_chunk(const AudioChunk& chunk) {
   }
 }
 
-void StateMachine::process_offline(const AudioChunk& chunk) {
+void StateMachine::process_who(const AudioChunk& chunk) {
   // Keep CHUNK_MS frames from capture; OfflineBuffer builds a longer clip.
   auto clip = offline_buf_.push(chunk);
   if (!clip) {
@@ -128,7 +116,7 @@ void StateMachine::process_offline(const AudioChunk& chunk) {
   }
 
   // Skip silence / noise — those embeddings look like "uncertain strangers".
-  const float rms = clip_rms(*clip);
+  const float rms = pcm_rms(clip->pcm);
   if (rms < min_speech_rms_) {
     std::cerr << "who is talking: (skip quiet clip rms=" << rms << ")\n";
     return;
@@ -154,7 +142,14 @@ void StateMachine::process_offline(const AudioChunk& chunk) {
       break;
   }
 
-  // Phone path still stubbed — print is enough for offline MVP.
+  // A clip that matches nobody at all is noise, not a new person: tell the
+  // phone nothing rather than flashing "Someone new".
+  if (!should_report_who(out.who, voice_min_score_)) {
+    std::cerr << "who is talking: (skip non-voice clip best_score=" << out.who.score << ")\n";
+    return;
+  }
+
+  // PhoneLink writes the drop file; the BLE sidecar notifies the phone.
   (void)phone_.send_who_is_talking(out.who);
 }
 

@@ -38,6 +38,19 @@ async def main(drop: Path, name: str) -> None:
         )
 
     server = BlessServer(name=name, name_overwrite=True)
+
+    # bless raises "Read/Write Callback is undefined" without these. Reads return
+    # the current value (e.g. the latest `who`). Phone commands on `control`
+    # (voice enrollment) are not implemented on the puck yet: log and ignore.
+    def on_read(characteristic, **kwargs):
+        return characteristic.value
+
+    def on_write(characteristic, value, **kwargs):
+        log.info("ignored phone command on %s: %s", characteristic.uuid,
+                 bytes(value).decode("utf-8", "replace")[:120])
+
+    server.read_request_func = on_read
+    server.write_request_func = on_write
     gatt = {
         SERVICE: {
             WHO: {
