@@ -104,9 +104,21 @@ cmake -S . -B build && cmake --build build
 
 Dashboard should show `puck.segment` / `puck.health` on `/stream` when online.
 
-## systemd
+## systemd (puck + BLE together)
 
-See `systemd/calypso-puck.service` — set `MIC_DEVICE` to the real ALSA name on the Pi.
+One unit runs `scripts/start_puck.sh`, which starts `ble_who_peripheral.py` then `build/calypso_puck`.
 The unit's `StateDirectory=calypso-puck` creates `/var/lib/calypso-puck` (owned
-by `User=`) for the default spool dir. After editing the unit:
-`sudo systemctl daemon-reload && sudo systemctl restart calypso-puck`.
+by `User=`) for the default spool dir. Set `MIC_DEVICE` in `config/.env`.
+
+```bash
+# on the Pi
+chmod +x scripts/start_puck.sh
+sudo cp systemd/calypso-puck.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now bluetooth
+sudo systemctl enable --now calypso-puck
+journalctl -u calypso-puck -f
+```
+
+Stop manual terminals first (`pkill -f calypso_puck`; stop the Python BLE script) so the mic isn’t busy.
+After editing the unit: `sudo systemctl daemon-reload && sudo systemctl restart calypso-puck`.

@@ -1,21 +1,28 @@
 [Unit]
-Description=Calypso⁻¹ puck (mic → backend / offline models)
-After=network-online.target sound.target
+Description=Calypso⁻¹ puck (mic + Titanet + BLE who → phone)
+After=network-online.target sound.target bluetooth.service
 Wants=network-online.target
+Requires=bluetooth.service
 
 [Service]
 Type=simple
 User=matthewthomasbeck
+# audio = mic; bluetooth = BlueZ D-Bus for ble_who_peripheral.py
 Group=audio
+SupplementaryGroups=bluetooth
 WorkingDirectory=/home/matthewthomasbeck/Projects/HackUTA/puck
 EnvironmentFile=-/home/matthewthomasbeck/Projects/HackUTA/puck/config/.env
-ExecStart=/home/matthewthomasbeck/Projects/HackUTA/puck/build/calypso_puck
+# One unit starts BLE sidecar then the C++ puck (see scripts/start_puck.sh)
+ExecStart=/home/matthewthomasbeck/Projects/HackUTA/puck/scripts/start_puck.sh
 # Creates /var/lib/calypso-puck owned by User= (default PUCK_SPOOL_DIR is
 # /var/lib/calypso-puck/spool); the puck exits with a clear error without it.
 StateDirectory=calypso-puck
 StateDirectoryMode=0750
 Restart=on-failure
 RestartSec=5
+# Kill BLE child when the unit stops
+KillMode=control-group
+TimeoutStopSec=15
 
 [Install]
 WantedBy=multi-user.target
