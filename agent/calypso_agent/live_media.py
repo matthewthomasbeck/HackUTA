@@ -169,6 +169,8 @@ class Publisher:
         self.on_shown = on_shown
         self.camera_status = ""
         self.pinned_card = None
+        # Shown whenever no other card is due (group calls: who Mary is talking to).
+        self.resting_card = None
         self.caption_pages = []
         self.caption_started = 0
 
@@ -190,16 +192,20 @@ class Publisher:
             pub = await self.room.local_participant.publish_track(track, options)
             self.publications.append(pub.sid)
 
+    def choose_card(self):
+        """Final card > a due scheduler card (e.g. recall) > the resting card > caption/status."""
+        card = self.scheduler.current() if self.scheduler else None
+        if self.caption_pages:
+            page = min(int((time.monotonic() - self.caption_started) / 5), len(self.caption_pages) - 1)
+            caption = self.caption_pages[page]
+        else:
+            caption = self.status
+        return self.pinned_card or card or self.resting_card or caption
+
     async def run(self):
         previous, previous_card, frame = None, None, None
         while True:
-            card = self.scheduler.current() if self.scheduler else None
-            if self.caption_pages:
-                page = min(int((time.monotonic() - self.caption_started) / 5), len(self.caption_pages) - 1)
-                caption = self.caption_pages[page]
-            else:
-                caption = self.status
-            card = self.pinned_card or card or caption
+            card = self.choose_card()
             key = (card.model_dump_json() if card else "idle", self.camera_status)
             if key != previous:
                 status = (
