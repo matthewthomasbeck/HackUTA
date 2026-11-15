@@ -48,7 +48,7 @@ PEOPLE = {
                 "facts": ["Lives in Austin", "Has a dog named Biscuit"]},
     "p_tom": {"id": "p_tom", "name": "Tom", "relationship": "neighbor", "is_patient": False,
               "facts": ["Fixes the fence every spring"]},
-    # Not named yet: the app should show "Unnamed visitor".
+    # Not named yet: the app shows "Getting to know someone new…".
     "p_unknown": {"id": "p_unknown", "name": None, "relationship": None, "is_patient": False,
                   "facts": []},
 }
@@ -83,10 +83,7 @@ def seeded_events(day: date) -> list[dict]:
     if day > today:
         return []
     if day < today - timedelta(days=2):
-        # Matches the backend's empty-day wording (Task 7).
-        return [{"id": f"ev_{day}_quiet", "start": at(day, 8, 0), "end": at(day, 20, 0),
-                 "place": "Home", "place_confidence": 0.95, "people": [],
-                 "summary": "A quiet day at home.", "evidence": [], "photo_ids": []}]
+        return []
     return [
         {"id": f"ev_{day}_kroger", "start": at(day, 9, 10), "end": at(day, 9, 55),
          "place": "Kroger", "place_confidence": 0.87, "people": ["p_mom"],

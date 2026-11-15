@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		03523954E6FF5DA23FF86B05 /* ContactBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFA318F059492AB2C1179647 /* ContactBuilderTests.swift */; };
+		14CEEED30611C0920CB3F904 /* DayPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A202F17A972A83C548345B9 /* DayPresentation.swift */; };
 		172F266470305939F3DBF943 /* ScreenRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19BA6629159A25F7BB20A7F0 /* ScreenRoute.swift */; };
 		18CEFE84A165DAE4C8B55037 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = C000207E3BE110C95A3CC700 /* Typography.swift */; };
 		198DF353F2A700D7A5431E65 /* PermissionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86A3F0EE6854B0B69B9BED8F /* PermissionsView.swift */; };
@@ -40,6 +41,7 @@
 		E08C90366F8545608632D2F9 /* GroupCallHowToView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC8E90F0AA08BAC56087EB2 /* GroupCallHowToView.swift */; };
 		E9CD81B65AF90AC53D3B75BD /* Nunito-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 50B615A01F92611AEA9EC53C /* Nunito-Regular.ttf */; };
 		EA59C67737D4B673E42E12C0 /* card.json in Resources */ = {isa = PBXBuildFile; fileRef = DD27CA6990D892953719D4B1 /* card.json */; };
+		ECCD5911526611BE8E7CC2E5 /* DayPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E330351A31673814846B7D47 /* DayPresentationTests.swift */; };
 		EE567266074201F5433BD53F /* EventRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57F213DBACE9FF99060673E9 /* EventRow.swift */; };
 		F3FA10055E7A8ADA7C07BE90 /* OFL-Nunito.txt in Resources */ = {isa = PBXBuildFile; fileRef = 05BDE8C999D8C72BB74C5FF0 /* OFL-Nunito.txt */; };
 		FF3AA5B2C38D4CF0D8F76AAD /* PeopleListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66C4426D34E7133D06233BDD /* PeopleListView.swift */; };
@@ -65,6 +67,7 @@
 		19BA6629159A25F7BB20A7F0 /* ScreenRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenRoute.swift; sourceTree = "<group>"; };
 		1BA8A7316EEF065BD5C1F278 /* CalypsoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalypsoApp.swift; sourceTree = "<group>"; };
 		1F63932741AF35C8CEF7253B /* AddContactView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddContactView.swift; sourceTree = "<group>"; };
+		3A202F17A972A83C548345B9 /* DayPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayPresentation.swift; sourceTree = "<group>"; };
 		3A9EBD092A4C4DA4B07AEB04 /* OFL-Fraunces.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-Fraunces.txt"; sourceTree = "<group>"; };
 		4B6BB8C1DAF0F0A34D244938 /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
 		50B615A01F92611AEA9EC53C /* Nunito-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Nunito-Regular.ttf"; sourceTree = "<group>"; };
@@ -95,6 +98,7 @@
 		CCC8E90F0AA08BAC56087EB2 /* GroupCallHowToView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupCallHowToView.swift; sourceTree = "<group>"; };
 		DD27CA6990D892953719D4B1 /* card.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = card.json; sourceTree = "<group>"; };
 		E26ED4E4BC103197F47F32EA /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		E330351A31673814846B7D47 /* DayPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayPresentationTests.swift; sourceTree = "<group>"; };
 		E9DE861182F214754D6B51F7 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		EAB25557BFD3F2F40E9D0D2B /* PersonDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDetailView.swift; sourceTree = "<group>"; };
 		EBBB739A589A7F912F54233D /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
@@ -117,6 +121,7 @@
 			isa = PBXGroup;
 			children = (
 				AFA318F059492AB2C1179647 /* ContactBuilderTests.swift */,
+				E330351A31673814846B7D47 /* DayPresentationTests.swift */,
 				73B2520CB080608B20FAAD51 /* DesignSystemTests.swift */,
 				FFFD5920901B83B310B84DF0 /* ModelsDecodingTests.swift */,
 				619D8BAB1B9994414C0F8BFF /* PhotoSyncTests.swift */,
@@ -176,6 +181,7 @@
 			isa = PBXGroup;
 			children = (
 				16BF16670930782C25ABB070 /* .gitkeep */,
+				3A202F17A972A83C548345B9 /* DayPresentation.swift */,
 				57F213DBACE9FF99060673E9 /* EventRow.swift */,
 				A019F55B802A508A2223AAAB /* TodayView.swift */,
 			);
@@ -382,6 +388,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				03523954E6FF5DA23FF86B05 /* ContactBuilderTests.swift in Sources */,
+				ECCD5911526611BE8E7CC2E5 /* DayPresentationTests.swift in Sources */,
 				AB64BA5BA34F86A82DCC7527 /* DesignSystemTests.swift in Sources */,
 				825B335B54C2FAD38D5E3EB6 /* ModelsDecodingTests.swift in Sources */,
 				A8E1CDB66CC2C3EA3B398103 /* PhotoSyncTests.swift in Sources */,
@@ -399,6 +406,7 @@
 				367C353412EB4741F36914DD /* CalypsoApp.swift in Sources */,
 				7F46DBB0D390E1258E5D7BB5 /* Config.swift in Sources */,
 				1ADFCE652FF794F86CCB9FC7 /* ContactBuilder.swift in Sources */,
+				14CEEED30611C0920CB3F904 /* DayPresentation.swift in Sources */,
 				C967CFCB52C65A074F932D02 /* Decoration.swift in Sources */,
 				EE567266074201F5433BD53F /* EventRow.swift in Sources */,
 				E08C90366F8545608632D2F9 /* GroupCallHowToView.swift in Sources */,
