@@ -1,9 +1,13 @@
+import MessageUI
 import SwiftUI
 
 /// Person (Figma 20:668 named, 20:852 someone new). The navigation bar is hidden (the iOS 26 system back button
 /// is a glass circle) and the paper-cut "‹ People" button sits at the top of the content, as in Figma; swipe-back
 /// still works through `.swipeBackEnabled()` (`SwipeBack.swift`). An unknown person is never titled "Unnamed visitor".
-/// `startEditing` opens the edit-name sheet on appear (DEBUG `-screen edit-name-…` route).
+/// A named person gets the Call block (Figma 59:327 / 59:377): "FaceTime <name>" iMessages Calypso⁻¹'s agent
+/// "call <name> with me" and, once sent, shows the Calling sheet; without a number it opens the details sheet.
+/// `startEditing` opens the edit sheet on appear (details for a named person, the name sheet for someone new) and
+/// `startCalling` opens the Calling sheet (DEBUG `-screen edit-name-… / details-… / calling-…` routes).
 struct PersonDetailView: View {
     let client: APIClient?
     @State var person: Person
@@ -12,16 +16,21 @@ struct PersonDetailView: View {
     @State private var editing = false
     @State private var draftName = ""
     @State private var error: String?
+    @State private var composing = false
+    @State private var callSent = false
+    @State private var calling = false
+    @State private var callNote: String?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dismiss) private var dismiss
 
     init(client: APIClient?, person: Person, onUpdate: @escaping (Person) -> Void = { _ in },
-         startEditing: Bool = false) {
+         startEditing: Bool = false, startCalling: Bool = false) {
         self.client = client
         _person = State(initialValue: person)
         self.onUpdate = onUpdate
         _editing = State(initialValue: startEditing)
+        _calling = State(initialValue: startCalling)
         _draftName = State(initialValue: person.displayName ?? "")
     }
 
@@ -34,10 +43,13 @@ struct PersonDetailView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if let name = person.displayName {
                     namedIdentity(name)
+                    CallBlock(name: name, hasNumber: person.callablePhone != nil, note: callNote,
+                              onCall: startCall, onAddNumber: startEditing)
                     facts
+                    FamilyPhotoPlaceholder()
                     recentMoments
                     if let error { errorText(error) }
-                    CalypsoButton("Edit name", kind: .secondary, action: startEditing)
+                    CalypsoButton("Edit details", kind: .secondary, action: startEditing)
                 } else {
                     unknownIdentity
                     if let error { errorText(error) }
@@ -61,11 +73,33 @@ struct PersonDetailView: View {
         .toolbar(.hidden, for: .navigationBar)
         .swipeBackEnabled()
         .sheet(isPresented: $editing) {
-            EditNameSheet(initialName: draftName, onSave: { name in
-                draftName = name
-                editing = false
-                Task { await save() }
-            }, onCancel: { editing = false })
+            if let name = person.displayName {
+                EditDetailsSheet(name: name, phone: person.phone, onSave: { name, phone in
+                    editing = false
+                    Task { await saveDetails(name: name, phone: phone) }
+                }, onCancel: { editing = false })
+            } else {
+                EditNameSheet(initialName: draftName, onSave: { name in
+                    draftName = name
+                    editing = false
+                    Task { await save() }
+                }, onCancel: { editing = false })
+            }
+        }
+        .sheet(isPresented: $composing, onDismiss: {
+            // Present the Calling sheet only after the compose sheet has gone, so the two don't collide.
+            if callSent { calling = true }
+        }) {
+            if let name = person.displayName {
+                MessageComposeView(recipient: Config.chertPhone, body: CallRequest.messageBody(for: name)) { result in
+                    callSent = result == .sent // .cancelled / .failed: nothing more
+                    composing = false
+                }
+                .ignoresSafeArea()
+            }
+        }
+        .sheet(isPresented: $calling) {
+            CallingSheet(name: person.displayName ?? "", onCancel: { calling = false })
         }
         .task { await load() }
     }
@@ -73,6 +107,14 @@ struct PersonDetailView: View {
     private func startEditing() {
         draftName = person.displayName ?? ""
         editing = true
+    }
+
+    private func startCall() {
+        callNote = CallRequest.unavailableNote(canSendText: MFMessageComposeViewController.canSendText(),
+                                               agentPhone: Config.chertPhone)
+        guard callNote == nil else { return }
+        callSent = false
+        composing = true
     }
 
     // MARK: Named
@@ -206,12 +248,25 @@ struct PersonDetailView: View {
             self.error = "Couldn’t save the name"
         }
     }
+
+    private func saveDetails(name: String, phone: String?) async {
+        guard let client, !name.isEmpty else { return }
+        do {
+            person = try await client.updatePersonDetails(id: person.id, name: name, phone: phone)
+            onUpdate(person)
+            error = nil
+            callNote = nil
+        } catch {
+            self.error = "Couldn’t save the details"
+        }
+    }
 }
 
 #Preview("Named") {
     NavigationStack {
         PersonDetailView(client: nil, person: Person(id: "p_sarah", name: "Sarah", relationship: "daughter",
-                                                     facts: ["Lives in Austin", "Has a dog named Biscuit"]))
+                                                     facts: ["Lives in Austin", "Has a dog named Biscuit"],
+                                                     phone: "+15125550142"))
     }
     .tint(Color.periwinkleDeep)
 }

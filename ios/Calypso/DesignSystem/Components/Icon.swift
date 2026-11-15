@@ -13,6 +13,8 @@ enum CalypsoGlyph: String {
     case soundWave = "IconSoundWave"
     case feather = "IconFeather"
     case photo = "IconPhoto"
+    /// `Icon / Video` (58:323): FaceTime, on the person page's Call button.
+    case video = "IconVideo"
 
     var image: Image {
         switch self {
@@ -63,7 +65,7 @@ struct CalypsoIcon: View {
 #Preview {
     HStack(spacing: 12) {
         ForEach([CalypsoGlyph.today, .people, .account, .chevronLeft, .chevronRight, .pin, .soundWave, .feather,
-                 .photo], id: \.self) { glyph in
+                 .photo, .video], id: \.self) { glyph in
             CalypsoIcon(glyph)
         }
     }

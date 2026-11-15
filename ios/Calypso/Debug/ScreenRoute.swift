@@ -54,7 +54,16 @@ enum ScreenRoute {
         case "people-ax":
             return AnyView(PeopleListView(client: APIClient.configured).dynamicTypeSize(.accessibility5))
         case "person-p_sarah":
-            return AnyView(DebugPersonStack(seed: Person(id: "p_sarah", name: "Sarah", relationship: "daughter")))
+            return AnyView(DebugPersonStack(seed: .debugSarah))
+        case "person-p_sarah-bottom":
+            return AnyView(DebugPersonStack(seed: .debugSarah).defaultScrollAnchor(.bottom))
+        case "person-p_tom":
+            // No phone: the dashed "Add Tom’s number" state.
+            return AnyView(DebugPersonStack(seed: Person(id: "p_tom", name: "Tom", relationship: "neighbor")))
+        case "calling-p_sarah":
+            return AnyView(DebugPersonStack(seed: .debugSarah, startCalling: true))
+        case "details-p_sarah":
+            return AnyView(DebugPersonStack(seed: .debugSarah, startEditing: true))
         case "person-p_unknown":
             return AnyView(DebugPersonStack(seed: Person(id: "p_unknown")))
         case "edit-name-p_unknown":
@@ -86,11 +95,13 @@ enum ScreenRoute {
 private struct DebugPersonStack: View {
     let seed: Person
     var startEditing = false
+    var startCalling = false
     @State private var path: [String]
 
-    init(seed: Person, startEditing: Bool = false) {
+    init(seed: Person, startEditing: Bool = false, startCalling: Bool = false) {
         self.seed = seed
         self.startEditing = startEditing
+        self.startCalling = startCalling
         _path = State(initialValue: [seed.id])
     }
 
@@ -101,11 +112,17 @@ private struct DebugPersonStack: View {
                 .navigationTitle("People")
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationDestination(for: String.self) { _ in
-                    PersonDetailView(client: APIClient.configured, person: seed, startEditing: startEditing)
+                    PersonDetailView(client: APIClient.configured, person: seed, startEditing: startEditing,
+                                     startCalling: startCalling)
                 }
         }
         .tint(Color.periwinkleDeep)
     }
+}
+
+private extension Person {
+    /// Sarah with her phone, so the FaceTime state shows before the fake backend is restarted with phones.
+    static let debugSarah = Person(id: "p_sarah", name: "Sarah", relationship: "daughter", phone: "+15125550142")
 }
 #endif
 

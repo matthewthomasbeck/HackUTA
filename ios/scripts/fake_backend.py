@@ -43,9 +43,10 @@ PEOPLE = {
     "p_patient": {"id": "p_patient", "name": "Mary", "relationship": None, "is_patient": True,
                   "facts": ["Retired schoolteacher", "Loves crosswords"]},
     "p_mom": {"id": "p_mom", "name": "Mom", "relationship": "mother", "is_patient": False,
-              "facts": ["Loves gardening", "Calls every Sunday"]},
+              "facts": ["Loves gardening", "Calls every Sunday"], "phone": "+15125550117"},
     "p_sarah": {"id": "p_sarah", "name": "Sarah", "relationship": "daughter", "is_patient": False,
-                "facts": ["Lives in Austin", "Has a dog named Biscuit"]},
+                "facts": ["Lives in Austin", "Has a dog named Biscuit"], "phone": "+15125550142"},
+    # No phone: the app shows "Add Tom’s number".
     "p_tom": {"id": "p_tom", "name": "Tom", "relationship": "neighbor", "is_patient": False,
               "facts": ["Fixes the fence every spring"]},
     # Not named yet: the app shows "Getting to know someone new…".
