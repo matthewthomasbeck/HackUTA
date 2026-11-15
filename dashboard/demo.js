@@ -1,4 +1,5 @@
-/* Demo replay for the judge dashboard: `?demo=1` (full loop), `?demo=idle`, `?demo=offline`.
+/* Demo replay for the judge dashboard: `?demo=1` (full loop), `?demo=idle`, `?demo=offline`,
+ * `?demo=auto` (1:1 calls: recognized, then interviewed and saved).
  * Emits the same `{stage, ts, payload}` events the backend puts on /stream, on a timer,
  * so the page can be built, screenshotted and shown without a live puck or call.
  */
@@ -59,6 +60,26 @@ window.CalypsoDemo = (() => {
       [2.4, { stage: "puck.processed", payload: { segment_uuid: "s-a", utterance_ids: ["u1"] } }],
     ];
     if (mode === "idle") return { steps: ambient.concat([[6, seg("s-b", [{ label: "Speech", score: 0.8 }])], [7.3, { stage: "puck.processed", payload: { segment_uuid: "s-b", utterance_ids: ["u2"] } }]]), length: 10 };
+    if (mode === "auto") {
+      // Two 1:1 calls: a known relative is recognized; then a new caller is interviewed and saved.
+      const bridge = "chert-bridge-demo";
+      const session = (cid) => ({ stage: "agent.session", payload: { session_id: `s-${cid}`, call_id: cid, mode: "auto", participant: bridge, controlled: false } });
+      const switched = (cid, previous, m) => ({ stage: "agent.mode", payload: { session_id: `s-${cid}`, call_id: cid, mode: m, previous, participant: bridge } });
+      const look = (cid, status, pid, f) => ({ stage: "recognize", payload: { ...face(bridge, status, pid, f, null).payload, call_id: cid } });
+      const say = (cid, text) => ({ stage: "call.line", payload: { call_id: cid, speaker: bridge, text } });
+      const card = (title, lines) => ({ stage: "card.shown", payload: { card: { kind: "identity", title, lines } } });
+      return { steps: ambient.concat([
+        [3, { stage: "call.started", payload: { call_id: "c1", kind: "group" } }], [3.1, session("c1")], [3.2, switched("c1", "auto", "recognize")],
+        [5, look("c1", "learning", null, 0.31)], [6.5, look("c1", "identified", "p-sarah", 0.81)],
+        [7, card("You are Sarah", ["Mary's Daughter", "Lives in Austin", "Please hang up now."])],
+        [14, { stage: "call.ended", payload: { call_id: "c1" } }],
+        [17, { stage: "call.started", payload: { call_id: "c2", kind: "group" } }], [17.1, session("c2")], [17.2, switched("c2", "auto", "recognize")],
+        [19, look("c2", "learning", null, 0.22)], [22.2, switched("c2", "recognize", "setup")],
+        [24, say("c2", "I'm Priya, Mary's neighbor.")], [28, say("c2", "Yes, that's right.")],
+        [30, { stage: "person.enrolled", payload: { call_id: "c2", person_id: "p-tom", matched_existing: false, face_prints_added: 3, voice_prints_added: 1 } }],
+        [37, { stage: "call.ended", payload: { call_id: "c2" } }],
+      ]), length: 42 };
+    }
 
     const call = offline ? [
       [3, { stage: "call.started", payload: { call_id: "c1", kind: "group" } }],
@@ -96,7 +117,7 @@ window.CalypsoDemo = (() => {
   }
 
   function start(mode, ctx) {
-    mode = mode === "offline" || mode === "idle" ? mode : "live";
+    mode = ["offline", "idle", "auto"].includes(mode) ? mode : "live";
     ctx.setPeople(Object.fromEntries(PEOPLE.map((p) => [p.id, p])));
     ctx.setDays(dayEvents());
     for (const ev of seed(mode)) ctx.emit(ev, false);

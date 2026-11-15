@@ -59,7 +59,7 @@ async def start(body: StartSession, request: Request):
     request.app.state.agent_sessions[sid] = session
     # The call log stores recognize calls as kind "group"; tell the dashboard the real mode.
     emit("agent.session", {"session_id": sid, "call_id": call["id"], "mode": body.mode,
-                           "controlled": body.controlled})
+                           "participant": body.participant, "controlled": body.controlled})
     return {"session_id": sid, "call_id": call["id"]}
 
 
@@ -74,9 +74,15 @@ async def event(session_id: str, body: MediaEvent, request: Request):
                  len(body.face_jpegs_b64), bool(body.text))
         async with backend_api(request) as api:
             controller = request.app.state.claude_controller or ClaudeController()
+            before = session.config.mode
             try:
                 async with asyncio.timeout(30):
                     effects = await controller.respond(session, body, api)
+                if session.config.mode != before:
+                    # An auto call starts recognizing, then may switch to the setup interview.
+                    emit("agent.mode", {"session_id": session_id, "call_id": session.call_id,
+                                        "mode": session.config.mode, "previous": before,
+                                        "participant": session.config.participant})
                 for card in effects.cards:
                     emit("card.queued", {"session_id": session_id, "call_id": session.call_id,
                         "card": card.model_dump(mode="json"), "controlled": session.config.controlled})

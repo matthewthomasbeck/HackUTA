@@ -494,4 +494,31 @@ async def test_auto_session_api_starts_recognition_and_cleans_up(gateway_app):
             sid = response.json()["session_id"]
             effects = (await client.post(f"/agent/sessions/{sid}/events", json={"kind": "start"})).json()
             assert effects["mode"] == "recognize" and len(effects["speech"]) == 1
+            events = [e for e in (await client.get("/events/recent?limit=1000")).json()
+                      if e["payload"].get("session_id") == sid]
+            started = [e["payload"] for e in events if e["stage"] == "agent.session"]
+            assert started and started[0]["mode"] == "auto" and started[0]["participant"] == "phone"
+            modes = [e["payload"] for e in events if e["stage"] == "agent.mode"]
+            assert [(m["previous"], m["mode"], m["participant"]) for m in modes] == [("auto", "recognize", "phone")]
             assert (await client.post(f"/agent/sessions/{sid}/end")).status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_auto_timeout_emits_agent_mode_setup(gateway_app, monkeypatch):
+    from calypso.claude_controller import ClaudeController
+    import calypso.claude_controller as module
+    now = [100.0]
+    monkeypatch.setattr(module.time, "monotonic", lambda: now[0])
+    gateway_app.state.claude_controller = ClaudeController(FakeClaude([("speak", {"text": "Introduce yourself"}), None]))
+    async with gateway_app.router.lifespan_context(gateway_app):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=gateway_app),
+            base_url="http://test", headers={"Authorization": "Bearer gateway-token"}) as client:
+            await client.post("/people", json={"name": "Mary", "is_patient": True})
+            sid = (await client.post("/agent/sessions", json={"mode": "auto", "participant": "phone"})).json()["session_id"]
+            await client.post(f"/agent/sessions/{sid}/events", json={"kind": "start"})
+            now[0] = 105.1
+            effects = (await client.post(f"/agent/sessions/{sid}/events", json={"kind": "recognition_timeout"})).json()
+            assert effects["mode"] == "setup"
+            modes = [e["payload"] for e in (await client.get("/events/recent?limit=1000")).json()
+                     if e["stage"] == "agent.mode" and e["payload"].get("session_id") == sid]
+            assert [(m["previous"], m["mode"]) for m in modes] == [("auto", "recognize"), ("recognize", "setup")]
