@@ -196,3 +196,109 @@ def test_unsaved_closing_never_claims_success():
     assert effects.done and effects.cards[0].title != "Saved"
     assert "No introduction was saved" in effects.speech[0]
     assert "Please hang up now" in effects.speech[0]
+
+
+CARD = {"kind": "today", "title": "Today", "lines": ["Lunch with Sarah"]}
+
+
+def _group_session():
+    from calypso.claude_controller import Session, StartSession
+    return Session("sid", "cid", StartSession(mode="group", participant="phone"), {})
+
+
+def _recording_api(card=CARD, delay=0):
+    calls = []
+    async def api(method, path, body=None):
+        calls.append((method, path, body))
+        if path == "/recall":
+            if delay:
+                import asyncio
+                await asyncio.sleep(delay)
+            return {"intent": "today" if card else "none", "card": card}
+        return {"ok": True}
+    api.calls = calls
+    return api
+
+
+@pytest.mark.asyncio
+async def test_group_utterance_calls_recall_not_sonnet():
+    from calypso.claude_controller import ClaudeController, MediaEvent
+    model = FakeClaude([])
+    api = _recording_api()
+    effects = await ClaudeController(model).respond(_group_session(), MediaEvent(kind="utterance", text="what day is it"), api)
+    assert len(effects.cards) == 1 and effects.cards[0].kind == "today"
+    assert model.requests == []
+    recall = [c for c in api.calls if c[1] == "/recall"]
+    assert recall[0][2]["lines"] == [{"speaker": "phone", "text": "what day is it"}]
+
+
+@pytest.mark.asyncio
+async def test_group_recall_none_no_sonnet():
+    from calypso.claude_controller import ClaudeController, MediaEvent
+    model = FakeClaude([])
+    effects = await ClaudeController(model).respond(_group_session(), MediaEvent(kind="utterance", text="nice weather"), _recording_api(card=None))
+    assert not effects.cards and model.requests == []
+
+
+@pytest.mark.asyncio
+async def test_group_recall_timeout_returns_empty():
+    import time
+    from calypso.claude_controller import ClaudeController, MediaEvent
+    model = FakeClaude([])
+    start = time.monotonic()
+    effects = await ClaudeController(model).respond(_group_session(), MediaEvent(kind="utterance", text="hello"), _recording_api(delay=5))
+    assert time.monotonic() - start <= 4.5
+    assert not effects.cards and not effects.speech and model.requests == []
+
+
+@pytest.mark.asyncio
+async def test_group_recall_http_error_returns_empty():
+    from calypso.claude_controller import ClaudeController, MediaEvent
+    async def api(method, path, body=None):
+        if path == "/recall":
+            raise httpx.HTTPStatusError("boom", request=None, response=None)
+        return {"ok": True}
+    effects = await ClaudeController(FakeClaude([])).respond(_group_session(), MediaEvent(kind="utterance", text="hello"), api)
+    assert not effects.cards
+
+
+@pytest.mark.asyncio
+async def test_group_recall_debounced_10s(monkeypatch):
+    import time
+    from calypso.claude_controller import ClaudeController, MediaEvent
+    now = [1000.0]
+    monkeypatch.setattr(time, "monotonic", lambda: now[0])
+    session = _group_session()
+    controller = ClaudeController(FakeClaude([]))
+    api = _recording_api()
+    first = await controller.respond(session, MediaEvent(kind="utterance", text="one"), api)
+    now[0] += 1
+    second = await controller.respond(session, MediaEvent(kind="utterance", text="two"), api)
+    now[0] += 10
+    third = await controller.respond(session, MediaEvent(kind="utterance", text="three"), api)
+    assert len(first.cards) == 1 and not second.cards and len(third.cards) == 1
+
+
+@pytest.mark.asyncio
+async def test_pending_newcomer_reply_goes_to_sonnet():
+    from calypso.claude_controller import ClaudeController, MediaEvent
+    model = FakeClaude([None])
+    session = _group_session()
+    session.awaiting_newcomer_reply = True
+    api = _recording_api()
+    controller = ClaudeController(model)
+    await controller.respond(session, MediaEvent(kind="utterance", text="She is my niece"), api)
+    assert len(model.requests) == 1 and session.awaiting_newcomer_reply is False
+    assert not [c for c in api.calls if c[1] == "/recall"]
+    effects = await controller.respond(session, MediaEvent(kind="utterance", text="what day is it"), api)
+    assert len(model.requests) == 1 and len(effects.cards) == 1
+
+
+@pytest.mark.asyncio
+async def test_group_speak_sets_awaiting_newcomer_reply():
+    from calypso.claude_controller import ClaudeController, Effects
+    session = _group_session()
+    session.learning_count = 3
+    async def api(*args): return {}
+    await ClaudeController().execute("speak", {"text": "Who is this?"}, session, Effects(session_id="sid"), api)
+    assert session.awaiting_newcomer_reply is True
