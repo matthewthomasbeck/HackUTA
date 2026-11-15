@@ -1,41 +1,36 @@
-# Puck (Matt) — C++17 pipeline stubs
+# Puck (Matt) — online pipeline
 
-Full task checklist: [`docs/tasks/matt-puck.md`](../docs/tasks/matt-puck.md)
+Teammates need: mic (or `sine`) → buffer `SEGMENT_MS` → `POST /puck/segments` with Bearer token. Same contract as `backend/calypso/models.py`.
 
-## Threads
+## Online path (done)
 
-| Thread | Role |
-|---|---|
-| **0 main** | Load `config/.env`, init mic + backend link + NCS2 models, wait `CONNECT_RETRY_SEC`, start SM + listener. Run via **systemd**. |
-| **1 connection listener** | Poll link; on drop wait `n` s, set Offline, keep reconnecting every `n` s. |
-| **2 state machine** | Sole mic owner. **Online:** chunk → backend. **Offline:** chunk → local models → discard output (for now). |
+1. `Capture` — ALSA on Linux, or `MIC_DEVICE=sine` anywhere  
+2. `BackendLink` — `GET /health` to connect; buffer audio; multipart `POST /puck/segments`; `POST /puck/health` on connect  
+3. `StateMachine` online tick — `read_chunk` → `send_audio_chunk`  
+4. `ConnectionListener` — flips Offline on drop, retries every `CONNECT_RETRY_SEC`
 
-Online and offline are **modes**, not two mic threads (ALSA can’t be shared that way).
+Offline / Coral / NCS2 still stubbed.
 
-## Layout
+## Config (`config/.env`)
 
-```
-puck/
-  main.cpp                 # THREAD 0
-  include/*.hpp
-  src/*.cpp
-  config/.env.example      # copy → config/.env
-  systemd/calypso-puck.service
-  spikes/mic_check.sh      # hour-1 only
+```bash
+cp config/.env.example config/.env
+# set BACKEND_IP, BACKEND_PORT, API_TOKEN (= CALYPSO_API_TOKEN), MIC_DEVICE
 ```
 
 ## Build / run
 
 ```bash
-cp config/.env.example config/.env   # edit IP, port, MIC_DEVICE
-cmake -S . -B build && cmake --build build
-./build/calypso_puck
+# macOS smoke (no ALSA): brew install curl; MIC_DEVICE=sine
+# Pi: sudo apt install cmake g++ libasound2-dev libcurl4-openssl-dev
 
-# on the Pi:
-sudo cp systemd/calypso-puck.service /etc/systemd/system/
-sudo systemctl daemon-reload && sudo systemctl enable --now calypso-puck
+cmake -S . -B build && cmake --build build
+# backend must be up: cd backend && uv run uvicorn calypso.app:app --host 0.0.0.0 --port 8000
+./build/calypso_puck
 ```
 
-## Stub status
+Dashboard should show `puck.segment` / `puck.health` on `/stream`.
 
-Everything compiles as a skeleton: `Capture` / `BackendLink` / `Models` init & I/O return failure until you fill them in. Offline `infer` output is intentionally unused.
+## systemd
+
+See `systemd/calypso-puck.service` — set `MIC_DEVICE` to the real ALSA name on the Pi.

@@ -2,11 +2,16 @@
 
 #include "types.hpp"
 
+#include <cstdint>
 #include <string>
 
 namespace calypso {
 
-// ALSA (or other) mic capture. Owns the device handle.
+inline constexpr int kSampleRate = 16000;
+
+// Mic capture. Owns the device handle.
+// MIC_DEVICE: ALSA name (e.g. plughw:1,0) on Linux, or "sine" for a test tone
+// (no hardware — useful for laptop → backend smoke tests).
 class Capture {
  public:
   Capture() = default;
@@ -15,18 +20,18 @@ class Capture {
   Capture(const Capture&) = delete;
   Capture& operator=(const Capture&) = delete;
 
-  // Open mic_device (ALSA name / bus). Returns false on failure.
   bool init(const std::string& mic_device, int chunk_ms);
-
-  // Block until one chunk_ms frame is ready, or return false on error/stop.
   bool read_chunk(AudioChunk& out);
-
   void shutdown();
 
  private:
   bool open_ = false;
+  bool sine_ = false;
   int chunk_ms_ = 30;
-  // TODO: snd_pcm_t* / ring buffer
+  std::uint64_t sine_phase_ = 0;
+#if defined(CALYPSO_HAS_ALSA)
+  void* pcm_ = nullptr;  // snd_pcm_t*
+#endif
 };
 
 }  // namespace calypso

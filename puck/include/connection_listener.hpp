@@ -9,7 +9,7 @@
 
 namespace calypso {
 
-// THREAD 1 — watches BackendLink; flips StateMachine to Offline on drop,
+// THREAD 1 — watches BackendLink (HTTP); flips StateMachine to Offline on drop,
 // keeps retrying connect every retry_sec.
 class ConnectionListener {
  public:

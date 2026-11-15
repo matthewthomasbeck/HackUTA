@@ -1,7 +1,6 @@
 #include "config.hpp"
 
 #include <fstream>
-#include <sstream>
 #include <unordered_map>
 
 namespace calypso {
@@ -11,10 +10,22 @@ std::string trim(std::string s) {
   while (!s.empty() && (s.front() == ' ' || s.front() == '\t')) {
     s.erase(s.begin());
   }
-  while (!s.empty() && (s.back() == ' ' || s.back() == '\t' || s.back() == '\r')) {
+  while (!s.empty() &&
+         (s.back() == ' ' || s.back() == '\t' || s.back() == '\r')) {
     s.pop_back();
   }
   return s;
+}
+
+int parse_int(const std::string& s, int fallback) {
+  if (s.empty()) {
+    return fallback;
+  }
+  try {
+    return std::stoi(s);
+  } catch (...) {
+    return fallback;
+  }
 }
 
 }  // namespace
@@ -45,18 +56,20 @@ bool load_config(const std::string& path, Config& out) {
   };
 
   out.backend_ip = get("BACKEND_IP");
-  out.backend_port = static_cast<std::uint16_t>(std::stoi(get("BACKEND_PORT").empty() ? "0" : get("BACKEND_PORT")));
+  out.backend_port =
+      static_cast<std::uint16_t>(parse_int(get("BACKEND_PORT"), 0));
+  out.api_token = get("API_TOKEN");
   out.mic_device = get("MIC_DEVICE");
-  out.chunk_ms = get("CHUNK_MS").empty() ? 30 : std::stoi(get("CHUNK_MS"));
-  out.connect_retry_sec =
-      get("CONNECT_RETRY_SEC").empty() ? 5 : std::stoi(get("CONNECT_RETRY_SEC"));
-  out.connection_check_sec =
-      get("CONNECTION_CHECK_SEC").empty() ? 2 : std::stoi(get("CONNECTION_CHECK_SEC"));
+  out.chunk_ms = parse_int(get("CHUNK_MS"), 30);
+  out.segment_ms = parse_int(get("SEGMENT_MS"), 3000);
+  out.connect_retry_sec = parse_int(get("CONNECT_RETRY_SEC"), 5);
+  out.connection_check_sec = parse_int(get("CONNECTION_CHECK_SEC"), 2);
   out.ncs2_device = get("NCS2_DEVICE");
   out.stt_model_path = get("STT_MODEL_PATH");
   out.voice_model_path = get("VOICE_MODEL_PATH");
 
-  return !out.backend_ip.empty() && out.backend_port != 0 && !out.mic_device.empty();
+  return !out.backend_ip.empty() && out.backend_port != 0 &&
+         !out.api_token.empty() && !out.mic_device.empty();
 }
 
 }  // namespace calypso
