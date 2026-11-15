@@ -9,11 +9,13 @@ struct Person: Codable, Equatable, Identifiable {
     var isPatient: Bool
     var facePhotoUrl: String?
     var facts: [String]
+    var phone: String?
 
     init(id: String, name: String? = nil, relationship: String? = nil, isPatient: Bool = false,
-         facePhotoUrl: String? = nil, facts: [String] = []) {
+         facePhotoUrl: String? = nil, facts: [String] = [], phone: String? = nil) {
         self.id = id; self.name = name; self.relationship = relationship
         self.isPatient = isPatient; self.facePhotoUrl = facePhotoUrl; self.facts = facts
+        self.phone = phone
     }
 
     init(from decoder: Decoder) throws {
@@ -24,6 +26,7 @@ struct Person: Codable, Equatable, Identifiable {
         isPatient = try c.decodeIfPresent(Bool.self, forKey: .isPatient) ?? false
         facePhotoUrl = try c.decodeIfPresent(String.self, forKey: .facePhotoUrl)
         facts = try c.decodeIfPresent([String].self, forKey: .facts) ?? []
+        phone = try c.decodeIfPresent(String.self, forKey: .phone)
     }
 }
 
