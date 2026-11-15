@@ -44,11 +44,11 @@ enum ScreenRoute {
             return AnyView(TodayView(client: APIClient.configured).dynamicTypeSize(.accessibility5))
         case "today-quiet":
             let fiveDaysAgo = Calendar.current.date(byAdding: .day, value: -5, to: Date()) ?? Date()
-            return AnyView(TodayView(client: APIClient.configured, initialDay: fiveDaysAgo))
+            return AnyView(TodayView(client: APIClient.configured, initialDay: fiveDaysAgo).debugWithTabBar())
         case "today-error":
             // Nothing listens on port 9, so every request fails fast.
             let unreachable = APIClient(baseURL: URL(string: "http://127.0.0.1:9")!, token: "dev-token")
-            return AnyView(TodayView(client: unreachable))
+            return AnyView(TodayView(client: unreachable).debugWithTabBar())
         case "people":
             return AnyView(PeopleListView(client: APIClient.configured))
         case "people-ax":
@@ -148,6 +148,15 @@ struct DesignSystemSpecimen: View {
             .padding(24)
         }
         .background(Color.paper)
+    }
+}
+#endif
+
+#if DEBUG
+private extension View {
+    /// Pins the real tab bar under a state route, so screenshots show what fits above it.
+    func debugWithTabBar() -> some View {
+        safeAreaInset(edge: .bottom, spacing: 0) { CalypsoTabBar(selection: .constant(.today)) }
     }
 }
 #endif

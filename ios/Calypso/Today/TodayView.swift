@@ -69,7 +69,7 @@ struct TodayView: View {
 
     private var header: some View {
         let title = DayHeader.make(for: day)
-        return VStack(alignment: .leading, spacing: 12) {
+        return VStack(alignment: .leading, spacing: 8) {
             NavHeader(caption: title.caption, title: title.title) {
                 if showsPeek {
                     // Peeks over the top edge of the day switcher, as in Figma.
@@ -79,11 +79,14 @@ struct TodayView: View {
             }
             .zIndex(1)
             DaySwitcher(labels: DaySwitcherLabels.make(for: day), onPrevious: previousDay, onNext: nextDay)
-            CalypsoButton("Pick a day", kind: .quiet) { pickingDay = true }
+            // The couldn't-load state already offers "Look at another day"; hiding this keeps it on one screen.
+            if state != .failed {
+                CalypsoButton("Pick a day", kind: .quiet) { pickingDay = true }
+            }
         }
         .padding(.horizontal, 24)
-        .padding(.top, 16)
-        .padding(.bottom, 8)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
     }
 
     private func previousDay() {
@@ -100,19 +103,19 @@ struct TodayView: View {
     @ViewBuilder private var stateContent: some View {
         switch state {
         case .failed:
-            VStack(spacing: 8) {
+            VStack(spacing: 4) {
                 CalmMessage(pose: .thinking, title: "We couldn’t load this day right now.", message: "Please check your connection. Your memories are safe.",
                             buttonTitle: "Try again", scene: false, action: retry)
                 CalypsoButton("Look at another day", kind: .quiet, action: previousDay)
             }
             .padding(.horizontal, 24)
-            .padding(.top, 32)
+            .padding(.top, 12)
         case .loaded where events.isEmpty:
             CalmMessage(pose: .resting, title: "A quiet day",
                         message: "Nothing new was recorded. That’s okay. Rest days matter.",
                         buttonTitle: "Look at another day", action: previousDay)
                 .padding(.horizontal, 24)
-                .padding(.top, 32)
+                .padding(.top, 12)
         case .loading where events.isEmpty:
             ProgressView()
                 .controlSize(.large)

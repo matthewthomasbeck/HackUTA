@@ -22,7 +22,7 @@ struct CalmMessage: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             if scene {
                 illustration
             } else {
@@ -46,17 +46,17 @@ struct CalmMessage: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// Quiet Shore (14:42), 240pt tall: calm waves from 150pt down, a sand shore, the mascot resting on it.
+    /// Quiet Shore (14:42), compacted to 180pt so the quiet day fits one screen on a 390×844 phone: calm waves, a sand shore, the mascot resting on it.
     private var illustration: some View {
         // Layers are overlays so the oversized shore and wave art never widen the layout.
         Color.clear
             .frame(maxWidth: .infinity)
-            .frame(height: 240)
+            .frame(height: 180)
             .overlay(alignment: .bottomLeading) {
                 DecorationImage(.wavesCalm)
                     .scaledToFill()
-                    .frame(height: 110)
-                    .offset(y: 20)
+                    .frame(height: 90)
+                    .offset(y: 16)
             }
             .overlay(alignment: .bottom) {
                 GeometryReader { geo in
@@ -67,7 +67,7 @@ struct CalmMessage: View {
                 }
             }
             .overlay(alignment: .bottom) {
-                Mascot(pose: pose, size: .l)
+                Mascot(pose: pose, size: .custom(156))
                     .padding(.bottom, 8)
             }
             .clipShape(RoundedRectangle(cornerRadius: 24))
