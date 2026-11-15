@@ -17,6 +17,18 @@ enum ScreenRoute {
         switch route {
         case "design-system":
             return AnyView(DesignSystemSpecimen())
+        #if DEBUG
+        case "components":
+            return AnyView(ComponentsSpecimen(page: 1))
+        case "components-2":
+            return AnyView(ComponentsSpecimen(page: 2))
+        case "components-3":
+            return AnyView(ComponentsSpecimen(page: 3))
+        case "components-4":
+            return AnyView(ComponentsSpecimen(page: 4))
+        case "components-ax":
+            return AnyView(ComponentsSpecimen(page: 5).dynamicTypeSize(.accessibility5))
+        #endif
         default:
             return AnyView(Text("Unknown route").calypsoFont(.body).padding())
         }

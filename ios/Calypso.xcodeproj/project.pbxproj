@@ -8,37 +8,54 @@
 
 /* Begin PBXBuildFile section */
 		03523954E6FF5DA23FF86B05 /* ContactBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFA318F059492AB2C1179647 /* ContactBuilderTests.swift */; };
+		064661FD9AFB1256F1112965 /* MomentCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA7E994FE48D2107E9B5BC3 /* MomentCard.swift */; };
+		0B92D28E1121C6A3B27DB62E /* ComponentsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221385F83789EE45B9C7A7F3 /* ComponentsTests.swift */; };
+		0B9E793E6CC3519125895CE1 /* PhotoTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A48544A88801A6AC7BE05C /* PhotoTile.swift */; };
 		14CEEED30611C0920CB3F904 /* DayPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A202F17A972A83C548345B9 /* DayPresentation.swift */; };
 		172F266470305939F3DBF943 /* ScreenRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19BA6629159A25F7BB20A7F0 /* ScreenRoute.swift */; };
 		18CEFE84A165DAE4C8B55037 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = C000207E3BE110C95A3CC700 /* Typography.swift */; };
 		198DF353F2A700D7A5431E65 /* PermissionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86A3F0EE6854B0B69B9BED8F /* PermissionsView.swift */; };
 		1990378769632A6B50AE2D5B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90AC15038E2C32668688A5FC /* OnboardingView.swift */; };
 		1ADFCE652FF794F86CCB9FC7 /* ContactBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 013CE471DAB0DE95C63AD848 /* ContactBuilder.swift */; };
+		1BE05D2879186A107C092786 /* StepDots.swift in Sources */ = {isa = PBXBuildFile; fileRef = F26F48A3EF1D19ADF7191BD1 /* StepDots.swift */; };
+		1ECE490FD83D5D6A1B20D3F2 /* BackButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB180B2E853CF7FA515B5C5 /* BackButton.swift */; };
+		1F0F7BCDA52952DC3D3A10A0 /* Avatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 776BE9FD5055F8E07C18FB53 /* Avatar.swift */; };
 		2F6DB8893954A584049FC608 /* PersonDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAB25557BFD3F2F40E9D0D2B /* PersonDetailView.swift */; };
 		31DD5362F551F3A11DA1827F /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 172FCEC2FD95E71D4334677C /* APIClient.swift */; };
 		367C353412EB4741F36914DD /* CalypsoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BA8A7316EEF065BD5C1F278 /* CalypsoApp.swift */; };
+		3AD7B682CCE8CAFB4FFE65BB /* DaySwitcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 998AFCC2F781DF2228746AC0 /* DaySwitcher.swift */; };
 		44E94392D6C8D143DC26C5B0 /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B6BB8C1DAF0F0A34D244938 /* Palette.swift */; };
+		4511E419BEE3C82F6AE6E1CF /* Logo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D0D637A2CA5E624A76ED57E /* Logo.swift */; };
 		45256228BE67DF436B2BD60A /* Fraunces-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8C02AFFEE4EA0C4746132B7F /* Fraunces-SemiBold.ttf */; };
 		484F7978CFFBE861E4AFC4FC /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ACB2B94AE150CA1A096F52F /* Models.swift */; };
 		4A5DE239414E7F74DD11EEBD /* VisitSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF7C632925D6D48A7D561E07 /* VisitSync.swift */; };
 		51D32352E9E774EA5DEF3350 /* Mascot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 039F204A3910A45258DDF7AC /* Mascot.swift */; };
 		54A317F607A71DF3EFCD4B0C /* PhotoSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66A1EEECD7F59818BDAFFA3A /* PhotoSync.swift */; };
+		591BFE8A725BCE6C9EC2FF06 /* PaperCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFDA5A290A662F37DB597DB8 /* PaperCard.swift */; };
+		7293061DC2F18B0188E77157 /* ComponentsSpecimen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8738171C3568BB59FCF89B46 /* ComponentsSpecimen.swift */; };
+		7EF44820026550AC337031A1 /* CalmMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BE49B19EF05F392F73C5F81 /* CalmMessage.swift */; };
 		7F46DBB0D390E1258E5D7BB5 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B350D7FDB84FCD745D02E68 /* Config.swift */; };
 		822A4784C4BBA1A0B4C41C5D /* OFL-Fraunces.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3A9EBD092A4C4DA4B07AEB04 /* OFL-Fraunces.txt */; };
 		825B335B54C2FAD38D5E3EB6 /* ModelsDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFFD5920901B83B310B84DF0 /* ModelsDecodingTests.swift */; };
+		82C733EE685C86EA5C5C2791 /* CalypsoTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F88CAB202EF683EA5FCD9937 /* CalypsoTabBar.swift */; };
 		8DE1226523C76C1918EF0FDB /* Nunito-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 59A030AB2E35AD8CB7FA5A4B /* Nunito-Bold.ttf */; };
 		9CD912909AD1ACEC79350773 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A019F55B802A508A2223AAAB /* TodayView.swift */; };
+		A295855598C9783B2885D720 /* PlaceRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D8BD76689F7B9700767D06 /* PlaceRow.swift */; };
 		A8E1CDB66CC2C3EA3B398103 /* PhotoSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 619D8BAB1B9994414C0F8BFF /* PhotoSyncTests.swift */; };
 		AB157F26920A6951A4F16A1F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8F342471DA69D019603CCF54 /* Assets.xcassets */; };
 		AB2EA21093BD0A46F30EC14D /* Nunito-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 88929DA6DFCFA83507C98BB0 /* Nunito-SemiBold.ttf */; };
 		AB64BA5BA34F86A82DCC7527 /* DesignSystemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73B2520CB080608B20FAAD51 /* DesignSystemTests.swift */; };
+		B01F100A6D481A0F08E1CAA9 /* CalypsoButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE05A37936A65DEB8235E2F /* CalypsoButton.swift */; };
+		BBD2B5724BA6FD88872AC9AF /* NavHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CC9FE748068B7F226F25BD8 /* NavHeader.swift */; };
 		C186C8026759B4A7F67F12A9 /* AddContactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F63932741AF35C8CEF7253B /* AddContactView.swift */; };
 		C967CFCB52C65A074F932D02 /* Decoration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5366F45AA4CA4C56A2BBDECF /* Decoration.swift */; };
 		CC383F035487C0E12E10687B /* person.json in Resources */ = {isa = PBXBuildFile; fileRef = 7AF65A48C2B99AA17637EAE0 /* person.json */; };
+		CD2727BBBB18285FAAB75DB6 /* PersonChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B79343FDC0FDB82875BCAAF /* PersonChip.swift */; };
 		CEAAA36EB67A5B215AEE6E8E /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9DE861182F214754D6B51F7 /* AccountView.swift */; };
 		D24756932D01B4EA00DE52F2 /* day_events.json in Resources */ = {isa = PBXBuildFile; fileRef = 7142BFC78178A9CE47212C61 /* day_events.json */; };
 		D7931FA2864863CDF0EB6EEF /* VisitSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67362F56F646B0C8A4C00B65 /* VisitSyncTests.swift */; };
 		E08C90366F8545608632D2F9 /* GroupCallHowToView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCC8E90F0AA08BAC56087EB2 /* GroupCallHowToView.swift */; };
+		E5605C1A17A0FB6384AD6C27 /* Icon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528C68D5A8457E9E471591AD /* Icon.swift */; };
 		E9CD81B65AF90AC53D3B75BD /* Nunito-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 50B615A01F92611AEA9EC53C /* Nunito-Regular.ttf */; };
 		EA59C67737D4B673E42E12C0 /* card.json in Resources */ = {isa = PBXBuildFile; fileRef = DD27CA6990D892953719D4B1 /* card.json */; };
 		ECCD5911526611BE8E7CC2E5 /* DayPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E330351A31673814846B7D47 /* DayPresentationTests.swift */; };
@@ -67,33 +84,47 @@
 		19BA6629159A25F7BB20A7F0 /* ScreenRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenRoute.swift; sourceTree = "<group>"; };
 		1BA8A7316EEF065BD5C1F278 /* CalypsoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalypsoApp.swift; sourceTree = "<group>"; };
 		1F63932741AF35C8CEF7253B /* AddContactView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddContactView.swift; sourceTree = "<group>"; };
+		221385F83789EE45B9C7A7F3 /* ComponentsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComponentsTests.swift; sourceTree = "<group>"; };
 		3A202F17A972A83C548345B9 /* DayPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayPresentation.swift; sourceTree = "<group>"; };
 		3A9EBD092A4C4DA4B07AEB04 /* OFL-Fraunces.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "OFL-Fraunces.txt"; sourceTree = "<group>"; };
 		4B6BB8C1DAF0F0A34D244938 /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
 		50B615A01F92611AEA9EC53C /* Nunito-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Nunito-Regular.ttf"; sourceTree = "<group>"; };
+		528C68D5A8457E9E471591AD /* Icon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Icon.swift; sourceTree = "<group>"; };
 		5366F45AA4CA4C56A2BBDECF /* Decoration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Decoration.swift; sourceTree = "<group>"; };
 		57F213DBACE9FF99060673E9 /* EventRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventRow.swift; sourceTree = "<group>"; };
 		59A030AB2E35AD8CB7FA5A4B /* Nunito-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Nunito-Bold.ttf"; sourceTree = "<group>"; };
+		5CC9FE748068B7F226F25BD8 /* NavHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavHeader.swift; sourceTree = "<group>"; };
+		5D0D637A2CA5E624A76ED57E /* Logo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logo.swift; sourceTree = "<group>"; };
+		60A48544A88801A6AC7BE05C /* PhotoTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoTile.swift; sourceTree = "<group>"; };
 		619D8BAB1B9994414C0F8BFF /* PhotoSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoSyncTests.swift; sourceTree = "<group>"; };
 		66A1EEECD7F59818BDAFFA3A /* PhotoSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoSync.swift; sourceTree = "<group>"; };
 		66C4426D34E7133D06233BDD /* PeopleListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleListView.swift; sourceTree = "<group>"; };
 		67362F56F646B0C8A4C00B65 /* VisitSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisitSyncTests.swift; sourceTree = "<group>"; };
+		6BE49B19EF05F392F73C5F81 /* CalmMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalmMessage.swift; sourceTree = "<group>"; };
 		7142BFC78178A9CE47212C61 /* day_events.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = day_events.json; sourceTree = "<group>"; };
 		73B2520CB080608B20FAAD51 /* DesignSystemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystemTests.swift; sourceTree = "<group>"; };
+		776BE9FD5055F8E07C18FB53 /* Avatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Avatar.swift; sourceTree = "<group>"; };
 		7AEDC98BA46AC8C0902164F2 /* Calypso.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Calypso.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7AF65A48C2B99AA17637EAE0 /* person.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = person.json; sourceTree = "<group>"; };
 		7B350D7FDB84FCD745D02E68 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		7FA7E994FE48D2107E9B5BC3 /* MomentCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MomentCard.swift; sourceTree = "<group>"; };
 		86A3F0EE6854B0B69B9BED8F /* PermissionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsView.swift; sourceTree = "<group>"; };
+		8738171C3568BB59FCF89B46 /* ComponentsSpecimen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComponentsSpecimen.swift; sourceTree = "<group>"; };
 		88929DA6DFCFA83507C98BB0 /* Nunito-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Nunito-SemiBold.ttf"; sourceTree = "<group>"; };
 		8C02AFFEE4EA0C4746132B7F /* Fraunces-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fraunces-SemiBold.ttf"; sourceTree = "<group>"; };
 		8F342471DA69D019603CCF54 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		90AC15038E2C32668688A5FC /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		998AFCC2F781DF2228746AC0 /* DaySwitcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaySwitcher.swift; sourceTree = "<group>"; };
+		9B79343FDC0FDB82875BCAAF /* PersonChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonChip.swift; sourceTree = "<group>"; };
 		A019F55B802A508A2223AAAB /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		AF7C632925D6D48A7D561E07 /* VisitSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisitSync.swift; sourceTree = "<group>"; };
 		AFA318F059492AB2C1179647 /* ContactBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactBuilderTests.swift; sourceTree = "<group>"; };
+		AFDA5A290A662F37DB597DB8 /* PaperCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperCard.swift; sourceTree = "<group>"; };
 		AFF0847AB5D7506F0D986E2A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B76503FD2834DAE360BCC268 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		BAB180B2E853CF7FA515B5C5 /* BackButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackButton.swift; sourceTree = "<group>"; };
 		C000207E3BE110C95A3CC700 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
+		C1D8BD76689F7B9700767D06 /* PlaceRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceRow.swift; sourceTree = "<group>"; };
 		CB00D30C88C8102CB6EFEA94 /* CalypsoTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CalypsoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CCC8E90F0AA08BAC56087EB2 /* GroupCallHowToView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupCallHowToView.swift; sourceTree = "<group>"; };
 		DD27CA6990D892953719D4B1 /* card.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = card.json; sourceTree = "<group>"; };
@@ -102,6 +133,9 @@
 		E9DE861182F214754D6B51F7 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		EAB25557BFD3F2F40E9D0D2B /* PersonDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonDetailView.swift; sourceTree = "<group>"; };
 		EBBB739A589A7F912F54233D /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		ECE05A37936A65DEB8235E2F /* CalypsoButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalypsoButton.swift; sourceTree = "<group>"; };
+		F26F48A3EF1D19ADF7191BD1 /* StepDots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepDots.swift; sourceTree = "<group>"; };
+		F88CAB202EF683EA5FCD9937 /* CalypsoTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalypsoTabBar.swift; sourceTree = "<group>"; };
 		FFFD5920901B83B310B84DF0 /* ModelsDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsDecodingTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -120,6 +154,7 @@
 		24037F260A7F573B41DCBF79 /* CalypsoTests */ = {
 			isa = PBXGroup;
 			children = (
+				221385F83789EE45B9C7A7F3 /* ComponentsTests.swift */,
 				AFA318F059492AB2C1179647 /* ContactBuilderTests.swift */,
 				E330351A31673814846B7D47 /* DayPresentationTests.swift */,
 				73B2520CB080608B20FAAD51 /* DesignSystemTests.swift */,
@@ -138,6 +173,7 @@
 				039F204A3910A45258DDF7AC /* Mascot.swift */,
 				4B6BB8C1DAF0F0A34D244938 /* Palette.swift */,
 				C000207E3BE110C95A3CC700 /* Typography.swift */,
+				A6002101E8428F2BF4C99648 /* Components */,
 			);
 			path = DesignSystem;
 			sourceTree = "<group>";
@@ -198,6 +234,28 @@
 			path = Fixtures;
 			sourceTree = "<group>";
 		};
+		A6002101E8428F2BF4C99648 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				776BE9FD5055F8E07C18FB53 /* Avatar.swift */,
+				BAB180B2E853CF7FA515B5C5 /* BackButton.swift */,
+				6BE49B19EF05F392F73C5F81 /* CalmMessage.swift */,
+				ECE05A37936A65DEB8235E2F /* CalypsoButton.swift */,
+				F88CAB202EF683EA5FCD9937 /* CalypsoTabBar.swift */,
+				998AFCC2F781DF2228746AC0 /* DaySwitcher.swift */,
+				528C68D5A8457E9E471591AD /* Icon.swift */,
+				5D0D637A2CA5E624A76ED57E /* Logo.swift */,
+				7FA7E994FE48D2107E9B5BC3 /* MomentCard.swift */,
+				5CC9FE748068B7F226F25BD8 /* NavHeader.swift */,
+				AFDA5A290A662F37DB597DB8 /* PaperCard.swift */,
+				9B79343FDC0FDB82875BCAAF /* PersonChip.swift */,
+				60A48544A88801A6AC7BE05C /* PhotoTile.swift */,
+				C1D8BD76689F7B9700767D06 /* PlaceRow.swift */,
+				F26F48A3EF1D19ADF7191BD1 /* StepDots.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
 		AA1DCDC4D2D2845C9A08745F /* People */ = {
 			isa = PBXGroup;
 			children = (
@@ -211,6 +269,7 @@
 		BB54F3124056AC8AE3A0EE91 /* Debug */ = {
 			isa = PBXGroup;
 			children = (
+				8738171C3568BB59FCF89B46 /* ComponentsSpecimen.swift */,
 				19BA6629159A25F7BB20A7F0 /* ScreenRoute.swift */,
 			);
 			path = Debug;
@@ -387,6 +446,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0B92D28E1121C6A3B27DB62E /* ComponentsTests.swift in Sources */,
 				03523954E6FF5DA23FF86B05 /* ContactBuilderTests.swift in Sources */,
 				ECCD5911526611BE8E7CC2E5 /* DayPresentationTests.swift in Sources */,
 				AB64BA5BA34F86A82DCC7527 /* DesignSystemTests.swift in Sources */,
@@ -403,22 +463,38 @@
 				31DD5362F551F3A11DA1827F /* APIClient.swift in Sources */,
 				CEAAA36EB67A5B215AEE6E8E /* AccountView.swift in Sources */,
 				C186C8026759B4A7F67F12A9 /* AddContactView.swift in Sources */,
+				1F0F7BCDA52952DC3D3A10A0 /* Avatar.swift in Sources */,
+				1ECE490FD83D5D6A1B20D3F2 /* BackButton.swift in Sources */,
+				7EF44820026550AC337031A1 /* CalmMessage.swift in Sources */,
 				367C353412EB4741F36914DD /* CalypsoApp.swift in Sources */,
+				B01F100A6D481A0F08E1CAA9 /* CalypsoButton.swift in Sources */,
+				82C733EE685C86EA5C5C2791 /* CalypsoTabBar.swift in Sources */,
+				7293061DC2F18B0188E77157 /* ComponentsSpecimen.swift in Sources */,
 				7F46DBB0D390E1258E5D7BB5 /* Config.swift in Sources */,
 				1ADFCE652FF794F86CCB9FC7 /* ContactBuilder.swift in Sources */,
 				14CEEED30611C0920CB3F904 /* DayPresentation.swift in Sources */,
+				3AD7B682CCE8CAFB4FFE65BB /* DaySwitcher.swift in Sources */,
 				C967CFCB52C65A074F932D02 /* Decoration.swift in Sources */,
 				EE567266074201F5433BD53F /* EventRow.swift in Sources */,
 				E08C90366F8545608632D2F9 /* GroupCallHowToView.swift in Sources */,
+				E5605C1A17A0FB6384AD6C27 /* Icon.swift in Sources */,
+				4511E419BEE3C82F6AE6E1CF /* Logo.swift in Sources */,
 				51D32352E9E774EA5DEF3350 /* Mascot.swift in Sources */,
 				484F7978CFFBE861E4AFC4FC /* Models.swift in Sources */,
+				064661FD9AFB1256F1112965 /* MomentCard.swift in Sources */,
+				BBD2B5724BA6FD88872AC9AF /* NavHeader.swift in Sources */,
 				1990378769632A6B50AE2D5B /* OnboardingView.swift in Sources */,
 				44E94392D6C8D143DC26C5B0 /* Palette.swift in Sources */,
+				591BFE8A725BCE6C9EC2FF06 /* PaperCard.swift in Sources */,
 				FF3AA5B2C38D4CF0D8F76AAD /* PeopleListView.swift in Sources */,
 				198DF353F2A700D7A5431E65 /* PermissionsView.swift in Sources */,
+				CD2727BBBB18285FAAB75DB6 /* PersonChip.swift in Sources */,
 				2F6DB8893954A584049FC608 /* PersonDetailView.swift in Sources */,
 				54A317F607A71DF3EFCD4B0C /* PhotoSync.swift in Sources */,
+				0B9E793E6CC3519125895CE1 /* PhotoTile.swift in Sources */,
+				A295855598C9783B2885D720 /* PlaceRow.swift in Sources */,
 				172F266470305939F3DBF943 /* ScreenRoute.swift in Sources */,
+				1BE05D2879186A107C092786 /* StepDots.swift in Sources */,
 				9CD912909AD1ACEC79350773 /* TodayView.swift in Sources */,
 				18CEFE84A165DAE4C8B55037 /* Typography.swift in Sources */,
 				4A5DE239414E7F74DD11EEBD /* VisitSync.swift in Sources */,

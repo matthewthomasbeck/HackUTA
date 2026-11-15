@@ -23,3 +23,8 @@ extension Color {
     /// Decorative only; never text.
     static let terracotta = Color(hex: 0xC2603F)
 }
+
+extension Color {
+    /// Helper/Photo Glyph: Ink Soft at 40% pre-mixed on Apricot Cream. Glyphs only, never text.
+    static let photoGlyph = Color(hex: 0xB49B90)
+}

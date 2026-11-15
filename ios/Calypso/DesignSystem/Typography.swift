@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum CalypsoTextStyle: CaseIterable {
     case display, title, headline, body, bodyStrong, callout, caption
@@ -23,6 +24,13 @@ enum CalypsoTextStyle: CaseIterable {
         case .callout: 30
         case .caption: 26
         }
+    }
+
+    /// Extra space between lines so the line pitch matches the Figma leading. Nunito and Fraunces already
+    /// have a natural line height at or above the Figma leading, so this is usually 0.
+    var extraLeading: CGFloat {
+        let natural = UIFont(name: fontName, size: size)?.lineHeight ?? size
+        return max(0, leading - natural)
     }
 
     private var fontName: String {
@@ -55,7 +63,7 @@ private struct CalypsoFontModifier: ViewModifier {
 
     init(style: CalypsoTextStyle) {
         self.style = style
-        _extra = ScaledMetric(wrappedValue: style.leading - style.size, relativeTo: style.relativeTo)
+        _extra = ScaledMetric(wrappedValue: style.extraLeading, relativeTo: style.relativeTo)
     }
 
     func body(content: Content) -> some View {
