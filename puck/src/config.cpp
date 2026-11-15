@@ -28,6 +28,14 @@ int parse_int(const std::string& s, int fallback) {
   }
 }
 
+ModeSetting parse_mode_setting(const std::string& s) {
+  if (s == "offline") {
+    return ModeSetting::Offline;
+  }
+  // default / "online" / anything else → health-driven online path
+  return ModeSetting::Online;
+}
+
 InferBackend parse_infer_backend(const std::string& s) {
   if (s == "coral") {
     return InferBackend::Coral;
@@ -74,6 +82,7 @@ bool load_config(const std::string& path, Config& out) {
       static_cast<std::uint16_t>(parse_int(get("BACKEND_PORT"), 0));
   out.api_token = get("API_TOKEN");
   out.mic_device = get("MIC_DEVICE");
+  out.mode = parse_mode_setting(get("MODE"));
   out.chunk_ms = parse_int(get("CHUNK_MS"), 30);
   out.segment_ms = parse_int(get("SEGMENT_MS"), 3000);
   out.offline_segment_ms = parse_int(get("OFFLINE_SEGMENT_MS"), 2000);

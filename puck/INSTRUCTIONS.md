@@ -9,7 +9,8 @@ voice-fingerprint → Bluetooth "who is talking" to the phone.
 2. Load `config/.env`
 3. Init mic (`Capture`), backend link, **Coral/NCS2 stubs** (`Accelerators`),
    **phone Bluetooth stub** (`PhoneLink`), offline models (`Models`, CPU default)
-4. Try `GET /health` — start Online if it works, else Offline
+4. `MODE=offline` → start Offline and pin it (listener will not promote).
+   `MODE=online` (default) → try `GET /health`; Online if up, else Offline
 5. Start listen + worker threads, plus the connection watcher
 6. **Always:** listen thread: mic/sine → `CHUNK_MS` chunks → in-memory queue
 7. Worker pops chunks and branches on mode
@@ -51,6 +52,7 @@ voice-fingerprint → Bluetooth "who is talking" to the phone.
 ```bash
 cp config/.env.example config/.env
 # set BACKEND_IP, BACKEND_PORT, API_TOKEN (= CALYPSO_API_TOKEN), MIC_DEVICE
+# MODE=offline to force-test emergency path; MODE=online for normal ops
 # optional: OFFLINE_SEGMENT_MS, INFER_BACKEND=cpu, BT_ADAPTER, BT_PEER_NAME
 ```
 

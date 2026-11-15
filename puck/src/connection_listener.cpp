@@ -5,8 +5,13 @@
 namespace calypso {
 
 ConnectionListener::ConnectionListener(BackendLink& link, StateMachine& sm,
-                                       int retry_sec, int check_sec)
-    : link_(link), sm_(sm), retry_sec_(retry_sec), check_sec_(check_sec) {}
+                                       int retry_sec, int check_sec,
+                                       bool force_offline)
+    : link_(link),
+      sm_(sm),
+      retry_sec_(retry_sec),
+      check_sec_(check_sec),
+      force_offline_(force_offline) {}
 
 ConnectionListener::~ConnectionListener() {
   stop();
@@ -29,6 +34,13 @@ void ConnectionListener::stop() {
 
 void ConnectionListener::run() {
   while (!stop_.load()) {
+    if (force_offline_) {
+      // MODE=offline: stay on the emergency path even if the backend is up.
+      sm_.set_mode(RunMode::Offline);
+      std::this_thread::sleep_for(std::chrono::seconds(check_sec_));
+      continue;
+    }
+
     if (link_.is_connected()) {
       sm_.set_mode(RunMode::Online);
       std::this_thread::sleep_for(std::chrono::seconds(check_sec_));

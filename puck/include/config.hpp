@@ -14,6 +14,9 @@ struct Config {
 
   std::string mic_device;  // ALSA name, or "sine" for test tone
 
+  // MODE=online|offline — offline force-tests the emergency path
+  ModeSetting mode = ModeSetting::Online;
+
   int chunk_ms = 30;              // mic read size (both modes)
   int segment_ms = 3000;          // online: buffer then POST
   int offline_segment_ms = 2000;  // offline: concat then infer (separate)

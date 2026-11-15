@@ -12,6 +12,14 @@ enum class RunMode {
   Offline,
 };
 
+// config MODE= — pins run path for testing / normal ops.
+// online  = health + connection listener decide Online/Offline (default)
+// offline = force Offline; listener will not promote to Online
+enum class ModeSetting {
+  Online,
+  Offline,
+};
+
 // Where offline voice-fingerprint inference runs. Default CPU; TPU later.
 enum class InferBackend {
   Cpu,

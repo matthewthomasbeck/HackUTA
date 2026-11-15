@@ -81,20 +81,27 @@ int main() {
     std::cerr << "models init skipped/stub — offline infer will no-op\n";
   }
 
-  const bool online =
-      wait_for_initial_connection(link, cfg.connect_retry_sec);
-  const calypso::RunMode initial =
-      online ? calypso::RunMode::Online : calypso::RunMode::Offline;
+  const bool force_offline = (cfg.mode == calypso::ModeSetting::Offline);
+  calypso::RunMode initial = calypso::RunMode::Offline;
+  if (force_offline) {
+    std::cerr << "MODE=offline — forcing Offline (skip health for run path)\n";
+  } else {
+    const bool online =
+        wait_for_initial_connection(link, cfg.connect_retry_sec);
+    initial = online ? calypso::RunMode::Online : calypso::RunMode::Offline;
+  }
   std::cerr << "starting state machine in "
-            << (online ? "ONLINE" : "OFFLINE") << " mode\n";
+            << (initial == calypso::RunMode::Online ? "ONLINE" : "OFFLINE")
+            << " mode\n";
 
   calypso::StateMachine sm(capture, link, models, phone,
                            cfg.offline_segment_ms);
   calypso::ConnectionListener listener(link, sm, cfg.connect_retry_sec,
-                                       cfg.connection_check_sec);
+                                       cfg.connection_check_sec,
+                                       force_offline);
 
   sm.start(initial);       // listen thread + upload/infer worker
-  listener.start();        // connection watch
+  listener.start();        // connection watch (no-op promote when forced)
 
   while (g_run.load()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
