@@ -120,6 +120,12 @@ bool load_config(const std::string& path, Config& out) {
   out.min_speech_rms = parse_float(get("MIN_SPEECH_RMS"), 0.02f);
   out.bt_adapter = get("BT_ADAPTER");
   out.bt_peer_name = get("BT_PEER_NAME");
+  {
+    const std::string w = get("WHO_DROP_PATH");
+    if (!w.empty()) {
+      out.who_drop_path = w;
+    }
+  }
 
   return !out.backend_ip.empty() && out.backend_port != 0 &&
          !out.api_token.empty() && !out.mic_device.empty();

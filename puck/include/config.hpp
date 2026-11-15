@@ -35,6 +35,8 @@ struct Config {
 
   std::string bt_adapter;     // e.g. hci0
   std::string bt_peer_name;   // phone / app advertisement name
+  // Drop file for BLE sidecar (scripts/ble_who_peripheral.py)
+  std::string who_drop_path = "/tmp/calypso_who.json";
 };
 
 bool load_config(const std::string& path, Config& out);

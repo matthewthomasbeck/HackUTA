@@ -16,6 +16,7 @@ add_executable(calypso_puck
   src/connection_listener.cpp
   src/accelerators.cpp
   src/phone_link.cpp
+  src/who_json.cpp
   src/offline_buffer.cpp
   src/voice_gallery.cpp
   src/wav.cpp
