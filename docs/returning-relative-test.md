@@ -8,11 +8,11 @@ Set `CALYPSO_CALL_MODE=recognize` for an explicitly selected, single-relative re
 
 - Starts with a neutral waiting card and one brief greeting to satisfy Chert's audio timeout; it does not start an enrollment interview.
 - Sends clear face crops to backend `/recognize`, excluding the patient.
-- On caller utterances, sends the WAV and, when available, a recent face crop for existing face/voice fusion. Without a face, voice-only results can be used.
+- Opening recognition is face-only. Caller utterances cannot identify anyone; voice samples are not sent for matching and voice-only results are ignored. Without a usable face, keep neutral wording.
 - Claude can display only the backend-identified person, with stored name, relationship to the patient, and memories/facts. Patient profiles are rejected.
 - Uncertainty produces neutral wording; unknown faces debounce into the learning card. After the opening greeting, recognition mode cannot speak newcomer questions or enroll anyone.
 
-Voice attribution is valid only under the explicit single-relative assumption. Do not use this mode for group calls. Multi-person tracking and group speaker attribution remain separate work. Existing model thresholds and ambiguity/conflict rules are unchanged.
+This mode performs face-only identification throughout the opening-recognition workflow; it does not switch to voice after a timer. Voiceprint enrollment in setup and the general backend face/voice API remain unchanged. Do not use this mode for group calls. Multi-person tracking and group speaker attribution remain separate work. Existing model thresholds and ambiguity/conflict rules are unchanged.
 
 Calls use the existing `group` call-log kind to preserve the shared model schema; the agent session retains `mode=recognize`.
 
@@ -32,7 +32,7 @@ Use enrolled relatives with usable prints and saved facts. Check:
 - Returning relative: correct name, relationship and memory; no setup interview or “Test profile” label.
 - Different enrolled relative: their own profile, independent of the last enrollment fixture.
 - Unknown caller: neutral wording, no invented identity or enrollment write.
-- Ambiguous/conflicting evidence: neutral wording. Cover the camera and provide sufficient speech to test voice-only matching.
+- Ambiguous/conflicting evidence: neutral wording. Cover the camera and speak: voice must not identify the caller.
 - Mary: no patient identity card.
 - Hang up and call again: session cleanup and no identity carried between calls.
 

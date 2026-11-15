@@ -182,12 +182,15 @@ class ClaudeController:
                 effects.cards = [Card(kind="learning", title="Looking for a familiar face…", lines=[])]
                 effects.speech = ["Hi, it's Calypso. One moment while I see who's here."]
                 return effects
-        recognition_event = event.kind == "frame" or (session.config.mode == "recognize" and event.kind == "utterance")
+        # Opening identity is face-only. Caller speech may be logged, but may
+        # never identify someone or trigger model guesses in this workflow.
+        if session.config.mode == "recognize" and event.kind != "frame":
+            return effects
+        recognition_event = event.kind == "frame"
         if recognition_event:
             if session.config.mode not in {"group", "recognize"}:
                 return effects
-            voice = event.voice_wav_b64 if session.config.mode == "recognize" and event.kind == "utterance" else None
-            if not event.jpeg_b64 and not voice:
+            if not event.jpeg_b64:
                 session.learning_count = 0
                 # A missing crop is not contradictory identity evidence. Keep the
                 # last result; do not queue a new placeholder for a dropped frame.
@@ -195,10 +198,9 @@ class ClaudeController:
                     session.recognized_id = None
                 return effects
             response = await api("POST", "/recognize", {"face_jpeg_b64": event.jpeg_b64,
-                "voice_wav_b64": voice,
                 "exclude_patient": True, "participant_key": session.config.participant, "call_id": session.call_id})
             faces = response.get("faces", [])
-            if len(faces) != 1 and not (not faces and response.get("voice_only")):
+            if len(faces) != 1:
                 session.learning_count = 0
                 if len(faces) > 1 or session.config.mode != "recognize":
                     session.recognized_id = None
@@ -207,7 +209,7 @@ class ClaudeController:
                         effects.cards = [Card(kind="learning", title="Not sure who this is yet…", lines=[])]
                     session.last_recognition_status = "uncertain"
                 return effects
-            result = faces[0]["result"] if faces else response["voice_only"]
+            result = faces[0]["result"]
             if session.config.controlled:
                 result = {"status": session.config.outcome,
                           "person_id": session.config.enrolled_person_id}
