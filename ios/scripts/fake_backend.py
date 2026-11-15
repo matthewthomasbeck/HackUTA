@@ -13,7 +13,8 @@ uploaded photos and visits show up in Today on the next refresh.
     python3 ios/scripts/fake_backend.py                # also works; plain-color images without Pillow
 
 Point the app at it in ios/Secrets.xcconfig (use the Mac's LAN IP on a device;
-ATS allows plain http to raw IPs):
+ATS allows plain http to local-network IPs, but not Tailscale's 100.x ones, so
+over Tailscale run `tailscale serve --bg 8000` and use the https ts.net URL):
 
     API_BASE_URL = http:/$()/192.168.1.23:8000
     API_TOKEN = dev-token
@@ -204,7 +205,10 @@ class Handler(BaseHTTPRequestHandler):
     token = "dev-token"
 
     def base_url(self) -> str:
-        return f"http://{self.headers.get('Host', 'localhost')}"
+        # Behind `tailscale serve` the app talks https, so face URLs must too (ATS).
+        host = self.headers.get("X-Forwarded-Host") or self.headers.get("Host", "localhost")
+        proto = self.headers.get("X-Forwarded-Proto") or ("https" if host.endswith(".ts.net") else "http")
+        return f"{proto}://{host}"
 
     def person_json(self, p: dict) -> dict:
         return {**p, "face_photo_url": f"{self.base_url()}/media/faces/{p['id']}.jpg"}
