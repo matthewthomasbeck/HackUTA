@@ -6,9 +6,12 @@ struct OnboardingView: View {
     /// Whether the last move went forward, so the push slides the right way.
     @State private var forward = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Family already texted from the invite step (DEBUG routes seed it to open on the "sent" state).
+    private let seededInvites: [FamilyInvite.Invitee]
 
-    init(initialStep: OnboardingStep = .welcome) {
+    init(initialStep: OnboardingStep = .welcome, seededInvites: [FamilyInvite.Invitee] = []) {
         _step = State(initialValue: initialStep)
+        self.seededInvites = seededInvites
     }
 
     var body: some View {
@@ -32,6 +35,8 @@ struct OnboardingView: View {
             GroupCallHowToView(onBack: goBack, onNext: goNext)
         case .permissions:
             PermissionsView(onBack: goBack, onDone: goNext)
+        case .inviteFamily:
+            InviteFamilyView(onBack: goBack, onNext: goNext, invited: seededInvites)
         case .allSet:
             // Only the final step finishes onboarding.
             AllSetView { onboarded = true }

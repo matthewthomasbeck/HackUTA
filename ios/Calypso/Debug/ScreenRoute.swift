@@ -24,6 +24,11 @@ enum ScreenRoute {
         #endif
         switch route {
         #if DEBUG
+        case "onboarding-inviteFamily-sent":
+            // The "Invites sent" state, as in Figma 62:283.
+            return AnyView(OnboardingView(initialStep: .inviteFamily, seededInvites: [
+                .init(name: "Sarah", phone: "+15125550142"), .init(name: "Tom", phone: "+15125550143"),
+            ]))
         case "design-system":
             return AnyView(DesignSystemSpecimen())
         case "components":
