@@ -3,14 +3,16 @@ import sqlite3
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile
 
 from .. import db
 from ..auth import require_token
 from ..bus import emit
 from ..config import Settings
-from ..deps import b64decode, get_conn, get_settings, get_storage, person_out, public_base, require_person
-from ..models import IntroRequest, Person, PersonCreate, PersonDetail, PersonPatch
+from ..deps import (b64decode, get_conn, get_face_embedder, get_settings, get_storage, get_voice_embedder,
+                    person_out, public_base, require_person)
+from ..identity.enroll import face_vectors, find_existing, print_counts, store_prints, voice_vector
+from ..models import IntroRequest, IntroResult, Person, PersonCreate, PersonDetail, PersonPatch
 from ..timeutil import parse_iso
 
 router = APIRouter(prefix="/people", dependencies=[Depends(require_token)])
@@ -87,29 +89,58 @@ def _save_face_photo(storage, conn: sqlite3.Connection, person_id: str, jpeg: by
     db.update_person(conn, person_id, {"face_photo_key": key})
 
 
-@router.post("/from_intro", response_model=Person, status_code=201)
+def _merge_facts(existing: list[str], new: list[str]) -> list[str]:
+    seen = {f.strip().casefold() for f in existing}
+    return existing + [f.strip() for f in new if f.strip() and f.strip().casefold() not in seen]
+
+
+@router.post("/from_intro", response_model=IntroResult, status_code=201)
 def from_intro(
     body: IntroRequest,
     request: Request,
+    response: Response,
     conn: sqlite3.Connection = Depends(get_conn),
     storage=Depends(get_storage),
-) -> Person:
-    """End of a 1:1 setup call: create the person.
+    settings: Settings = Depends(get_settings),
+    face_embedder=Depends(get_face_embedder),
+    voice_embedder=Depends(get_voice_embedder),
+) -> IntroResult:
+    """End of a 1:1 setup call: enroll the caller's face prints and voiceprint.
 
-    M1 stub: creates an unnamed person and keeps the first face crop as their photo.
-    M2 adds Claude extraction of name/relationship/facts, face prints, the voiceprint,
-    and linking of matching puck voice clusters.
+    If the verified phone, the face, or the voice matches someone already enrolled,
+    that person is updated (prints added, facts merged) instead of creating a duplicate.
+    Missing models or unusable media never block enrollment; `notes` says what was skipped.
     """
     faces = [b64decode(f, "face_jpegs_b64") for f in body.face_jpegs_b64]
-    if body.voice_wav_b64:
-        b64decode(body.voice_wav_b64, "voice_wav_b64")  # validated now, used in M2
-    row = db.insert_person(conn, phone=body.phone)
-    if faces:
+    wav = b64decode(body.voice_wav_b64, "voice_wav_b64") if body.voice_wav_b64 else None
+    notes: list[str] = []
+    face_vecs = face_vectors(face_embedder, faces, notes)
+    voice_vec, speech_s = voice_vector(voice_embedder, wav, settings, notes)
+
+    person_id, matched_by = find_existing(conn, settings, body.phone, face_vecs, voice_vec)
+    if person_id:
+        row = db.get_person(conn, person_id)
+        updates = {"facts": _merge_facts(db.loads(row["facts"]), body.facts)}
+        for field in ("name", "relationship", "phone"):
+            if getattr(body, field) and not row[field]:
+                updates[field] = getattr(body, field)
+        row = db.update_person(conn, person_id, updates)
+        response.status_code = 200
+    else:
+        row = db.insert_person(conn, name=body.name, relationship=body.relationship,
+                               phone=body.phone, facts=_merge_facts([], body.facts))
+    added_faces, added_voice = store_prints(conn, row["id"], face_vecs, voice_vec, speech_s, "setup", "call")
+    if faces and not row["face_photo_key"]:
         _save_face_photo(storage, conn, row["id"], faces[0])
         row = db.get_person(conn, row["id"])
-    emit("person.enrolled", {"person_id": row["id"], "faces": len(faces),
-                             "voice": bool(body.voice_wav_b64), "call_id": body.call_id})
-    return person_out(row, public_base(request))
+
+    emit("person.enrolled", {"person_id": row["id"], "name": row["name"], "matched_existing": bool(person_id),
+                             "matched_by": matched_by, "face_prints_added": added_faces,
+                             "voice_prints_added": added_voice, "speech_s": round(speech_s, 1),
+                             "notes": notes, "call_id": body.call_id})
+    return IntroResult(**person_out(row, public_base(request)).model_dump(), matched_existing=bool(person_id),
+                       matched_by=matched_by, face_prints_added=added_faces,
+                       voice_prints_added=added_voice, notes=notes)
 
 
 @router.post("/{person_id}/faces")
@@ -119,15 +150,22 @@ def add_face(
     conn: sqlite3.Connection = Depends(get_conn),
     storage=Depends(get_storage),
     settings: Settings = Depends(get_settings),
+    face_embedder=Depends(get_face_embedder),
 ) -> dict:
-    """Enroll one face image (iMessage photo, learn-in-call). M2 adds the face print."""
+    """Enroll one face image (iMessage photo, learn-in-call): stores a face print."""
     row = require_person(conn, person_id)
     data = image.file.read(settings.max_image_bytes + 1)
     if len(data) > settings.max_image_bytes:
         raise HTTPException(status_code=413, detail="image too large")
+    notes: list[str] = []
+    vecs = face_vectors(face_embedder, [data], notes)
+    if not vecs:
+        raise HTTPException(status_code=422, detail="; ".join(notes) or "no face found")
+    store_prints(conn, person_id, vecs, None, 0.0, "upload", "")
     if not row["face_photo_key"]:
         _save_face_photo(storage, conn, person_id, data)
-    return {"ok": True, "face_prints": 0}
+    faces, voices = print_counts(conn, person_id)
+    return {"ok": True, "face_prints": faces, "voice_prints": voices}
 
 
 @router.post("/{person_id}/voice")
@@ -136,9 +174,17 @@ def add_voice(
     audio: UploadFile = File(...),
     conn: sqlite3.Connection = Depends(get_conn),
     settings: Settings = Depends(get_settings),
+    voice_embedder=Depends(get_voice_embedder),
 ) -> dict:
-    """Enroll a voice sample. The audio is used and dropped, never stored. M2 adds the voiceprint."""
+    """Enroll a voice sample: stores a voiceprint. The audio itself is never stored."""
     require_person(conn, person_id)
-    if len(audio.file.read(settings.max_audio_bytes + 1)) > settings.max_audio_bytes:
+    data = audio.file.read(settings.max_audio_bytes + 1)
+    if len(data) > settings.max_audio_bytes:
         raise HTTPException(status_code=413, detail="audio too large")
-    return {"ok": True, "voice_prints": 0}
+    notes: list[str] = []
+    vec, speech_s = voice_vector(voice_embedder, data, settings, notes)
+    if vec is None:
+        raise HTTPException(status_code=422, detail="; ".join(notes) or "no usable speech")
+    store_prints(conn, person_id, [], vec, speech_s, "", "upload")
+    faces, voices = print_counts(conn, person_id)
+    return {"ok": True, "face_prints": faces, "voice_prints": voices, "speech_s": round(speech_s, 1)}

@@ -156,8 +156,10 @@ async def run_call(ctx, config):
                 crops = await samples.collect()
             except ValueError:
                 crops = []
+            voice = getattr(speech, "last_wav", None) if text else None
             effects = await gateway.event("utterance" if text else "silence",
-                text=text, face_jpegs_b64=[b64(crop) for crop in crops])
+                text=text, face_jpegs_b64=[b64(crop) for crop in crops],
+                voice_wav_b64=b64(voice) if voice else None)
             if await apply(effects):
                 return
 

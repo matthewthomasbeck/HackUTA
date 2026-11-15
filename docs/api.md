@@ -78,13 +78,17 @@ The media transport now delegates decisions to Claude on the backend:
   controlled: bool, outcome: "identified"|"learning"|"uncertain",
   enrolled_person_id?: str, caller_phone?: str}` → `{session_id, call_id}`.
 - `POST /agent/sessions/{id}/events`: `{kind: "start"|"utterance"|"silence"|"frame"|"camera_ready",
-  text?: str, face_jpegs_b64?: [str], jpeg_b64?: str}` →
+  text?: str, face_jpegs_b64?: [str], jpeg_b64?: str, voice_wav_b64?: str}` →
   `{session_id, speech: [str], cards: [Card], done: bool, enrolled_person_id?: str,
   needs_face_crops: bool}`. When requested, the transport reports `camera_ready`
   with three recent crops. A confirmed introduction can then be saved without
   requiring a second spoken confirmation.
 - `POST /agent/sessions/{id}/end`: ends the backend call and removes the session;
   repeated cleanup returns `{ok: true}`.
+
+On `utterance` events, `voice_wav_b64` is the caller's audio for that utterance (the same WAV sent to
+Grok). In setup calls the backend keeps up to 60 s of it, and `save_intro` sends it, with the
+confirmed name/relationship/memory, in a single `/people/from_intro` call for the voiceprint.
 
 These routes require the existing bearer token. `ANTHROPIC_API_KEY` stays on the
 server; `CALYPSO_AGENT_MODEL` defaults to `claude-sonnet-4-6`. Claude tool calls
@@ -99,7 +103,14 @@ Chert's authenticated call record and sends the inbound `from.value` only when
 existing `Person.phone` field via `/people/from_intro`. Masked callers, email
 identities or failed lookups leave it null; Claude never supplies the number.
 
-### `POST /recognize`  (stub → Task 4)
+### Face prints and voiceprints (open-source models)
+- **Faces:** OpenCV **YuNet** finds each face and its landmarks, then **SFace** turns the aligned face into 128 numbers. Tight crops (like the agent's Haar crops) are padded before detection.
+- **Voices:** NVIDIA NeMo **TitaNet-small** (via sherpa-onnx) turns 16 kHz speech into 192 numbers. Silence is trimmed first, and a voiceprint needs **≥ 2 s of speech**.
+- Model files: `cd backend && uv run python scripts/fetch_models.py` downloads them into `data/models/`, with SHA-256 checks. Without them the backend still runs: matching returns `learning`, and enrollment notes what it skipped.
+- Only the numbers are stored (plus one display photo per person). Audio is never stored.
+- Provisional thresholds, to tune on real calls: `FACE_MATCH=0.40`, `FACE_MARGIN=0.08`, `VOICE_MATCH=0.50`, `VOICE_MARGIN=0.08`.
+
+### `POST /recognize`
 Face first, voice second. Send a frame and/or a voice clip (≥ 2 s of that participant's speech, 16 kHz mono WAV) as base64.
 ```json
 { "face_jpeg_b64": "/9j/4AAQ...", "voice_wav_b64": "UklGR...", "exclude_patient": true,
@@ -112,29 +123,33 @@ Response: one entry per face found in the frame (composite grids give several), 
   "voice_only": null }
 ```
 - `status`: `identified` (show the identity card), `learning` ("Getting to know someone new…"), `uncertain` (show nothing).
-- The patient is never returned.
-- **Stub today:** every face is `learning` with `bbox: null` (null means the whole frame).
+- **identified** needs a face score ≥ `FACE_MATCH` that beats the second-best person by ≥ `FACE_MARGIN`. If the voice clearly belongs to someone *else*, the result is `uncertain`.
+- With **no face**, voice alone can identify, but only at `VOICE_MATCH + 0.1`.
+- The patient is never returned. Every call emits a `recognize` event with the top-3 face/voice scores and the thresholds (for the dashboard and tuning).
 
-### `POST /people/from_intro`  (stub → Tasks 4–5)
-End of a 1:1 setup call. Creates the person and enrolls them.
+### `POST /people/from_intro`
+End of a 1:1 setup call. Enrolls the caller's face prints and voiceprint.
 ```json
 { "transcript": "Hi, I'm Sarah, Mary's daughter. We bake together on Sundays.",
+  "name": "Sarah", "relationship": "daughter", "facts": ["Baking on Sundays"],
   "face_jpegs_b64": ["/9j/...", "/9j/...", "/9j/..."],
   "voice_wav_b64": "UklGR...", "phone": "+15555550123", "call_id": "c1" }
 ```
-Response `201`: a `Person`.
-- **Stub today:** creates an unnamed person (`name: null`, shown as "Unnamed visitor") and keeps the first face crop as their photo.
-- **Later:**
-  - Claude extracts the name, relationship and facts.
-  - Face prints and the voiceprint are enrolled.
-  - Puck voices that match are linked to this person, so the puck's past conversations get attributed to them.
+- `name`/`relationship`/`facts` are what the caller confirmed aloud. `voice_wav_b64` is their speech from the call (joined clips are fine).
+- **No duplicates:** if the verified `phone`, the face, or the voice matches someone already enrolled (never the patient), that person is **updated**: prints are added, facts merged, and missing name/relationship/phone filled in. If face and voice point to different people, nothing is merged.
+- Response: `201` for a new person, `200` when an existing one was updated. The body is the `Person` plus:
+```json
+{ "matched_existing": false, "matched_by": null, "face_prints_added": 3, "voice_prints_added": 1,
+  "notes": ["only 1.4 s of speech; need 2.0 s for a voiceprint"] }
+```
+- Unusable media (no face, too little speech, missing models) never blocks enrollment; `notes` says what was skipped.
 
 ### `POST /people/{id}/faces`, `POST /people/{id}/voice`
 Extra enrollment, e.g. an iMessage photo, or learning someone during a call.
-- **Faces:** multipart `image` (JPEG).
-- **Voice:** multipart `audio` (WAV). The audio is never stored.
+- **Faces:** multipart `image` (JPEG). `422` if no face is found.
+- **Voice:** multipart `audio` (WAV), `422` with less than 2 s of speech. The audio is never stored.
 
-Both return `{"ok": true, ...}`.
+Both return `{"ok": true, "face_prints": n, "voice_prints": m}`.
 
 ### `POST /calls`, `POST /calls/{id}/lines`, `POST /calls/{id}/end`
 Log a call and its transcript lines. Lines become `source: "call"` utterances, so they turn into memories later.

@@ -65,6 +65,7 @@ async def event(session_id: str, body: MediaEvent, request: Request):
     session = get_session(request, session_id)
     if any(len(crop) > 2_000_000 for crop in body.face_jpegs_b64) or (body.jpeg_b64 and len(body.jpeg_b64) > 2_000_000):
         raise HTTPException(413, "Camera sample too large")
+    # voice_wav_b64 is capped at 2,000,000 chars (~45 s of 16 kHz speech) by MediaEvent itself.
     async with session.lock:
         log.info("session=%s event=%s crops=%d text_present=%s", session_id, body.kind,
                  len(body.face_jpegs_b64), bool(body.text))

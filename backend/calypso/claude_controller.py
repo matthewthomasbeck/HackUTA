@@ -5,6 +5,8 @@ server-side only. Tool arguments never choose arbitrary URLs or credentials.
 """
 
 import asyncio
+import base64
+import binascii
 from dataclasses import dataclass, field
 import json
 import logging
@@ -14,6 +16,7 @@ import time
 import anthropic
 from pydantic import BaseModel, Field
 
+from .identity.audio import concat_wavs, wav_seconds
 from .models import Card
 
 log = logging.getLogger("calypso.controller")
@@ -35,6 +38,8 @@ class MediaEvent(BaseModel):
     text: str | None = Field(default=None, max_length=4000)
     face_jpegs_b64: list[str] = Field(default_factory=list, max_length=3)
     jpeg_b64: str | None = None
+    # The caller's speech for this utterance (16 kHz mono WAV, base64), used for the voiceprint.
+    voice_wav_b64: str | None = Field(default=None, max_length=2_000_000)
 
 
 class Effects(BaseModel):
@@ -55,6 +60,7 @@ class Session:
     messages: list = field(default_factory=list)
     transcript: list = field(default_factory=list)
     crops: list = field(default_factory=list)
+    voice_clips: list = field(default_factory=list)  # caller WAVs (setup calls), for the voiceprint
     pending_intro: dict | None = None
     intro_confirmed: bool = False
     awaiting_crops: bool = False
@@ -147,6 +153,7 @@ class ClaudeController:
             if not session.last_text:
                 return effects
             session.transcript.append((time.monotonic(), session.last_text))
+            self.keep_voice(session, event.voice_wav_b64)
             await api("POST", f"/calls/{session.call_id}/lines", {"speaker": session.config.participant, "text": session.last_text})
         if event.kind in {"utterance", "silence"}:
             # Never reuse earlier camera samples after a capture failure.
@@ -243,6 +250,19 @@ class ClaudeController:
         raise RuntimeError("Claude exceeded the per-event tool limit")
 
     @staticmethod
+    def keep_voice(session, voice_wav_b64, max_seconds=60.0):
+        """Buffer the caller's speech from setup-call utterances (capped) for the voiceprint."""
+        if session.config.mode != "setup" or not voice_wav_b64:
+            return
+        try:
+            clip = base64.b64decode(voice_wav_b64, validate=True)
+        except (binascii.Error, ValueError):
+            log.warning("session=%s ignoring undecodable voice_wav_b64", session.id)
+            return
+        if sum(wav_seconds(c) for c in session.voice_clips) + wav_seconds(clip) <= max_seconds:
+            session.voice_clips.append(clip)
+
+    @staticmethod
     def finish_setup(session, effects):
         session.done = True
         effects.done = True
@@ -304,13 +324,20 @@ class ClaudeController:
                 session.awaiting_crops = True
                 return {"saved": False, "waiting_for_camera": True, "available_face_crops": len(session.crops)}
             intro = session.pending_intro
+            voice = concat_wavs(session.voice_clips)
+            # One write: the confirmed details, face crops, caller speech and verified phone.
+            # The backend enrolls face/voice prints and updates an existing person instead of
+            # creating a duplicate when the phone, face or voice already matches someone.
             person = await api("POST", "/people/from_intro", {"transcript": "\n".join(text for _, text in session.transcript),
                 "face_jpegs_b64": session.crops, "call_id": session.call_id,
-                "phone": session.config.caller_phone})
+                "phone": session.config.caller_phone,
+                "name": intro["name"], "relationship": intro["relationship"], "facts": [intro["memory"]],
+                "voice_wav_b64": base64.b64encode(voice).decode() if voice else None})
             session.enrolled_id = person["id"]
-            # Confirmed Claude extraction fills the M1 introduction stub.
-            await api("PATCH", f"/people/{person['id']}", {"name": intro["name"],
-                "relationship": intro["relationship"], "facts": [intro["memory"]]})
+            log.info("session=%s enrolled person=%s matched_existing=%s face_prints=%s voice_prints=%s notes=%s",
+                     session.id, person["id"], person.get("matched_existing"), person.get("face_prints_added"),
+                     person.get("voice_prints_added"), person.get("notes"))
+            session.voice_clips = []
             session.crops = []
             session.awaiting_crops = False
             self.finish_setup(session, effects)

@@ -123,8 +123,13 @@ def test_from_intro_bad_base64_422(client):
     assert r.status_code == 422
 
 
-def test_add_voice_accepts_audio_without_storing(client, env):
+def test_add_voice_stores_print_not_audio(client, env):
+    from conftest import tone_wav
+
     p = make_person(client, name="Sarah")
-    r = client.post(f"/people/{p['id']}/voice", headers=AUTH, files={"audio": ("v.wav", io.BytesIO(b"RIFF"), "audio/wav")})
-    assert r.status_code == 200
+    r = client.post(f"/people/{p['id']}/voice", headers=AUTH,
+                    files={"audio": ("v.wav", io.BytesIO(tone_wav(220)), "audio/wav")})
+    assert r.status_code == 200 and r.json()["voice_prints"] == 1
     assert not list((env / "data").rglob("*.wav"))
+    bad = client.post(f"/people/{p['id']}/voice", headers=AUTH, files={"audio": ("v.wav", io.BytesIO(b"RIFF"), "audio/wav")})
+    assert bad.status_code == 422
