@@ -77,7 +77,7 @@ curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
 
 The media transport now delegates decisions to Claude on the backend:
 
-- `POST /agent/sessions`: `{mode: "setup"|"group"|"recognize"|"auto", participant: str,
+- `POST /agent/sessions`: `{mode: "setup"|"group"|"recognize"|"auto"|"group_intro", participant: str,
   controlled: bool, outcome: "identified"|"learning"|"uncertain",
   enrolled_person_id?: str, caller_phone?: str}` → `{session_id, call_id}`.
 - `POST /agent/sessions/{id}/events`: `{kind: "start"|"utterance"|"silence"|"frame"|"camera_ready"|"recognition_timeout",
@@ -253,3 +253,5 @@ uv run --env-file ../.env rq worker --with-scheduler --url "$CALYPSO_REDIS_URL" 
 - On Vultr, uvicorn runs on `127.0.0.1:8000` behind Caddy for HTTPS.
 
 In `auto` sessions, effects include the current `mode` (`recognize` then `setup` if unmatched). The transport sends `recognition_timeout` after the five-second opening window; the backend enforces the elapsed-time guard and ignores repeated/early timeout events. A confident face match completes the flow with an identity card and hang-up instruction. No-match transitions reuse the same session and call log for enrollment.
+
+`group_intro` sessions require the existing sole patient Mary and real recognition. Frame events may include `source_key` (track SID, max 200 characters) to isolate per-video confirmation histories. Full frames support multiple face results; two consecutive confident observations are required per relative/source. Effects contain the grounded announcement and card and remain `done=false`. See `manual-group-introductions.md` for the live topology checkpoint.

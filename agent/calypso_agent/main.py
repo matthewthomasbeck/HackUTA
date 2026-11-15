@@ -3,6 +3,7 @@
 import asyncio
 from dataclasses import dataclass
 import logging
+from functools import partial
 import os
 import sys
 import time
@@ -16,7 +17,7 @@ from .caller_identity import resolve_caller_phone, wait_chert_bridge
 from .contract import Card
 from .latency import fresh_cards, latency_ms
 from .grok import GrokSpeech
-from .live_media import CameraSamples, Publisher, RoomSpeech, audio_frames, video_frames, wait_bridge_ready
+from .live_media import CameraSamples, Publisher, RoomSpeech, audio_frames, video_frames, wait_bridge_ready, group_frame_jpeg
 from .scheduler import CardScheduler
 
 log = logging.getLogger("calypso.live")
@@ -37,8 +38,8 @@ class Config:
     def from_env(cls, env=None):
         env = os.environ if env is None else env
         mode = env.get("CALYPSO_CALL_MODE")
-        if mode not in {"setup", "group", "recognize", "auto"}:
-            raise ValueError("Set CALYPSO_CALL_MODE=setup, recognize, auto or group; automatic patient routing is not enabled")
+        if mode not in {"setup", "group", "recognize", "auto", "group_intro"}:
+            raise ValueError("Set CALYPSO_CALL_MODE=setup, recognize, auto, group_intro or group; automatic patient routing is not enabled")
         missing = [name for name in ("CALYPSO_BACKEND_URL", "CALYPSO_API_TOKEN", "XAI_API_KEY") if not env.get(name)]
         if missing:
             raise ValueError("Missing environment variables: " + ", ".join(missing))
@@ -62,6 +63,7 @@ async def run_call(ctx, config):
     stopped, failed, ready = asyncio.Event(), asyncio.Event(), asyncio.Event()
     errors, tracks = [], set()
     video_sid = None
+    video_sources = set()
     effect_lock = asyncio.Lock()
     selected_identity = config.participant_id
     needs_crops = False
@@ -112,8 +114,13 @@ async def run_call(ctx, config):
                 await speech.speak(text)
         return effects.get("done", False)
 
-    async def frame(image):
+    async def frame(image, source_key="bridge"):
         nonlocal needs_crops, last_progress
+        if config.mode == "group_intro":
+            if ready.is_set():
+                effects = await gateway.event("frame", jpeg_b64=b64(group_frame_jpeg(image)), source_key=source_key)
+                await apply(effects)
+            return
         crop = await samples.add(image)
         if active_mode == "setup":
             progress = samples.progress
@@ -136,18 +143,27 @@ async def run_call(ctx, config):
 
     def subscribed(track, publication, participant):
         nonlocal video_sid
-        if participant.identity != selected_identity or track.sid in tracks:
+        if track.sid in tracks:
+            return
+        if config.mode == "group_intro":
+            if getattr(participant, "kind", None) == rtc.ParticipantKind.PARTICIPANT_KIND_AGENT:
+                return
+        elif participant.identity != selected_identity:
             return
         if publication.source in {rtc.TrackSource.SOURCE_SCREENSHARE, rtc.TrackSource.SOURCE_SCREENSHARE_AUDIO}:
             return
         tracks.add(track.sid)
         log.info("subscribed_media kind=%s source=%s", track.kind, publication.source)
         if track.kind == rtc.TrackKind.KIND_VIDEO:
-            if video_sid is not None and video_sid != track.sid:
+            if config.mode != "group_intro" and video_sid is not None and video_sid != track.sid:
                 return
             video_sid = track.sid
-            spawn(video_frames(track, frame))
-        elif track.kind == rtc.TrackKind.KIND_AUDIO:
+            video_sources.add(track.sid)
+            callback = partial(frame, source_key=track.sid) if config.mode == "group_intro" else frame
+            log.info("video_source subscribed group=%s width=%s height=%s", config.mode == "group_intro",
+                     getattr(publication, "width", None), getattr(publication, "height", None))
+            spawn(video_frames(track, callback))
+        elif track.kind == rtc.TrackKind.KIND_AUDIO and config.mode != "group_intro":
             spawn(audio_frames(track, speech))
 
     async def workflow():
@@ -167,6 +183,9 @@ async def run_call(ctx, config):
             spawn(finish_recognition_window())
         ready.set()
         if await apply(initial):
+            return
+        if config.mode == "group_intro":
+            await stopped.wait()  # Face-only introductions: do not transcribe mixed audio.
             return
         while not stopped.is_set() and not dialogue_done:
             text = await speech.listen()
@@ -215,9 +234,13 @@ async def run_call(ctx, config):
             caller_phone = await resolve_caller_phone(selected_identity)
             log.info("verified_caller_phone_available=%s", bool(caller_phone))
         log.info("Claude media transport: mode=%s, participant=%s", config.mode, selected_identity)
-        for publication in participant.track_publications.values():
-            if publication.track:
-                subscribed(publication.track, publication, participant)
+        participants = list(ctx.room.remote_participants.values()) if config.mode == "group_intro" else [participant]
+        for remote in participants:
+            for publication in remote.track_publications.values():
+                if publication.track:
+                    subscribed(publication.track, publication, remote)
+        if config.mode == "group_intro":
+            log.info("group_topology remote_participants=%d video_tracks=%d", len(participants), len(video_sources))
         spawn(workflow())
         waiters = [asyncio.create_task(stopped.wait()), asyncio.create_task(failed.wait())]
         try:

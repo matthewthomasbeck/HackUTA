@@ -25,7 +25,7 @@ CAMERA_PERMISSION = {"you may capture my face", "you can capture my face", "plea
 
 
 class StartSession(BaseModel):
-    mode: str = Field(pattern="^(setup|group|recognize|auto)$")
+    mode: str = Field(pattern="^(setup|group|recognize|auto|group_intro)$")
     participant: str
     controlled: bool = False
     outcome: str = Field(default="learning", pattern="^(identified|learning|uncertain)$")
@@ -38,6 +38,7 @@ class MediaEvent(BaseModel):
     text: str | None = Field(default=None, max_length=4000)
     face_jpegs_b64: list[str] = Field(default_factory=list, max_length=3)
     jpeg_b64: str | None = None
+    source_key: str = Field(default="bridge", max_length=200)
     # The caller's speech for this utterance (16 kHz mono WAV, base64), used for the voiceprint.
     voice_wav_b64: str | None = Field(default=None, max_length=2_000_000)
 
@@ -75,6 +76,8 @@ class Session:
     recognition_started: float | None = None
     emitted: set = field(default_factory=set)
     group_question_used: bool = False
+    group_matches: dict = field(default_factory=dict)
+    group_announced: set = field(default_factory=set)
     last_recall_card_at: float = 0.0
     awaiting_newcomer_reply: bool = False
     done: bool = False
@@ -138,10 +141,69 @@ class ClaudeController:
     def __init__(self, model_client=None):
         self.model_client = model_client
 
+    async def group_introductions(self, session, event, api):
+        """Manual group milestone: grounded face introductions, no enrollment."""
+        effects = Effects(session_id=session.id, mode="group_intro")
+        session.touched = time.monotonic()
+        if event.kind == "start":
+            if not session.started:
+                session.started = True
+                # Chert requires initial audio even before a face is identified.
+                effects.speech = ["Hi, it's Calypso. I'm here to help with introductions."]
+                effects.cards = [Card(kind="learning", title="Looking for familiar faces…", lines=[])]
+            return effects
+        if event.kind != "frame" or not session.started:
+            return effects
+        now = time.monotonic()
+        previous_at, previous = session.group_matches.get(event.source_key, (0, {}))
+        if now - previous_at > 3:
+            previous = {}
+        current = {}
+        if event.jpeg_b64:
+            response = await api("POST", "/recognize", {
+                "face_jpeg_b64": event.jpeg_b64, "exclude_patient": False,
+                "participant_key": event.source_key, "call_id": session.call_id})
+            # Include Mary in matching so her face is positively filtered rather
+            # than forcing it to compete only against relatives' profiles.
+            for face in response.get("faces", []):
+                result = face.get("result", {})
+                person_id = result.get("person_id")
+                if result.get("status") != "identified" or not person_id or person_id == session.patient["id"]:
+                    continue
+                current[person_id] = previous.get(person_id, 0) + 1
+        # Each source has its own consecutive evidence; duplicate detections in
+        # one frame cannot satisfy the two-frame requirement.
+        session.group_matches[event.source_key] = (now, current)
+        for person_id, count in current.items():
+            if count < 2 or person_id in session.group_announced:
+                continue
+            person = await api("GET", f"/people/{person_id}")
+            if person.get("is_patient") or not person.get("name"):
+                continue
+            patient = session.patient["name"]
+            name, relationship = person["name"], person.get("relationship")
+            if relationship:
+                for prefix in (f"{patient}'s ", f"{patient}’s "):
+                    if relationship.casefold().startswith(prefix.casefold()):
+                        relationship = relationship[len(prefix):]
+                        break
+            # Use only stored profile fields, never a caller-supplied identity.
+            text = f"Hi {patient}, you're speaking with {name}"
+            if relationship:
+                text += f", your {relationship}"
+            effects.speech.append(text + ".")
+            effects.cards.append(Card(kind="identity", title=name,
+                lines=([f"{patient}'s {relationship}"] if relationship else [])
+                      + (person.get("memories") or person.get("facts", []))[:3]))
+            session.group_announced.add(person_id)
+        return effects
+
     async def respond(self, session, event, api):
         effects = Effects(session_id=session.id, done=session.done,
                           enrolled_person_id=session.enrolled_id)
         clear_newcomer_reply = False
+        if session.config.mode == "group_intro":
+            return await self.group_introductions(session, event, api)
         if session.done:
             return effects
         session.touched = time.monotonic()
