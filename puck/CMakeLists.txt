@@ -20,6 +20,7 @@ add_library(calypso_core STATIC
   src/who_json.cpp
   src/offline_buffer.cpp
   src/voice_gallery.cpp
+  src/gallery_json.cpp
   src/wav.cpp
   src/util.cpp
   src/segment_spool.cpp

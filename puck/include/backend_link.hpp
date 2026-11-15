@@ -35,6 +35,10 @@ class BackendLink {
   // POST /puck/health. Returns true on 200.
   bool post_health(std::size_t queue_depth, bool time_synced, bool last_upload_ok);
 
+  // GET /puck/gallery — full voice-print snapshot (Bearer token).
+  // On 200, writes the response body into body_out and returns true.
+  bool get_gallery(std::string& body_out);
+
   void disconnect();
   void shutdown();
 
