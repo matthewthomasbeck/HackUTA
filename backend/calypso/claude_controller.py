@@ -25,7 +25,7 @@ CAMERA_PERMISSION = {"you may capture my face", "you can capture my face", "plea
 
 
 class StartSession(BaseModel):
-    mode: str = Field(pattern="^(setup|group|recognize)$")
+    mode: str = Field(pattern="^(setup|group|recognize|auto)$")
     participant: str
     controlled: bool = False
     outcome: str = Field(default="learning", pattern="^(identified|learning|uncertain)$")
@@ -34,7 +34,7 @@ class StartSession(BaseModel):
 
 
 class MediaEvent(BaseModel):
-    kind: str = Field(pattern="^(start|utterance|silence|frame|camera_ready)$")
+    kind: str = Field(pattern="^(start|utterance|silence|frame|camera_ready|recognition_timeout)$")
     text: str | None = Field(default=None, max_length=4000)
     face_jpegs_b64: list[str] = Field(default_factory=list, max_length=3)
     jpeg_b64: str | None = None
@@ -49,6 +49,7 @@ class Effects(BaseModel):
     done: bool = False
     enrolled_person_id: str | None = None
     needs_face_crops: bool = False
+    mode: str | None = None
 
 
 @dataclass
@@ -70,6 +71,8 @@ class Session:
     learning_count: int = 0
     recognized_id: str | None = None
     last_recognition_status: str | None = None
+    auto_flow: bool = False
+    recognition_started: float | None = None
     emitted: set = field(default_factory=set)
     group_question_used: bool = False
     done: bool = False
@@ -139,6 +142,29 @@ class ClaudeController:
         if session.done:
             return effects
         session.touched = time.monotonic()
+        if session.config.mode == "auto":
+            session.auto_flow = True
+            session.config.mode = "recognize"
+        effects.mode = session.config.mode
+        expired_frame = (event.kind == "frame" and session.auto_flow
+                         and session.config.mode == "recognize"
+                         and session.recognition_started is not None
+                         and time.monotonic() - session.recognition_started >= 5)
+        if event.kind == "recognition_timeout" or expired_frame:
+            if not session.auto_flow or session.config.mode != "recognize" or session.recognition_started is None:
+                return effects
+            if time.monotonic() - session.recognition_started < 5:
+                return effects
+            session.config.mode = "setup"
+            effects.mode = "setup"
+            # Opening conversation belongs to recognition, not an enrollment
+            # confirmation. Start a fresh introduction without inferred identity.
+            session.messages.clear()
+            session.transcript.clear()
+            session.recognized_id = None
+            session.silence_count = 0
+            event = MediaEvent(kind="start")
+            session.started = False
         if len(session.messages) >= 100:
             session.done = True
             effects.done = True
@@ -179,6 +205,7 @@ class ClaudeController:
                 return effects
             session.started = True
             if session.config.mode == "recognize":
+                session.recognition_started = time.monotonic()
                 effects.cards = [Card(kind="learning", title="Looking for a familiar face…", lines=[])]
                 effects.speech = ["Hi, it's Calypso. One moment while I see who's here."]
                 return effects
@@ -227,6 +254,20 @@ class ClaudeController:
                 return effects
             if status == "uncertain" or (status == "learning" and session.learning_count < 3) or key in session.emitted:
                 return effects
+            if session.auto_flow and status == "identified":
+                await self.execute("show_identity", {}, session, effects, api)
+                card = effects.cards[-1]
+                card.title = ("Test profile: " if session.config.controlled else "") + "You are " + card.title.removeprefix("Test profile: ")
+                label = card.title.removeprefix("Test profile: ")
+                patient_name = session.patient.get("name")
+                if card.lines and patient_name and card.lines[0].startswith(f"{patient_name}'s "):
+                    label += ", " + card.lines[0]
+                effects.speech = [f"{label}. Please hang up now."]
+                card.lines.append("Please hang up now.")
+                session.done = effects.done = True
+                return effects
+            if session.auto_flow:
+                return effects  # Stay neutral until the bounded opening window ends.
             event_data = {"recognition": result}
         else:
             event_data = {"kind": event.kind, "caller_text": event.text,

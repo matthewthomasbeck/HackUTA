@@ -314,3 +314,78 @@ async def test_recognition_dropped_frames_do_not_hide_identity_and_uncertainty_i
     assert (await controller.respond(session, MediaEvent(kind="frame", jpeg_b64="eA=="), api)).cards
     assert session.recognized_id is None
     assert not (await controller.respond(session, MediaEvent(kind="frame", jpeg_b64="eA=="), api)).cards
+
+
+@pytest.mark.asyncio
+async def test_auto_recognized_relative_finishes_without_enrollment():
+    from calypso.claude_controller import ClaudeController, MediaEvent, Session, StartSession
+    controller = ClaudeController(FakeClaude([]))
+    session = Session("sid", "cid", StartSession(mode="auto", participant="phone"), {"name": "Mary"})
+    requests = []
+    async def api(method, path, body=None):
+        requests.append(path)
+        if path == "/recognize":
+            assert not body.get("voice_wav_b64")
+            return {"faces": [{"result": {"status": "identified", "person_id": "r"}}]}
+        assert path == "/people/r"
+        return {"name": "Keanu", "relationship": "brother", "is_patient": False, "facts": ["School together"]}
+    start = await controller.respond(session, MediaEvent(kind="start"), api)
+    assert start.mode == "recognize" and start.speech
+    effects = await controller.respond(session, MediaEvent(kind="frame", jpeg_b64="eA=="), api)
+    assert effects.done
+    assert effects.cards[0].title == "You are Keanu"
+    assert effects.cards[0].lines == ["Mary's brother", "School together", "Please hang up now."]
+    assert "Please hang up" in effects.speech[0]
+    assert not (await controller.respond(session, MediaEvent(kind="recognition_timeout"), api)).speech
+    assert "/people/from_intro" not in requests
+
+
+@pytest.mark.asyncio
+async def test_auto_timeout_starts_enrollment_once_without_guessing(monkeypatch):
+    from calypso.claude_controller import ClaudeController, MediaEvent, Session, StartSession
+    import calypso.claude_controller as module
+    now = [100.0]
+    monkeypatch.setattr(module.time, "monotonic", lambda: now[0])
+    controller = ClaudeController(FakeClaude([("speak", {"text": "Introduce yourself"}), None]))
+    session = Session("sid", "cid", StartSession(mode="auto", participant="phone"), {"name": "Mary"})
+    async def api(*args): raise AssertionError("No identity lookup or enrollment write expected")
+    await controller.respond(session, MediaEvent(kind="start"), api)
+    now[0] = 104.9
+    assert not (await controller.respond(session, MediaEvent(kind="recognition_timeout"), api)).speech
+    now[0] = 105.1
+    effects = await controller.respond(session, MediaEvent(kind="recognition_timeout"), api)
+    assert effects.mode == "setup" and not effects.done
+    assert "What's your name" in effects.speech[0]
+    assert session.recognized_id is None
+    assert not (await controller.respond(session, MediaEvent(kind="recognition_timeout"), api)).speech
+
+
+@pytest.mark.asyncio
+async def test_auto_late_face_cannot_bypass_enrollment_deadline(monkeypatch):
+    from calypso.claude_controller import ClaudeController, MediaEvent, Session, StartSession
+    import calypso.claude_controller as module
+    now = [100.0]
+    monkeypatch.setattr(module.time, "monotonic", lambda: now[0])
+    controller = ClaudeController(FakeClaude([("speak", {"text": "Introduce yourself"}), None]))
+    session = Session("sid", "cid", StartSession(mode="auto", participant="phone"), {"name": "Mary"})
+    async def api(*args): raise AssertionError("No late identity lookup")
+    await controller.respond(session, MediaEvent(kind="start"), api)
+    now[0] = 106
+    effects = await controller.respond(session, MediaEvent(kind="frame", jpeg_b64="eA=="), api)
+    assert effects.mode == "setup" and "What's your name" in effects.speech[0]
+
+
+@pytest.mark.asyncio
+async def test_auto_session_api_starts_recognition_and_cleans_up(gateway_app):
+    from calypso.claude_controller import ClaudeController
+    gateway_app.state.claude_controller = ClaudeController(FakeClaude([]))
+    async with gateway_app.router.lifespan_context(gateway_app):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=gateway_app),
+            base_url="http://test", headers={"Authorization": "Bearer gateway-token"}) as client:
+            await client.post("/people", json={"name": "Mary", "is_patient": True})
+            response = await client.post("/agent/sessions", json={"mode": "auto", "participant": "phone"})
+            assert response.status_code == 201, response.text
+            sid = response.json()["session_id"]
+            effects = (await client.post(f"/agent/sessions/{sid}/events", json={"kind": "start"})).json()
+            assert effects["mode"] == "recognize" and len(effects["speech"]) == 1
+            assert (await client.post(f"/agent/sessions/{sid}/end")).status_code == 200

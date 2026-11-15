@@ -74,10 +74,10 @@ curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
 
 The media transport now delegates decisions to Claude on the backend:
 
-- `POST /agent/sessions`: `{mode: "setup"|"group"|"recognize", participant: str,
+- `POST /agent/sessions`: `{mode: "setup"|"group"|"recognize"|"auto", participant: str,
   controlled: bool, outcome: "identified"|"learning"|"uncertain",
   enrolled_person_id?: str, caller_phone?: str}` → `{session_id, call_id}`.
-- `POST /agent/sessions/{id}/events`: `{kind: "start"|"utterance"|"silence"|"frame"|"camera_ready",
+- `POST /agent/sessions/{id}/events`: `{kind: "start"|"utterance"|"silence"|"frame"|"camera_ready"|"recognition_timeout",
   text?: str, face_jpegs_b64?: [str], jpeg_b64?: str, voice_wav_b64?: str}` →
   `{session_id, speech: [str], cards: [Card], done: bool, enrolled_person_id?: str,
   needs_face_crops: bool}`. When requested, the transport reports `camera_ready`
@@ -226,3 +226,5 @@ uv run --env-file ../.env rq worker --url "$CALYPSO_REDIS_URL" recordings  # wor
 - `CALYPSO_JOBS=rq` queues them on Redis for the worker. Use it on Vultr.
 - `CALYPSO_STORAGE=local` (default) keeps face crops and photos under `data/files/`. `s3` uses the Vultr enrollment bucket.
 - On Vultr, uvicorn runs on `127.0.0.1:8000` behind Caddy for HTTPS.
+
+In `auto` sessions, effects include the current `mode` (`recognize` then `setup` if unmatched). The transport sends `recognition_timeout` after the five-second opening window; the backend enforces the elapsed-time guard and ignores repeated/early timeout events. A confident face match completes the flow with an identity card and hang-up instruction. No-match transitions reuse the same session and call log for enrollment.
