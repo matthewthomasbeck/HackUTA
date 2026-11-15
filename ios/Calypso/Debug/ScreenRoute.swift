@@ -47,6 +47,13 @@ enum ScreenRoute {
             return AnyView(TodayView(client: APIClient.configured).debugScrolledToEnd())
         case "today-ax":
             return AnyView(TodayView(client: APIClient.configured).dynamicTypeSize(.accessibility5))
+        // The live card over a fake puck pinned to one speaker. Other routes use the app's own puck.
+        case "today-talking-sarah":
+            return AnyView(DebugTalkingToday(speaker: .sarah))
+        case "today-talking-unknown":
+            return AnyView(DebugTalkingToday(speaker: .unknown))
+        case "today-talking-quiet":
+            return AnyView(DebugTalkingToday(speaker: .none))
         case "today-quiet":
             let fiveDaysAgo = Calendar.current.date(byAdding: .day, value: -5, to: Date()) ?? Date()
             return AnyView(TodayView(client: APIClient.configured, initialDay: fiveDaysAgo).debugWithTabBar())
@@ -122,6 +129,24 @@ private struct DebugPersonStack: View {
                 }
         }
         .tint(Color.periwinkleDeep)
+    }
+}
+
+/// Today over its own fake puck, already paired and reconnecting, so the pinned speaker shows within a second.
+private struct DebugTalkingToday: View {
+    @StateObject private var puck: PuckConnection
+
+    init(speaker: FakeSpeaker) {
+        let defaults = UserDefaults(suiteName: "DebugTalkingToday") ?? .standard
+        defaults.set(true, forKey: FakePuckLink.pairedKey)
+        _puck = StateObject(wrappedValue: PuckConnection(link: FakePuckLink(pinnedSpeaker: speaker, defaults: defaults)))
+    }
+
+    var body: some View {
+        TodayView(client: APIClient.configured)
+            .debugWithTabBar()
+            .environmentObject(puck)
+            .onAppear { puck.reconnectRemembered() }
     }
 }
 

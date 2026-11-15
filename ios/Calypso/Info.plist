@@ -26,6 +26,8 @@
 	<string>1</string>
 	<key>CHERT_PHONE</key>
 	<string>$(CHERT_PHONE)</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Calypso⁻¹ connects to your puck to show who you're talking with.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Calypso⁻¹ adds itself to your contacts so you can FaceTime it.</string>
 	<key>NSLocalNetworkUsageDescription</key>

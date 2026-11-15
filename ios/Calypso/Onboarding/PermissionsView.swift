@@ -113,21 +113,30 @@ private struct PermissionCard: View {
                 }
                 .accessibilityElement(children: .combine)
                 if allowed {
-                    HStack(spacing: 12) {
-                        CalypsoIcon("checkmark.circle.fill", size: 36)
-                        Text("Allowed").calypsoFont(.bodyStrong)
-                    }
-                    .foregroundStyle(Color.ink)
-                    .frame(maxWidth: .infinity, minHeight: 56)
-                    .background(Color.periwinkleMist, in: RoundedRectangle(cornerRadius: 24))
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("\(title) allowed")
+                    StatusCheckPill(label: "Allowed")
+                        .accessibilityLabel("\(title) allowed")
                 } else {
                     CalypsoButton("Allow", kind: .secondary, action: onAllow)
                         .accessibilityLabel("Allow \(title)")
                 }
             }
         }
+    }
+}
+
+/// The periwinkle check pill that replaces a card's button once it's done ("Allowed", "Connected").
+struct StatusCheckPill: View {
+    let label: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            CalypsoIcon("checkmark.circle.fill", size: 36)
+            Text(label).calypsoFont(.bodyStrong)
+        }
+        .foregroundStyle(Color.ink)
+        .frame(maxWidth: .infinity, minHeight: 56)
+        .background(Color.periwinkleMist, in: RoundedRectangle(cornerRadius: 24))
+        .accessibilityElement(children: .combine)
     }
 }
 

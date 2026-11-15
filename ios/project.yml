@@ -33,6 +33,7 @@ targets:
         API_BASE_URL: $(API_BASE_URL)
         API_TOKEN: $(API_TOKEN)
         CHERT_PHONE: $(CHERT_PHONE)
+        NSBluetoothAlwaysUsageDescription: "Calypso⁻¹ connects to your puck to show who you're talking with."
         NSContactsUsageDescription: "Calypso⁻¹ adds itself to your contacts so you can FaceTime it."
         NSLocalNetworkUsageDescription: "Calypso⁻¹ connects to your Calypso server on the local network during development."
         NSPhotoLibraryUsageDescription: "Calypso⁻¹ places your photos on your day's timeline."

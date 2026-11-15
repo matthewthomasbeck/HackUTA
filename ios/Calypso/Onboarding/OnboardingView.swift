@@ -35,6 +35,10 @@ struct OnboardingView: View {
             GroupCallHowToView(onBack: goBack, onNext: goNext)
         case .permissions:
             PermissionsView(onBack: goBack, onDone: goNext)
+        case .connectPuck:
+            ConnectPuckView(onBack: goBack, onNext: goNext)
+        case .voiceSetup:
+            VoiceSetupView(onBack: goBack, onNext: goNext)
         case .inviteFamily:
             InviteFamilyView(onBack: goBack, onNext: goNext, invited: seededInvites)
         case .allSet:
