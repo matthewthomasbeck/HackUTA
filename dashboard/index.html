@@ -4,10 +4,72 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Calypso⁻¹ Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,600&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <!-- Placeholder. Vishnu builds this in Task 18: day timeline, live call, pipeline health. -->
-  <h1>Calypso⁻¹</h1>
-  <p>Judge dashboard coming soon. See docs/tasks/vishnu-backend.md, Task 18.</p>
+<body class="mode-idle">
+  <header class="header">
+    <div class="brand">
+      <img class="brand-gull" src="art/gull-wave.png" alt="" width="72" height="63">
+      <div>
+        <h1 class="title">Calypso⁻¹</h1>
+        <p class="small soft" id="subtitle">Live system view</p>
+      </div>
+    </div>
+    <div class="status" id="status"></div>
+  </header>
+
+  <section class="panel arch">
+    <div class="panel-header">
+      <h2 class="panel-title">How Calypso⁻¹ is thinking right now</h2>
+      <span class="small soft">Each step lights up when it runs</span>
+    </div>
+    <div class="graph-fit" id="graph-fit">
+      <div class="graph" id="graph">
+        <svg class="edges" id="edges" width="1336" height="284" viewBox="0 0 1336 284" aria-hidden="true"></svg>
+        <span class="label soft lane" style="left:0;top:0">Around the house · puck</span>
+        <span class="label soft lane" style="left:0;top:114px">On the call · FaceTime</span>
+        <div class="on-screen" id="on-screen">
+          <span class="label soft">On FaceTime now</span>
+          <div id="card-slot"></div>
+          <span class="mono-small soft" id="card-latency"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main class="row live-only">
+    <section class="panel" id="panel-call">
+      <div class="panel-header"><h2 class="panel-title">In the call</h2><span class="small soft" id="call-sub"></span></div>
+      <div class="stack" id="participants"></div>
+    </section>
+    <section class="panel" id="panel-said">
+      <div class="panel-header"><h2 class="panel-title">What was said</h2><span class="small soft">last 4 lines</span></div>
+      <div class="transcript" id="transcript"></div>
+      <div class="recall" id="recall"></div>
+    </section>
+    <section class="panel" id="panel-health">
+      <div class="panel-header"><h2 class="panel-title">Pipeline health</h2></div>
+      <div class="stats" id="stats"></div>
+      <div id="sparks"></div>
+    </section>
+  </main>
+
+  <main class="row idle-only">
+    <section class="panel" id="panel-day">
+      <div class="panel-header"><h2 class="panel-title" id="day-title">Today so far</h2><span class="small soft" id="day-sub"></span></div>
+      <div class="lanes" id="lanes"></div>
+      <p class="small soft">Place blocks fade with confidence. Below 0.6 they say “somewhere with … sounds”, never a made-up place.</p>
+    </section>
+    <section class="panel" id="panel-events">
+      <div class="panel-header"><h2 class="panel-title">Event stream</h2><span class="small soft">/stream</span></div>
+      <div id="events"></div>
+    </section>
+  </main>
+
+  <script src="demo.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
