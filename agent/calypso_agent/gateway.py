@@ -16,6 +16,15 @@ class GatewayClient:
         self.session_id = None
         self.controlled = False
 
+    async def route(self, caller_phone):
+        """Ask the backend which flow this call gets ("group_intro" or "auto")."""
+        response = await self.http.post("/agent/sessions/route", json={"caller_phone": caller_phone})
+        response.raise_for_status()
+        mode = response.json().get("mode")
+        if mode not in {"group_intro", "auto"}:
+            raise ValueError("Unexpected route mode")
+        return mode
+
     async def start(self, mode, participant, outcome, *, caller_phone=None, controlled=False):
         enrolled = None
         self.controlled = controlled

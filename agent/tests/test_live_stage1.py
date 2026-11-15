@@ -20,7 +20,7 @@ from calypso_agent.stage1_backend import ControlledBackend
 
 def test_live_mode_requires_explicit_selection_and_no_secret_in_errors():
     env = {"CALYPSO_STAGE1": "true", "CALYPSO_CALL_MODE": "patient", "XAI_API_KEY": "do-not-print"}
-    with pytest.raises(ValueError, match="automatic patient routing") as error:
+    with pytest.raises(ValueError, match="CALYPSO_CALL_MODE=route") as error:
         Config.from_env(env)
     assert "do-not-print" not in str(error.value)
     env["CALYPSO_CALL_MODE"] = "setup"
@@ -496,3 +496,81 @@ async def test_group_transport_subscribes_video_sources_and_sends_bridge_speech_
     assert utterances == [{"text": "Mom, what did you do today?", "face_jpegs_b64": [], "voice_wav_b64": None}]
     assert set(closed) == {"gateway", "provider", "output"}
     assert all(not handlers for handlers in room.handlers.values())
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("routed,expected", [("group_intro", "group_intro"), ("auto", "auto"), (RuntimeError("down"), "auto")])
+async def test_route_mode_picks_each_calls_flow_from_the_caller_phone(monkeypatch, tmp_path, routed, expected):
+    """CALYPSO_CALL_MODE=route: Mary's phone gets the group overlay, anyone else the 1:1 flow."""
+    import calypso_agent.main as live
+    from livekit import rtc
+    asked, started_with, closed = [], [], []
+    room = Events()
+    room.metadata = '{"chert_bridge_ready":true}'
+    video = NS(track=NS(sid="bridge-video", kind=rtc.TrackKind.KIND_VIDEO), source=rtc.TrackSource.SOURCE_CAMERA, width=1280, height=720)
+    bridge = NS(identity="chert-bridge-test", kind=rtc.ParticipantKind.PARTICIPANT_KIND_STANDARD, track_publications={"v": video})
+    room.remote_participants = {bridge.identity: bridge}
+    class Gateway:
+        session_id = "sid"
+        def __init__(self, *args): pass
+        async def route(self, caller_phone):
+            asked.append(caller_phone)
+            if isinstance(routed, Exception):
+                raise routed
+            return routed
+        async def start(self, mode, *args, **kwargs):
+            started_with.append(mode)
+            room.emit("disconnected")
+        async def event(self, kind, **fields): return {"mode": started_with[0]}
+        async def close(self): closed.append("gateway")
+    class Provider:
+        def __init__(self, *args): pass
+        async def close(self): closed.append("provider")
+    class Output:
+        def __init__(self, room, scheduler): self.audio, self.scheduler = None, scheduler
+        async def start(self): pass
+        async def run(self): await asyncio.Event().wait()
+        def caption(self, *args): pass
+        async def close(self): closed.append("output")
+    class Speech:
+        def __init__(self, *args, **kwargs): pass
+        async def speak(self, text): pass
+        async def listen(self): await asyncio.Event().wait()
+    async def frames(track, callback): await asyncio.Event().wait()
+    async def phone(identity): return "+15550000001"
+    monkeypatch.setattr(live, "GatewayClient", Gateway)
+    monkeypatch.setattr(live, "GrokSpeech", Provider)
+    monkeypatch.setattr(live, "Publisher", Output)
+    monkeypatch.setattr(live, "RoomSpeech", Speech)
+    monkeypatch.setattr(live, "video_frames", frames)
+    monkeypatch.setattr(live, "resolve_caller_phone", phone)
+    async def wait_for_participant(**kwargs): return bridge
+    config = Config("route", "http://test", "token", "key", state_file=str(tmp_path / "state.json"))
+    await asyncio.wait_for(live.run_call(NS(room=room, wait_for_participant=wait_for_participant), config), 2)
+    assert asked == ["+15550000001"]
+    assert started_with == [expected] and config.mode == expected
+    assert set(closed) == {"gateway", "provider", "output"}
+
+
+@pytest.mark.asyncio
+async def test_group_identity_card_stays_up_between_recall_cards():
+    import calypso_agent.live_media as media
+    from calypso_agent.scheduler import CardScheduler
+    from calypso_agent.contract import Card
+    clock = [0.0]
+    publisher = media.Publisher.__new__(media.Publisher)
+    publisher.scheduler = CardScheduler(clock=lambda: clock[0])
+    publisher.pinned_card, publisher.resting_card, publisher.caption_pages = None, None, []
+    publisher.status = Card(kind="memory", title="Connecting", lines=[])
+    keanu = Card(kind="identity", title="Keanu", lines=["Mary's brother"])
+    today = Card(kind="today", title="Today", lines=["Tea with Eric"])
+    publisher.resting_card = keanu
+    def showing():
+        return publisher.choose_card().title
+    assert showing() == "Keanu"
+    publisher.scheduler.push(today)
+    assert showing() == "Today"       # a recall card shows over the resting identity card
+    clock[0] = 11
+    assert showing() == "Keanu"       # then the identity card comes back
+    publisher.pinned_card = Card(kind="memory", title="Saved", lines=[])
+    assert showing() == "Saved"       # a finished 1:1 call's final card still wins

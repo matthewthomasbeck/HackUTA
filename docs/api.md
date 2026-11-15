@@ -102,6 +102,14 @@ curl -H "Authorization: Bearer $TOKEN" https://<host>/puck/gallery
 
 The media transport now delegates decisions to Claude on the backend:
 
+- `POST /agent/sessions/route`: `{caller_phone?: str}` → `{mode: "group_intro"|"auto", reason: "patient_phone"|"caller"|"no_phone"}`.
+  With `CALYPSO_CALL_MODE=route` (the one mode to run in production) the agent calls this once per call,
+  with Chert's verified caller phone, and runs the flow it returns: the **patient's phone** (Mary adding
+  Calypso⁻¹ to a family call, or starting a group with it) → `group_intro` (spoken introductions,
+  identity card kept on screen, grounded recall); **anyone else** → `auto` (1:1 recognize, or interview a
+  new relative, then "please hang up"). A failed lookup falls back to `auto`. Emits `agent.route`
+  (mode and reason, never the number). Chert doesn't mark group calls, so the caller phone is the signal:
+  **Mary must be the one who adds Calypso⁻¹**.
 - `POST /agent/sessions`: `{mode: "setup"|"group"|"recognize"|"auto"|"group_intro", participant: str,
   controlled: bool, outcome: "identified"|"learning"|"uncertain",
   enrolled_person_id?: str, caller_phone?: str}` → `{session_id, call_id}`.

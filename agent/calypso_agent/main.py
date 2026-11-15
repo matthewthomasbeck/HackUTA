@@ -38,8 +38,8 @@ class Config:
     def from_env(cls, env=None):
         env = os.environ if env is None else env
         mode = env.get("CALYPSO_CALL_MODE")
-        if mode not in {"setup", "group", "recognize", "auto", "group_intro"}:
-            raise ValueError("Set CALYPSO_CALL_MODE=setup, recognize, auto, group_intro or group; automatic patient routing is not enabled")
+        if mode not in {"setup", "group", "recognize", "auto", "group_intro", "route"}:
+            raise ValueError("Set CALYPSO_CALL_MODE=route (automatic), or setup, recognize, auto, group_intro or group")
         missing = [name for name in ("CALYPSO_BACKEND_URL", "CALYPSO_API_TOKEN", "XAI_API_KEY") if not env.get(name)]
         if missing:
             raise ValueError("Missing environment variables: " + ", ".join(missing))
@@ -107,6 +107,9 @@ async def run_call(ctx, config):
             dialogue_done = effects.get("done", False)
             for card in effects.get("cards", []):
                 publisher.scheduler.push(Card.model_validate(card))
+                if config.mode == "group_intro" and card.get("kind") == "identity":
+                    # Keep the newest relative's card up between recall cards.
+                    publisher.resting_card = Card.model_validate(card)
             if dialogue_done and effects.get("cards"):
                 publisher.pinned_card = Card.model_validate(effects["cards"][-1])
                 publisher.camera_status = ""
@@ -234,9 +237,19 @@ async def run_call(ctx, config):
         spawn(publisher.run())
         participant = await ctx.wait_for_participant(identity=selected_identity)
         selected_identity = participant.identity
-        if config.mode in {"setup", "auto"}:
+        if config.mode in {"setup", "auto", "route"}:
             caller_phone = await resolve_caller_phone(selected_identity)
             log.info("verified_caller_phone_available=%s", bool(caller_phone))
+        if config.mode == "route":
+            # Mary's phone → silent group overlay; anyone else → the 1:1 flow. `config` is
+            # per job, so every handler below sees the resolved mode.
+            try:
+                config.mode = await gateway.route(caller_phone)
+            except Exception as error:  # routing must never drop the call
+                log.warning("route lookup failed (%s); using the 1:1 flow", type(error).__name__)
+                config.mode = "auto"
+            active_mode = "recognize" if config.mode == "auto" else config.mode
+            log.info("route resolved mode=%s", config.mode)
         log.info("Claude media transport: mode=%s, participant=%s", config.mode, selected_identity)
         participants = list(ctx.room.remote_participants.values()) if config.mode == "group_intro" else [participant]
         for remote in participants:

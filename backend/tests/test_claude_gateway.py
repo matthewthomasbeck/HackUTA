@@ -584,3 +584,25 @@ async def test_manual_group_api_requires_fixed_patient_and_real_recognition(gate
                 effects = (await client.post(f"/agent/sessions/{sid}/events", json={"kind": "start"})).json()
                 assert len(effects["speech"]) == 1 and not effects["done"]
                 assert (await client.post(f"/agent/sessions/{sid}/end")).status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_route_picks_group_for_patient_phone_and_1to1_otherwise(gateway_app):
+    async with gateway_app.router.lifespan_context(gateway_app):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=gateway_app),
+            base_url="http://test", headers={"Authorization": "Bearer gateway-token"}) as client:
+            await client.post("/people", json={"name": "Mary", "is_patient": True, "phone": "+15550000001"})
+            async def route(phone):
+                response = await client.post("/agent/sessions/route", json={"caller_phone": phone})
+                assert response.status_code == 200, response.text
+                return response.json()
+            assert await route("+15550000001") == {"mode": "group_intro", "reason": "patient_phone"}
+            assert await route("+15550000002") == {"mode": "auto", "reason": "caller"}
+            assert await route(None) == {"mode": "auto", "reason": "no_phone"}
+            assert (await client.post("/agent/sessions/route", json={"caller_phone": "not-a-phone"})).status_code == 422
+            routes = [e["payload"] for e in (await client.get("/events/recent?limit=1000")).json() if e["stage"] == "agent.route"]
+            assert routes[-3:] == [{"mode": "group_intro", "reason": "patient_phone"},
+                                   {"mode": "auto", "reason": "caller"}, {"mode": "auto", "reason": "no_phone"}]
+            assert not any("555" in str(r) for r in routes)  # the number never reaches the event stream
+            assert (await client.post("/agent/sessions/route", json={"caller_phone": None},
+                                      headers={"Authorization": "Bearer wrong"})).status_code == 401

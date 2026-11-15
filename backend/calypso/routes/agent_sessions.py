@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 import httpx
+from pydantic import BaseModel, Field
 
 from ..auth import require_token
 from ..bus import emit
@@ -37,6 +38,29 @@ def get_session(request, session_id):
     if time.monotonic() - session.touched > 3600:
         raise HTTPException(410, "Agent session expired; reconnect the call")
     return session
+
+
+class RouteRequest(BaseModel):
+    caller_phone: str | None = Field(default=None, pattern=r"^\+[1-9]\d{7,14}$")
+
+
+@router.post("/route")
+async def route(body: RouteRequest, request: Request):
+    """Which flow a call gets, so no server-wide mode is needed.
+
+    Mary (the patient) adding Calypso to a call with family → the silent group overlay.
+    Anyone else calling → the 1:1 flow (recognize, or interview a new relative).
+    """
+    async with backend_api(request) as api:
+        patients = await api("GET", "/people?is_patient=true")
+    patient_phone = patients[0].get("phone") if len(patients) == 1 else None
+    if body.caller_phone and patient_phone and body.caller_phone == patient_phone:
+        mode, reason = "group_intro", "patient_phone"
+    else:
+        mode, reason = "auto", ("caller" if body.caller_phone else "no_phone")
+    emit("agent.route", {"mode": mode, "reason": reason})  # never the phone number itself
+    log.info("route mode=%s reason=%s", mode, reason)
+    return {"mode": mode, "reason": reason}
 
 
 @router.post("", status_code=201)
