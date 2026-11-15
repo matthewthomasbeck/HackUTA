@@ -323,4 +323,26 @@ TEST(test_unsynced_same_boot_held_until_sync) {
   CHECK_EQ(s.depth(), 0u);
 }
 
+TEST(test_segment_spanning_clock_sync_is_unsynced) {
+  FakeClock c;
+  c.snap = {false, tp_from("2020-01-01T00:00:00.000Z"), 50000, "b1"};
+  Segmenter seg(2000, c);
+  const Tp t0 = tp_from("2020-01-01T00:00:00.000Z");
+  AudioChunk ch;
+  ch.pcm.assign(16000, 1);
+  ch.ts = t0;
+  ch.duration_ms = 1000;
+  CHECK(!seg.push(ch));
+  c.snap.synced = true;  // NTP step lands mid-segment
+  ch.ts = t0 + std::chrono::seconds(1);
+  auto out = seg.push(ch);
+  CHECK(out.has_value());
+  CHECK(!out->second.time_synced);
+  ch.ts = t0 + std::chrono::seconds(2);
+  CHECK(!seg.push(ch));  // next segment starts synced
+  ch.ts = t0 + std::chrono::seconds(3);
+  out = seg.push(ch);
+  CHECK(out.has_value() && out->second.time_synced);
+}
+
 int main() { return testing::run_all(); }

@@ -89,9 +89,18 @@ void write_atomic(const fs::path& final_path, const std::string& data) {
     }
     off += static_cast<std::size_t>(n);
   }
-  ::fsync(fd);
+  if (::fsync(fd) != 0) {
+    ::close(fd);
+    throw std::runtime_error("spool: fsync failed " + tmp.string());
+  }
   ::close(fd);
   fs::rename(tmp, final_path);
+  // Persist the rename itself (the directory entry) across power loss.
+  const int dfd = ::open(final_path.parent_path().c_str(), O_RDONLY);
+  if (dfd >= 0) {
+    ::fsync(dfd);  // best effort: some filesystems refuse fsync on a directory
+    ::close(dfd);
+  }
 }
 
 std::string read_file(const fs::path& p) {

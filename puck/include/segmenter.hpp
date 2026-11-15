@@ -24,6 +24,7 @@ class Segmenter {
   std::vector<std::int16_t> buf_;
   std::chrono::system_clock::time_point start_{};
   bool has_start_ = false;
+  bool start_synced_ = false;  // clock sync state when the segment's first chunk arrived
 };
 
 }  // namespace calypso
