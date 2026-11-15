@@ -9,6 +9,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(CALYPSO_BUILD_TESTS "Build puck unit tests" OFF)
 
 add_library(calypso_core STATIC
+  src/who_filter.cpp
   src/config.cpp
   src/capture.cpp
   src/audio_gain.cpp
@@ -132,6 +133,9 @@ if(CALYPSO_BUILD_TESTS)
   add_executable(test_audio_gain tests/test_audio_gain.cpp)
   target_link_libraries(test_audio_gain PRIVATE calypso_core)
   add_test(NAME audio_gain COMMAND test_audio_gain)
+  add_executable(test_who_filter tests/test_who_filter.cpp)
+  target_link_libraries(test_who_filter PRIVATE calypso_core)
+  add_test(NAME who_filter COMMAND test_who_filter)
   add_executable(test_people_json tests/test_people_json.cpp)
   target_link_libraries(test_people_json PRIVATE calypso_core)
   add_test(NAME people_json COMMAND test_people_json)

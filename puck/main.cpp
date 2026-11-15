@@ -156,7 +156,8 @@ int main() {
 
   calypso::StateMachine sm(capture, link, models, phone,
                            cfg.offline_segment_ms, spool, clock,
-                           cfg.segment_ms, cfg.min_speech_rms);
+                           cfg.segment_ms, cfg.min_speech_rms,
+                           cfg.voice_min_score);
   calypso::ConnectionListener listener(link, sm, models, cfg.connect_retry_sec,
                                        cfg.connection_check_sec,
                                        force_offline);

@@ -33,6 +33,7 @@ struct Config {
   std::string gallery_dir = "gallery";
   float voice_match_threshold = 0.45f;  // 0.55 was too strict for lav + 1 speaker
   float min_speech_rms = 0.02f;         // skip quiet windows before embed
+  float voice_min_score = 0.2f;         // below this, an unmatched clip is noise, not "someone new"
 
   std::string spool_dir = "/var/lib/calypso-puck/spool";
   int spool_max_mb = 512;

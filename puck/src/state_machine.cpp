@@ -1,6 +1,7 @@
 #include "state_machine.hpp"
 
 #include "audio_gain.hpp"
+#include "who_filter.hpp"
 
 #include <chrono>
 #include <cmath>
@@ -12,7 +13,8 @@ namespace calypso {
 StateMachine::StateMachine(Capture& capture, BackendLink& link, Models& models,
                            PhoneLink& phone, int offline_segment_ms,
                            SegmentSpool& spool, const ClockSource& clock,
-                           int segment_ms, float min_speech_rms)
+                           int segment_ms, float min_speech_rms,
+                           float voice_min_score)
     : capture_(capture),
       link_(link),
       models_(models),
@@ -21,6 +23,7 @@ StateMachine::StateMachine(Capture& capture, BackendLink& link, Models& models,
       segmenter_(segment_ms, clock),
       offline_buf_(offline_segment_ms),
       min_speech_rms_(min_speech_rms > 0.f ? min_speech_rms : 0.02f),
+      voice_min_score_(voice_min_score),
       queue_(/*max_chunks=*/200) {}
 
 StateMachine::~StateMachine() {
@@ -137,6 +140,13 @@ void StateMachine::process_who(const AudioChunk& chunk) {
     case WhoIsTalking::Status::Unknown:
       std::cerr << "who is talking: unknown (no gallery / no embedding)\n";
       break;
+  }
+
+  // A clip that matches nobody at all is noise, not a new person: tell the
+  // phone nothing rather than flashing "Someone new".
+  if (!should_report_who(out.who, voice_min_score_)) {
+    std::cerr << "who is talking: (skip non-voice clip best_score=" << out.who.score << ")\n";
+    return;
   }
 
   // PhoneLink writes the drop file; the BLE sidecar notifies the phone.

@@ -27,7 +27,7 @@ class StateMachine {
   StateMachine(Capture& capture, BackendLink& link, Models& models,
                PhoneLink& phone, int offline_segment_ms, SegmentSpool& spool,
                const ClockSource& clock, int segment_ms,
-               float min_speech_rms = 0.02f);
+               float min_speech_rms = 0.02f, float voice_min_score = 0.2f);
   ~StateMachine();
 
   StateMachine(const StateMachine&) = delete;
@@ -53,6 +53,7 @@ class StateMachine {
   Segmenter segmenter_;
   OfflineBuffer offline_buf_;
   float min_speech_rms_ = 0.02f;
+  float voice_min_score_ = 0.2f;
   ChunkQueue queue_;
   std::atomic<RunMode> mode_{RunMode::Offline};
   std::atomic<bool> stop_{false};

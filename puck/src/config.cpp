@@ -124,6 +124,7 @@ bool load_config(const std::string& path, Config& out) {
   out.voice_match_threshold =
       parse_float(get("VOICE_MATCH_THRESHOLD"), 0.45f);
   out.min_speech_rms = parse_float(get("MIN_SPEECH_RMS"), 0.02f);
+  out.voice_min_score = parse_float(get("VOICE_MIN_SCORE"), 0.2f);
   {
     const std::string d = get("PUCK_SPOOL_DIR");
     if (!d.empty()) {
