@@ -1,12 +1,14 @@
 #pragma once
 
+#include "accelerators.hpp"
 #include "types.hpp"
 
 #include <string>
 
 namespace calypso {
 
-// NCS2 + local STT / voice-fingerprint models. Offline path only for now.
+// Offline voice-fingerprint (+ optional local STT). Default backend = CPU
+// (sherpa-onnx / titanet). Swap to Coral/NCS2 via set_backend when ready.
 class Models {
  public:
   Models() = default;
@@ -15,19 +17,29 @@ class Models {
   Models(const Models&) = delete;
   Models& operator=(const Models&) = delete;
 
-  // Start NCS2, load STT + voice-fingerprint graphs. Vague on purpose.
-  bool init(const std::string& ncs2_device,
+  // Load voice (+ optional STT) graphs. Pass Accelerators for TPU later.
+  bool init(InferBackend backend,
+            const std::string& voice_model_path,
             const std::string& stt_model_path,
-            const std::string& voice_model_path);
+            Accelerators* accelerators);
 
-  // Run chunk through loaded models. Output unused until offline brainstorm.
-  bool infer(const AudioChunk& chunk, ModelOutput& out);
+  // Switch runtime without changing the online upload path. Stub no-op.
+  bool set_backend(InferBackend backend);
+
+  InferBackend backend() const;
+  bool ready() const;
+
+  // Run voice fingerprint on a (already concatenated) offline clip.
+  // Fills out.who ("who is talking") + optional embedding/transcript.
+  bool infer(const AudioChunk& clip, ModelOutput& out);
 
   void shutdown();
 
  private:
   bool ready_ = false;
-  // TODO: OpenVINO / NCS2 handles
+  InferBackend backend_ = InferBackend::Cpu;
+  Accelerators* accelerators_ = nullptr;
+  // TODO: sherpa-onnx / ONNX Runtime / TPU session handles
 };
 
 }  // namespace calypso

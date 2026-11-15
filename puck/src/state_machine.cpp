@@ -6,8 +6,14 @@
 
 namespace calypso {
 
-StateMachine::StateMachine(Capture& capture, BackendLink& link, Models& models)
-    : capture_(capture), link_(link), models_(models), queue_(/*max_chunks=*/200) {}
+StateMachine::StateMachine(Capture& capture, BackendLink& link, Models& models,
+                           PhoneLink& phone, int offline_segment_ms)
+    : capture_(capture),
+      link_(link),
+      models_(models),
+      phone_(phone),
+      offline_buf_(offline_segment_ms),
+      queue_(/*max_chunks=*/200) {}
 
 StateMachine::~StateMachine() {
   stop();
@@ -40,6 +46,10 @@ void StateMachine::stop() {
 void StateMachine::set_mode(RunMode mode) {
   const auto prev = mode_.exchange(mode);
   if (prev != mode) {
+    // Drop partial offline concat so reconnect doesn't leak into the next clip.
+    if (mode == RunMode::Online) {
+      offline_buf_.clear();
+    }
     std::cerr << "state_machine: mode → "
               << (mode == RunMode::Online ? "ONLINE" : "OFFLINE") << "\n";
   }
@@ -84,10 +94,19 @@ void StateMachine::process_online(const AudioChunk& chunk) {
 }
 
 void StateMachine::process_offline(const AudioChunk& chunk) {
-  ModelOutput out;
-  if (models_.infer(chunk, out)) {
-    (void)out;  // offline brainstorm: unused for now
+  // Keep CHUNK_MS frames from capture; OfflineBuffer builds a longer clip.
+  auto clip = offline_buf_.push(chunk);
+  if (!clip) {
+    return;
   }
+
+  ModelOutput out;
+  if (!models_.infer(*clip, out)) {
+    return;
+  }
+
+  // Deliver "who is talking" to the phone over Bluetooth (stub).
+  (void)phone_.send_who_is_talking(out.who);
 }
 
 }  // namespace calypso

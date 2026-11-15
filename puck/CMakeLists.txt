@@ -14,6 +14,9 @@ add_executable(calypso_puck
   src/models.cpp
   src/state_machine.cpp
   src/connection_listener.cpp
+  src/accelerators.cpp
+  src/phone_link.cpp
+  src/offline_buffer.cpp
   src/wav.cpp
   src/util.cpp
 )

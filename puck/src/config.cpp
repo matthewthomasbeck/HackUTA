@@ -28,6 +28,16 @@ int parse_int(const std::string& s, int fallback) {
   }
 }
 
+InferBackend parse_infer_backend(const std::string& s) {
+  if (s == "coral") {
+    return InferBackend::Coral;
+  }
+  if (s == "ncs2") {
+    return InferBackend::Ncs2;
+  }
+  return InferBackend::Cpu;
+}
+
 }  // namespace
 
 bool load_config(const std::string& path, Config& out) {
@@ -43,7 +53,6 @@ bool load_config(const std::string& path, Config& out) {
     if (line.empty() || line[0] == '#') {
       continue;
     }
-    // Strip inline comments: KEY=value  # note
     const auto hash = line.find('#');
     if (hash != std::string::npos) {
       line = trim(line.substr(0, hash));
@@ -67,11 +76,16 @@ bool load_config(const std::string& path, Config& out) {
   out.mic_device = get("MIC_DEVICE");
   out.chunk_ms = parse_int(get("CHUNK_MS"), 30);
   out.segment_ms = parse_int(get("SEGMENT_MS"), 3000);
+  out.offline_segment_ms = parse_int(get("OFFLINE_SEGMENT_MS"), 2000);
   out.connect_retry_sec = parse_int(get("CONNECT_RETRY_SEC"), 5);
   out.connection_check_sec = parse_int(get("CONNECTION_CHECK_SEC"), 2);
+  out.infer_backend = parse_infer_backend(get("INFER_BACKEND"));
+  out.coral_device = get("CORAL_DEVICE");
   out.ncs2_device = get("NCS2_DEVICE");
   out.stt_model_path = get("STT_MODEL_PATH");
   out.voice_model_path = get("VOICE_MODEL_PATH");
+  out.bt_adapter = get("BT_ADAPTER");
+  out.bt_peer_name = get("BT_PEER_NAME");
 
   return !out.backend_ip.empty() && out.backend_port != 0 &&
          !out.api_token.empty() && !out.mic_device.empty();

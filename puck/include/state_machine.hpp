@@ -4,6 +4,8 @@
 #include "capture.hpp"
 #include "chunk_queue.hpp"
 #include "models.hpp"
+#include "offline_buffer.hpp"
+#include "phone_link.hpp"
 #include "types.hpp"
 
 #include <atomic>
@@ -11,14 +13,15 @@
 
 namespace calypso {
 
-// Capture never shares a thread with upload/infer (those block on HTTP / NCS2).
+// Capture never shares a thread with upload/infer (those block on HTTP / BT / NPU).
 //
 //   THREAD listen  — ALSA/sine → ChunkQueue (never waits on network)
-//   THREAD worker  — Online: queue → BackendLink
-//                    Offline: queue → Models::infer
+//   THREAD worker  — Online:  queue → BackendLink (SEGMENT_MS buffer)
+//                    Offline: queue → OfflineBuffer → Models::infer → PhoneLink
 class StateMachine {
  public:
-  StateMachine(Capture& capture, BackendLink& link, Models& models);
+  StateMachine(Capture& capture, BackendLink& link, Models& models,
+               PhoneLink& phone, int offline_segment_ms);
   ~StateMachine();
 
   StateMachine(const StateMachine&) = delete;
@@ -39,6 +42,8 @@ class StateMachine {
   Capture& capture_;
   BackendLink& link_;
   Models& models_;
+  PhoneLink& phone_;
+  OfflineBuffer offline_buf_;
   ChunkQueue queue_;
   std::atomic<RunMode> mode_{RunMode::Offline};
   std::atomic<bool> stop_{false};

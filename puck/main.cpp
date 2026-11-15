@@ -1,17 +1,19 @@
 // THREAD 0 — main
 // systemd launches the built binary (see systemd/calypso-puck.service).
 
+#include "accelerators.hpp"
 #include "backend_link.hpp"
 #include "capture.hpp"
 #include "config.hpp"
 #include "connection_listener.hpp"
 #include "models.hpp"
+#include "phone_link.hpp"
 #include "state_machine.hpp"
 #include "types.hpp"
 
+#include <atomic>
 #include <chrono>
 #include <csignal>
-#include <atomic>
 #include <iostream>
 #include <thread>
 
@@ -45,6 +47,8 @@ int main() {
 
   calypso::Capture capture;
   calypso::BackendLink link;
+  calypso::Accelerators accelerators;
+  calypso::PhoneLink phone;
   calypso::Models models;
 
   if (!capture.init(cfg.mic_device, cfg.chunk_ms)) {
@@ -56,8 +60,24 @@ int main() {
     std::cerr << "backend link init failed\n";
     return 1;
   }
-  // Offline models stay stubbed; online path does not need them.
-  if (!models.init(cfg.ncs2_device, cfg.stt_model_path, cfg.voice_model_path)) {
+
+  // Optional sticks — stubs; failure is OK for CPU-only offline ID.
+  if (!accelerators.init_coral(cfg.coral_device)) {
+    std::cerr << "coral init skipped/stub\n";
+  }
+  if (!accelerators.init_ncs2(cfg.ncs2_device)) {
+    std::cerr << "ncs2 init skipped/stub\n";
+  }
+
+  if (!phone.init(cfg.bt_adapter, cfg.bt_peer_name)) {
+    std::cerr << "phone bluetooth init failed\n";
+  } else if (!phone.connect()) {
+    std::cerr << "phone bluetooth connect skipped/stub\n";
+  }
+
+  // Default InferBackend::Cpu; set INFER_BACKEND=coral|ncs2 later.
+  if (!models.init(cfg.infer_backend, cfg.voice_model_path, cfg.stt_model_path,
+                   &accelerators)) {
     std::cerr << "models init skipped/stub — offline infer will no-op\n";
   }
 
@@ -68,7 +88,8 @@ int main() {
   std::cerr << "starting state machine in "
             << (online ? "ONLINE" : "OFFLINE") << " mode\n";
 
-  calypso::StateMachine sm(capture, link, models);
+  calypso::StateMachine sm(capture, link, models, phone,
+                           cfg.offline_segment_ms);
   calypso::ConnectionListener listener(link, sm, cfg.connect_retry_sec,
                                        cfg.connection_check_sec);
 
@@ -83,6 +104,8 @@ int main() {
   listener.stop();
   sm.stop();
   models.shutdown();
+  phone.shutdown();
+  accelerators.shutdown();
   link.shutdown();
   capture.shutdown();
   return 0;

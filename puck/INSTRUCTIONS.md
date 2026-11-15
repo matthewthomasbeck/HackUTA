@@ -1,21 +1,57 @@
-# Puck (Matt) — online pipeline
+# Puck (Matt) — online + offline emergency pipeline
 
-Teammates need: mic (or `sine`) → buffer `SEGMENT_MS` → `POST /puck/segments` with Bearer token. Same contract as `backend/calypso/models.py`.
+Teammates need: mic (or `sine`) → online `POST /puck/segments`, or offline
+voice-fingerprint → Bluetooth "who is talking" to the phone.
 
-## Online path (done)
+## Pipeline
 
-1. `Capture` — ALSA on Linux, or `MIC_DEVICE=sine` anywhere  
-2. `BackendLink` — `GET /health` to connect; buffer audio; multipart `POST /puck/segments`; `POST /puck/health` on connect  
-3. `StateMachine` — **listen** thread (mic → queue) + **worker** thread (online: upload / offline: infer). Capture never blocks on HTTP.  
-4. `ConnectionListener` — flips Offline on drop, retries every `CONNECT_RETRY_SEC`
+1. systemd starts `calypso_puck` (`main.cpp`)
+2. Load `config/.env`
+3. Init mic (`Capture`), backend link, **Coral/NCS2 stubs** (`Accelerators`),
+   **phone Bluetooth stub** (`PhoneLink`), offline models (`Models`, CPU default)
+4. Try `GET /health` — start Online if it works, else Offline
+5. Start listen + worker threads, plus the connection watcher
+6. **Always:** listen thread: mic/sine → `CHUNK_MS` chunks → in-memory queue
+7. Worker pops chunks and branches on mode
 
-Offline / Coral / NCS2 still stubbed.
+### Online
+8. Buffer chunks until `SEGMENT_MS` (`BackendLink`)
+9. `POST /puck/segments` (wav + meta + Bearer token)
+10. On success: clear buffer; on fail: keep audio, mark disconnected → Offline
+
+### Offline (emergency voice ID)
+8. Feed the same `CHUNK_MS` frames into `OfflineBuffer` (concat to
+   `OFFLINE_SEGMENT_MS` — **does not** touch the online upload buffer)
+9. `Models::infer` on the concatenated clip (CPU now; `INFER_BACKEND` /
+   `Models::set_backend` for Coral/NCS2 later)
+10. `PhoneLink::send_who_is_talking(out.who)` → phone app
+
+### Mode switching
+11. Connection listener: if connected → Online; if not → wait, retry connect,
+    set Offline/Online
+12. Capture never stops; only the worker path changes. Switching to Online
+    clears the offline concat buffer so partial clips do not leak.
+
+### Shutdown
+13. On SIGINT/SIGTERM: stop listener + state machine, shut down
+    models / phone / accelerators / link / capture
+
+## Stubs (empty bodies — fill later)
+
+| Piece | Files | Role |
+|---|---|---|
+| `Accelerators` | `include/accelerators.hpp`, `src/accelerators.cpp` | `init_coral` / `init_ncs2` |
+| `PhoneLink` | `include/phone_link.hpp`, `src/phone_link.cpp` | BT to app; `send_who_is_talking` |
+| `OfflineBuffer` | `include/offline_buffer.hpp`, `src/offline_buffer.cpp` | Offline-only concat |
+| `Models` | `include/models.hpp`, `src/models.cpp` | CPU infer + `set_backend` |
+| `WhoIsTalking` | `include/types.hpp` | Identified / Uncertain / Unknown |
 
 ## Config (`config/.env`)
 
 ```bash
 cp config/.env.example config/.env
 # set BACKEND_IP, BACKEND_PORT, API_TOKEN (= CALYPSO_API_TOKEN), MIC_DEVICE
+# optional: OFFLINE_SEGMENT_MS, INFER_BACKEND=cpu, BT_ADAPTER, BT_PEER_NAME
 ```
 
 ## Build / run
@@ -29,7 +65,7 @@ cmake -S . -B build && cmake --build build
 ./build/calypso_puck
 ```
 
-Dashboard should show `puck.segment` / `puck.health` on `/stream`.
+Dashboard should show `puck.segment` / `puck.health` on `/stream` when online.
 
 ## systemd
 
