@@ -69,7 +69,7 @@ Check off steps here as you go (`- [x]`). Shared data shapes live in `backend/ca
   - `testCalypsoContactHasNameAndPhone`
 - [x] **Step 2:** Run with `xcodebuild test -scheme Calypso -destination 'platform=iOS Simulator,name=iPhone 17'` → FAIL.
 - [x] **Step 3:** Implement the models, `APIClient`, `ContactBuilder`, and the onboarding views.
-- [ ] **Step 4:** Run the tests → PASS (done: 18/18 on the iPhone 17 simulator). On a device, the onboarding adds the contact and it shows up in FaceTime search. *(pending: waiting on the 1-hour Stolen Device Protection delay to trust the profile, and on Keanu for the Chert line number in `CHERT_PHONE`)*
+- [ ] **Step 4:** Run the tests → PASS (done: 18/18 on the iPhone 17 simulator). On a device, the onboarding adds the contact and it shows up in FaceTime search. *(done on an iPhone 14 with a placeholder `CHERT_PHONE`; pending: swap in Keanu's real Chert line number and confirm FaceTime reaches the agent)*
 - [x] **Step 5:** Commit `feat(ios): onboarding + add Calypso⁻¹ contact`.
 
 ### Task 17: iOS app: People, Today timeline, photo and visit uploaders
@@ -91,7 +91,7 @@ Check off steps here as you go (`- [x]`). Shared data shapes live in `backend/ca
   - `testPhotoSyncSkipsScreenshots` (mediaSubtypes filter)
 - [x] **Step 2:** Run → FAIL. **Step 3:** Implement. **Step 4:** Run → PASS.
 - [x] Commit `feat(ios): people, today timeline, sync`.
-- [ ] **Step 5:** On a device: take a photo, then pull to refresh in Today 15 minutes later (or after `POST /days/{date}/rebuild`) → the photo shows up under the right event. *(pending: needs Vishnu's Tasks 6 and 7 deployed)*
+- [ ] **Step 5:** On a device: take a photo, then pull to refresh in Today 15 minutes later (or after `POST /days/{date}/rebuild`) → the photo shows up under the right event. *(rehearsed against the fake backend on a device: upload, Today, People all work; pending: the real check needs Vishnu's Tasks 6 and 7 deployed)*
 
 ## Status and notes
 
@@ -102,4 +102,7 @@ Check off steps here as you go (`- [x]`). Shared data shapes live in `backend/ca
   - `DayEvent.people` holds person ids; ids with no name show "Unnamed visitor".
   - Images are public at unguessable URLs; photo thumbnails come from `{API_BASE_URL}/media/photos/{photo_id}.jpg` (sensitive photos 404).
   - Days are the patient's local calendar day, and every timestamp carries a zone.
-- Still to do: the two device checks above, then Task 19 (demo runbook, café run, dry runs) with everyone.
+- **Fake backend** (`ios/scripts/fake_backend.py`, see `ios/README.md`): serves every endpoint `APIClient` calls with seeded people and events, and keeps uploads in memory. Use it until the real backend is deployed.
+- **Device dev over Tailscale:** venue Wi-Fi blocks phone-to-Mac traffic, and ATS blocks plain http to Tailscale's `100.x` IPs. Run `tailscale serve --bg 8000` on the Mac and set `API_BASE_URL = https:/$()/<mac>.<tailnet>.ts.net` (no port). This is dev only; the deployed backend must be public https.
+- xcconfig gotcha: `//` starts a comment, so always write `https:/$()/host`. An empty key in `Secrets.xcconfig` overrides `Base.xcconfig`.
+- Still to do: the real `CHERT_PHONE` and a FaceTime call to the agent, the real-backend photo check, then Task 19 (demo runbook, café run, dry runs) with everyone.
