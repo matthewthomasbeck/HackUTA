@@ -26,11 +26,16 @@ struct CalypsoApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if onboarded {
-                HomeView()
-            } else {
-                OnboardingView()
+            Group {
+                if let route = ScreenRoute.current {
+                    ScreenRoute.view(for: route)
+                } else if onboarded {
+                    HomeView()
+                } else {
+                    OnboardingView()
+                }
             }
+            .preferredColorScheme(.light)
         }
         .onChange(of: onboarded) { _, done in
             if done { delegate.startVisitSync() }
