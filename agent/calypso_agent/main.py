@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import logging
 import os
 import sys
+import time
 
 from livekit import rtc
 from livekit.agents import AgentServer, AutoSubscribe, JobContext, cli
@@ -13,6 +14,7 @@ from .backend_client import b64
 from .gateway import GatewayClient
 from .caller_identity import resolve_caller_phone
 from .contract import Card
+from .latency import fresh_cards, latency_ms
 from .grok import GrokSpeech
 from .live_media import CameraSamples, Publisher, RoomSpeech, audio_frames, video_frames, wait_bridge_ready
 from .scheduler import CardScheduler
@@ -66,6 +68,7 @@ async def run_call(ctx, config):
     dialogue_done = False
     last_progress = None
     caller_phone = None
+    latencies = {}
 
     def spawn(coro):
         task = asyncio.create_task(coro)
@@ -80,7 +83,8 @@ async def run_call(ctx, config):
 
     def shown(card):
         if gateway.session_id and card.kind in {"identity", "learning", "today", "memory"}:
-            spawn(gateway.shown(card.model_dump(mode="json")))
+            payload = card.model_dump(mode="json")
+            spawn(gateway.shown(payload, latencies.pop(card.model_dump_json(), None)))
     publisher.on_shown = shown
 
     def disconnected(*_):
@@ -150,6 +154,7 @@ async def run_call(ctx, config):
         ready.set()
         while not stopped.is_set() and not dialogue_done:
             text = await speech.listen()
+            sentence_end = time.monotonic()
             if dialogue_done:
                 return
             try:
@@ -160,6 +165,17 @@ async def run_call(ctx, config):
             effects = await gateway.event("utterance" if text else "silence",
                 text=text, face_jpegs_b64=[b64(crop) for crop in crops],
                 voice_wav_b64=b64(voice) if voice else None)
+            if text:
+                now = time.monotonic()
+                cards = effects.get("cards", [])
+                kept = fresh_cards(cards, sentence_end, now)
+                for card in cards:
+                    if card.get("kind") in {"today", "memory"}:
+                        ms = latency_ms(sentence_end, now)
+                        log.info("recall_latency_ms=%d kind=%s dropped=%s", ms, card["kind"], card not in kept)
+                        if card in kept:
+                            latencies[Card.model_validate(card).model_dump_json()] = ms
+                effects = {**effects, "cards": kept}
             if await apply(effects):
                 return
 
