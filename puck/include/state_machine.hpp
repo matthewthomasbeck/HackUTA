@@ -21,7 +21,7 @@ namespace calypso {
 //   THREAD listen  — ALSA/sine → ChunkQueue (never waits on network)
 //   THREAD worker  — BOTH modes: queue → Segmenter → SegmentSpool (durable;
 //                    the Uploader thread drains it to the backend)
-//                    Offline additionally: queue → OfflineBuffer → Models::infer → PhoneLink
+//                    and: queue → OfflineBuffer → Models::infer → PhoneLink (who → phone)
 class StateMachine {
  public:
   StateMachine(Capture& capture, BackendLink& link, Models& models,
@@ -43,7 +43,7 @@ class StateMachine {
   void listen_loop();
   void worker_loop();
   void spool_chunk(const AudioChunk& chunk);
-  void process_offline(const AudioChunk& chunk);
+  void process_who(const AudioChunk& chunk);
 
   Capture& capture_;
   BackendLink& link_;

@@ -44,7 +44,7 @@ voice-fingerprint → Bluetooth "who is talking" to the phone.
     no NTP at all, audio waits in the spool (up to `PUCK_SPOOL_MAX_MB`). `/puck/health` reports
     the real `time_synced` and `queue_depth`.
 
-### Offline (emergency voice ID)
+### Who is talking (voice ID → phone, online AND offline)
 1. Feed the same `CHUNK_MS` frames into `OfflineBuffer` (concat to
    `OFFLINE_SEGMENT_MS` — **does not** touch the online upload buffer)
 2. `Models::infer` on the concatenated clip (CPU now; `INFER_BACKEND` /
